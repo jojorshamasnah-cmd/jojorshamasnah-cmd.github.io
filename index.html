@@ -61,7 +61,20 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 
 
 // use jquery to load GeoJSON data
-
+    $.getJSON("wasteContainer.json", function(WC) {
+      L.geoJson(WC, {
+        pointToLayer: function(feature, latlng) {
+          return L.circleMarker(latlng, {
+            radius: 5,
+            fillColor: "orange",
+            color: "orange",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+          });
+        }
+      }).addTo(map);
+    });
 
    $.getJSON("RamallahZones.json", function(RZ) {
       L.geoJson(RZ, {
@@ -77,21 +90,6 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         onEachFeature: function(feature, layer) {
           layer.on('click', function(e) {
             alert("Zone: " + feature.properties.NAME_ENGLI + "\nMAIL_CODE: " + feature.properties.MAIL_CODE);
-          });
-        }
-      }).addTo(map);
-    });
-
-    $.getJSON("wasteContainer.json", function(WC) {
-      L.geoJson(WC, {
-        pointToLayer: function(feature, latlng) {
-          return L.circleMarker(latlng, {
-            radius: 5,
-            fillColor: "orange",
-            color: "orange",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
           });
         }
       }).addTo(map);
@@ -114,3 +112,4 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 </body>
 
 </html>
+
