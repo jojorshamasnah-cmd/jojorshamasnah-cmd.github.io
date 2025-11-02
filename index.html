@@ -176,6 +176,7 @@
     let containersData = [];
 
     // تحميل الحاويات
+// تحميل الحاويات
 $.getJSON("wasteContainer.json", function (WC) {
   L.geoJson(WC, {
     pointToLayer: function (feature, latlng) {
@@ -196,6 +197,22 @@ $.getJSON("wasteContainer.json", function (WC) {
         marker.bindPopup(`<b>اسم الحاوية:</b> ${name}`).openPopup();
       });
 
+      // buffer أخضر حول الحاوية
+      L.circle(latlng, {
+        radius: 10,
+        color: "green",
+        fillColor: "green",
+        fillOpacity: 0.15,
+        weight: 1
+      }).addTo(map);
+
+      return marker;
+    }
+  }).addTo(map);
+
+  // حفظ بيانات الحاويات للبحث
+  containersData = WC.features;
+});
       // buffer أخضر حول الحاوية
       L.circle(latlng, {
         radius: 10,
@@ -323,4 +340,5 @@ $.getJSON("wasteContainer.json", function (WC) {
   </script>
 </body>
 </html>
+
 
