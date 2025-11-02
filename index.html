@@ -26,8 +26,8 @@
     #complaint-box {
       position: absolute;
       top: 20px;
-      right: 20px; /* ← هنا التغيير الأساسي */
-      background: rgba(255, 255, 255, 0.9);
+      right: 20px;
+      background: rgba(255, 255, 255, 0.95);
       padding: 15px;
       border-radius: 10px;
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
@@ -66,10 +66,19 @@
       border-radius: 5px;
       cursor: pointer;
       font-weight: bold;
+      margin-top: 5px;
     }
 
     #complaint-box button:hover {
       background: #0056b3;
+    }
+
+    #view-btn {
+      background: #28a745;
+    }
+
+    #view-btn:hover {
+      background: #1e7e34;
     }
 
     #coords {
@@ -103,6 +112,7 @@
     <div id="coords">موقع الشكوى: لم يُحدد بعد</div>
 
     <button id="submit">إرسال الشكوى</button>
+    <button id="view-btn">📥 عرض الشكاوى</button>
   </div>
 
   <!-- مكتبات جافاسكريبت -->
@@ -167,7 +177,6 @@
 
       map.fitBounds(zonesLayer.getBounds());
 
-      // تحكم الطبقات
       const overlays = {
         "Zones": zonesLayer,
         "Waste Containers": wasteContainersLayer
@@ -191,6 +200,10 @@
         `موقع الشكوى: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`;
     });
 
+    // 📋 مصفوفة لتخزين الشكاوى
+    let complaints = [];
+    let complaintsLayer = L.layerGroup().addTo(map);
+
     // 📤 إرسال الشكوى
     document.getElementById("submit").addEventListener("click", function () {
       const name = document.getElementById("name").value.trim();
@@ -209,8 +222,9 @@
         location: complaintCoords
       };
 
-      console.log("تم إرسال الشكوى:", complaint);
-      alert("تم إرسال الشكوى بنجاح! شكراً لتعاونك 💚");
+      complaints.push(complaint);
+
+      alert("✅ تم إرسال الشكوى بنجاح! شكراً لتعاونك 💚");
 
       // إعادة التهيئة
       document.getElementById("name").value = "";
@@ -223,6 +237,29 @@
         complaintMarker = null;
         complaintCoords = null;
       }
+    });
+
+    // 📥 عرض الشكاوى السابقة
+    document.getElementById("view-btn").addEventListener("click", function () {
+      complaintsLayer.clearLayers();
+
+      if (complaints.length === 0) {
+        alert("لا توجد شكاوى بعد.");
+        return;
+      }
+
+      complaints.forEach(c => {
+        L.circleMarker(c.location, {
+          radius: 6,
+          fillColor: "red",
+          color: "white",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.9
+        }).bindPopup(`<b>الاسم:</b> ${c.name}<br><b>النوع:</b> ${c.type}`).addTo(complaintsLayer);
+      });
+
+      alert(`تم عرض ${complaints.length} شكوى على الخريطة ✅`);
     });
   </script>
 </body>
