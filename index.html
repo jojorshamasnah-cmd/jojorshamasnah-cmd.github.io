@@ -45,9 +45,9 @@
 
     // تحميل بيانات الحاويات
     $.getJSON("wasteContainer.json", function (WC) {
-      const wasteContainersLayer = L.geoJson(WC, {
+      L.geoJson(WC, {
         pointToLayer: function (feature, latlng) {
-          // إنشاء نقطة الحاوية
+          // إنشاء marker للحاوية
           const marker = L.circleMarker(latlng, {
             radius: 6,
             fillColor: "orange",
@@ -63,18 +63,19 @@
           // عند الضغط على الحاوية تظهر نافذة باسمها
           marker.bindPopup(`<b>اسم الحاوية:</b> ${name}`);
 
-          // إنشاء buffer حولها باللون الأخضر 💚
-          const buffer = L.circle(latlng, {
+          // إضافة marker إلى الخريطة
+          marker.addTo(map);
+
+          // إضافة buffer حولها باللون الأخضر 💚
+          L.circle(latlng, {
             radius: 10, // متر
             color: "green",
             fillColor: "green",
             fillOpacity: 0.15,
             weight: 1
-          });
+          }).addTo(map);
 
-          // عرض الحاوية والدائرة معًا داخل مجموعة
-          const group = L.layerGroup([buffer, marker]);
-          return group;
+          return marker;
         }
       }).addTo(map);
     });
