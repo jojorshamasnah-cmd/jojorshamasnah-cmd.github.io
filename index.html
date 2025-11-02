@@ -22,7 +22,7 @@
       height: 100%;
     }
 
-    /* 🎯 صندوق الشكاوي على اليمين */
+    /* 🎯 صندوق الشكاوي */
     #complaint-box {
       position: absolute;
       top: 20px;
@@ -47,8 +47,7 @@
     }
 
     #complaint-box input,
-    #complaint-box select,
-    #complaint-box textarea {
+    #complaint-box select {
       width: 100%;
       margin-bottom: 8px;
       padding: 5px;
@@ -86,11 +85,53 @@
       color: #333;
       margin-bottom: 6px;
     }
+
+    /* 🔍 صندوق البحث */
+    #search-box {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      width: 240px;
+      z-index: 1000;
+    }
+
+    #search-box input {
+      width: 100%;
+      padding: 5px;
+      border: 1px solid #aaa;
+      border-radius: 5px;
+    }
+
+    #search-box button {
+      width: 100%;
+      margin-top: 5px;
+      padding: 6px;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #search-box button:hover {
+      background: #000;
+    }
   </style>
 </head>
 
 <body>
   <div id="map"></div>
+
+  <!-- 🔍 صندوق البحث -->
+  <div id="search-box">
+    <input type="text" id="search-input" placeholder="ابحث عن منطقة أو حاوية..." />
+    <button id="search-btn">بحث</button>
+  </div>
 
   <!-- 📦 صندوق الشكاوي -->
   <div id="complaint-box">
@@ -121,67 +162,65 @@
 
   <script>
     // إعداد الخريطة
-    const mapOptions = {
-      zoomSnap: 0.5,
+    const map = L.map("map", {
       center: [31.9045, 35.2045],
       zoom: 17.5
-    };
+    });
 
-    const map = L.map("map", mapOptions);
+    // مقياس الخريطة (أسفل اليسار)
+    L.control.scale({ position: "bottomleft", metric: true }).addTo(map);
 
     // طبقة الأساس
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        '&copy; OpenStreetMap & CARTO',
       subdomains: 'abcd',
       maxZoom: 20
     }).addTo(map);
 
     // متغيرات الطبقات
     let zonesLayer, wasteContainersLayer;
+    let zonesData = [];
+    let containersData = [];
 
     // تحميل بيانات الحاويات
     $.getJSON("wasteContainer.json", function (WC) {
       wasteContainersLayer = L.geoJson(WC, {
         pointToLayer: function (feature, latlng) {
-          return L.circleMarker(latlng, {
-            radius: 5,
+          const marker = L.circleMarker(latlng, {
+            radius: 6,
             fillColor: "orange",
             color: "orange",
             weight: 1,
             opacity: 1,
-            fillOpacity: 0.8
+            fillOpacity: 0.9
           });
+          marker.bindPopup(`<b>اسم الحاوية:</b> ${feature.properties.Name || "غير معروف"}`);
+          return marker;
         }
       }).addTo(map);
+
+      containersData = WC.features;
     });
 
     // تحميل بيانات المناطق
     $.getJSON("RamallahZones.json", function (RZ) {
       zonesLayer = L.geoJson(RZ, {
-        style: function (feature) {
-          return {
-            fillColor: "yellow",
-            fillOpacity: 0.3,
-            color: "yellow",
-            weight: 1.0,
-            opacity: 0.7
-          };
-        },
-        onEachFeature: function (feature, layer) {
-          layer.on('click', function () {
+        style: () => ({
+          fillColor: "yellow",
+          fillOpacity: 0.3,
+          color: "yellow",
+          weight: 1.0,
+          opacity: 0.7
+        }),
+        onEachFeature: (feature, layer) => {
+          layer.on('click', () => {
             alert("Zone: " + feature.properties.NAME_ENGLI + "\nMAIL_CODE: " + feature.properties.MAIL_CODE);
           });
         }
       }).addTo(map);
 
-      map.fitBounds(zonesLayer.getBounds());
-
-      const overlays = {
-        "Zones": zonesLayer,
-        "Waste Containers": wasteContainersLayer
-      };
-      L.control.layers({}, overlays).addTo(map);
+      zonesData = RZ.features;
     });
 
     // 📍 اختيار موقع الشكوى
@@ -200,11 +239,11 @@
         `موقع الشكوى: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`;
     });
 
-    // 📋 مصفوفة لتخزين الشكاوى
+    // 📋 تخزين الشكاوى
     let complaints = [];
     let complaintsLayer = L.layerGroup().addTo(map);
 
-    // 📤 إرسال الشكوى
+    // إرسال الشكوى
     document.getElementById("submit").addEventListener("click", function () {
       const name = document.getElementById("name").value.trim();
       const phone = document.getElementById("phone").value.trim();
@@ -215,18 +254,10 @@
         return;
       }
 
-      const complaint = {
-        name: name,
-        phone: phone,
-        type: type,
-        location: complaintCoords
-      };
-
+      const complaint = { name, phone, type, location: complaintCoords };
       complaints.push(complaint);
-
       alert("✅ تم إرسال الشكوى بنجاح! شكراً لتعاونك 💚");
 
-      // إعادة التهيئة
       document.getElementById("name").value = "";
       document.getElementById("phone").value = "";
       document.getElementById("type").value = "نظافة";
@@ -239,7 +270,7 @@
       }
     });
 
-    // 📥 عرض الشكاوى السابقة
+    // عرض الشكاوى
     document.getElementById("view-btn").addEventListener("click", function () {
       complaintsLayer.clearLayers();
 
@@ -260,6 +291,42 @@
       });
 
       alert(`تم عرض ${complaints.length} شكوى على الخريطة ✅`);
+    });
+
+    // 🔍 البحث عن منطقة أو حاوية
+    document.getElementById("search-btn").addEventListener("click", function () {
+      const query = document.getElementById("search-input").value.trim().toLowerCase();
+
+      if (!query) {
+        alert("اكتب اسم المنطقة أو الحاوية للبحث.");
+        return;
+      }
+
+      // بحث في المناطق
+      const foundZone = zonesData.find(z => z.properties.NAME_ENGLI && z.properties.NAME_ENGLI.toLowerCase().includes(query));
+      if (foundZone) {
+        const bounds = L.geoJson(foundZone).getBounds();
+        map.fitBounds(bounds);
+        L.popup()
+          .setLatLng(bounds.getCenter())
+          .setContent(`<b>منطقة:</b> ${foundZone.properties.NAME_ENGLI}`)
+          .openOn(map);
+        return;
+      }
+
+      // بحث في الحاويات
+      const foundContainer = containersData.find(c => c.properties.Name && c.properties.Name.toLowerCase().includes(query));
+      if (foundContainer) {
+        const latlng = [foundContainer.geometry.coordinates[1], foundContainer.geometry.coordinates[0]];
+        map.setView(latlng, 19);
+        L.popup()
+          .setLatLng(latlng)
+          .setContent(`<b>حاوية:</b> ${foundContainer.properties.Name}`)
+          .openOn(map);
+        return;
+      }
+
+      alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
   </script>
 </body>
