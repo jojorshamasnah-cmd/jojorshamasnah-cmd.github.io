@@ -63,11 +63,11 @@
           // عند الضغط على الحاوية تظهر نافذة باسمها
           marker.bindPopup(`<b>اسم الحاوية:</b> ${name}`);
 
-          // إنشاء buffer حولها
+          // إنشاء buffer حولها باللون الأخضر 💚
           const buffer = L.circle(latlng, {
             radius: 10, // متر
-            color: "orange",
-            fillColor: "orange",
+            color: "green",
+            fillColor: "green",
             fillOpacity: 0.15,
             weight: 1
           });
