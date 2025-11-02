@@ -13,6 +13,7 @@
       margin: 0;
       height: 100%;
       width: 100%;
+      font-family: Arial, sans-serif;
     }
 
     #map {
@@ -20,11 +21,89 @@
       width: 100%;
       height: 100%;
     }
+
+    /* 🎯 صندوق الشكاوي على اليمين */
+    #complaint-box {
+      position: absolute;
+      top: 20px;
+      right: 20px; /* ← هنا التغيير الأساسي */
+      background: rgba(255, 255, 255, 0.9);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      width: 260px;
+      z-index: 1000;
+    }
+
+    #complaint-box h3 {
+      margin-top: 0;
+      font-size: 16px;
+      text-align: center;
+    }
+
+    #complaint-box label {
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    #complaint-box input,
+    #complaint-box select,
+    #complaint-box textarea {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 13px;
+    }
+
+    #complaint-box button {
+      width: 100%;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #complaint-box button:hover {
+      background: #0056b3;
+    }
+
+    #coords {
+      font-size: 12px;
+      color: #333;
+      margin-bottom: 6px;
+    }
   </style>
 </head>
 
 <body>
   <div id="map"></div>
+
+  <!-- 📦 صندوق الشكاوي -->
+  <div id="complaint-box">
+    <h3>صندوق الشكاوي</h3>
+    <label>الاسم:</label>
+    <input type="text" id="name" placeholder="اكتب اسمك" required>
+
+    <label>رقم الهاتف:</label>
+    <input type="text" id="phone" placeholder="05XXXXXXXX" required>
+
+    <label>نوع الشكوى:</label>
+    <select id="type">
+      <option value="نظافة">نظافة</option>
+      <option value="حاوية ممتلئة">حاوية ممتلئة</option>
+      <option value="موقع خاطئ للحاوية">موقع خاطئ للحاوية</option>
+      <option value="أخرى">أخرى</option>
+    </select>
+
+    <div id="coords">موقع الشكوى: لم يُحدد بعد</div>
+
+    <button id="submit">إرسال الشكوى</button>
+  </div>
 
   <!-- مكتبات جافاسكريبت -->
   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
@@ -34,13 +113,13 @@
     // إعداد الخريطة
     const mapOptions = {
       zoomSnap: 0.5,
-      center: [31.9045, 35.2045], // مركز رام الله
+      center: [31.9045, 35.2045],
       zoom: 17.5
     };
 
     const map = L.map("map", mapOptions);
 
-    // طبقة الأساس (خلفية الخريطة)
+    // طبقة الأساس
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -48,11 +127,10 @@
       maxZoom: 20
     }).addTo(map);
 
-    // تعريف متغيرات الطبقات
-    let zonesLayer;
-    let wasteContainersLayer;
+    // متغيرات الطبقات
+    let zonesLayer, wasteContainersLayer;
 
-    // تحميل طبقة الحاويات
+    // تحميل بيانات الحاويات
     $.getJSON("wasteContainer.json", function (WC) {
       wasteContainersLayer = L.geoJson(WC, {
         pointToLayer: function (feature, latlng) {
@@ -68,7 +146,7 @@
       }).addTo(map);
     });
 
-    // تحميل طبقة مناطق رام الله
+    // تحميل بيانات المناطق
     $.getJSON("RamallahZones.json", function (RZ) {
       zonesLayer = L.geoJson(RZ, {
         style: function (feature) {
@@ -87,17 +165,64 @@
         }
       }).addTo(map);
 
-      // بعد تحميل المناطق، خريطة تتحرك لتغطيها كلها
       map.fitBounds(zonesLayer.getBounds());
 
-      // إنشاء التحكم في الطبقات
-      const baseLayers = {};
+      // تحكم الطبقات
       const overlays = {
         "Zones": zonesLayer,
         "Waste Containers": wasteContainersLayer
       };
+      L.control.layers({}, overlays).addTo(map);
+    });
 
-      L.control.layers(baseLayers, overlays).addTo(map);
+    // 📍 اختيار موقع الشكوى
+    let complaintMarker = null;
+    let complaintCoords = null;
+
+    map.on('click', function (e) {
+      complaintCoords = e.latlng;
+
+      if (complaintMarker) {
+        map.removeLayer(complaintMarker);
+      }
+
+      complaintMarker = L.marker(complaintCoords).addTo(map);
+      document.getElementById("coords").innerText =
+        `موقع الشكوى: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`;
+    });
+
+    // 📤 إرسال الشكوى
+    document.getElementById("submit").addEventListener("click", function () {
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const type = document.getElementById("type").value;
+
+      if (!name || !phone || !complaintCoords) {
+        alert("الرجاء تعبئة كل الحقول وتحديد موقع الشكوى على الخريطة.");
+        return;
+      }
+
+      const complaint = {
+        name: name,
+        phone: phone,
+        type: type,
+        location: complaintCoords
+      };
+
+      console.log("تم إرسال الشكوى:", complaint);
+      alert("تم إرسال الشكوى بنجاح! شكراً لتعاونك 💚");
+
+      // إعادة التهيئة
+      document.getElementById("name").value = "";
+      document.getElementById("phone").value = "";
+      document.getElementById("type").value = "نظافة";
+      document.getElementById("coords").innerText = "موقع الشكوى: لم يُحدد بعد";
+
+      if (complaintMarker) {
+        map.removeLayer(complaintMarker);
+        complaintMarker = null;
+        complaintCoords = null;
+      }
     });
   </script>
 </body>
