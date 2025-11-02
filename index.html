@@ -176,11 +176,10 @@
     let containersData = [];
 
     // تحميل الحاويات
-// تحميل الحاويات
 $.getJSON("wasteContainer.json", function (WC) {
   L.geoJson(WC, {
     pointToLayer: function (feature, latlng) {
-      const name = feature.properties.Name || "حاوية بدون اسم";
+      const material = feature.properties.Material || feature.properties.Name || "غير معروف";
 
       // إنشاء marker للحاوية
       const marker = L.circleMarker(latlng, {
@@ -192,9 +191,9 @@ $.getJSON("wasteContainer.json", function (WC) {
         fillOpacity: 0.9
       }).addTo(map);
 
-      // عند الضغط على الحاوية يظهر اسمها
+      // عند الضغط على الحاوية يظهر من شو مصنوعة
       marker.on("click", function () {
-        marker.bindPopup(`<b>اسم الحاوية:</b> ${name}`).openPopup();
+        marker.bindPopup(`<b>من شو مصنوعة؟</b> ${material}`).openPopup();
       });
 
       // buffer أخضر حول الحاوية
@@ -213,22 +212,7 @@ $.getJSON("wasteContainer.json", function (WC) {
   // حفظ بيانات الحاويات للبحث
   containersData = WC.features;
 });
-      // buffer أخضر حول الحاوية
-      L.circle(latlng, {
-        radius: 10,
-        color: "green",
-        fillColor: "green",
-        fillOpacity: 0.15,
-        weight: 1
-      }).addTo(map);
 
-      return marker;
-    }
-  }).addTo(map);
-
-  // حفظ بيانات الحاويات للبحث
-  containersData = WC.features;
-});
     // تحميل مناطق رام الله
     $.getJSON("RamallahZones.json", function (RZ) {
       L.geoJson(RZ, {
@@ -340,5 +324,6 @@ $.getJSON("wasteContainer.json", function (WC) {
   </script>
 </body>
 </html>
+
 
 
