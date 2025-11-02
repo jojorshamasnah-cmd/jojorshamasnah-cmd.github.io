@@ -176,35 +176,42 @@
     let containersData = [];
 
     // تحميل الحاويات
-    $.getJSON("wasteContainer.json", function (WC) {
-      L.geoJson(WC, {
-        pointToLayer: function (feature, latlng) {
-          const name = feature.properties.Name || "حاوية بدون اسم";
+$.getJSON("wasteContainer.json", function (WC) {
+  L.geoJson(WC, {
+    pointToLayer: function (feature, latlng) {
+      const name = feature.properties.Name || "حاوية بدون اسم";
 
-          const marker = L.circleMarker(latlng, {
-            radius: 6,
-            fillColor: "orange",
-            color: "orange",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.9
-          }).bindPopup(`<b>اسم الحاوية:</b> ${name}`).addTo(map);
-
-          // buffer أخضر
-          L.circle(latlng, {
-            radius: 10,
-            color: "green",
-            fillColor: "green",
-            fillOpacity: 0.15,
-            weight: 1
-          }).addTo(map);
-
-          return marker;
-        }
+      // إنشاء marker للحاوية
+      const marker = L.circleMarker(latlng, {
+        radius: 6,
+        fillColor: "orange",
+        color: "orange",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.9
       }).addTo(map);
-      containersData = WC.features;
-    });
 
+      // عند الضغط على الحاوية يظهر اسمها
+      marker.on("click", function () {
+        marker.bindPopup(`<b>اسم الحاوية:</b> ${name}`).openPopup();
+      });
+
+      // buffer أخضر حول الحاوية
+      L.circle(latlng, {
+        radius: 10,
+        color: "green",
+        fillColor: "green",
+        fillOpacity: 0.15,
+        weight: 1
+      }).addTo(map);
+
+      return marker;
+    }
+  }).addTo(map);
+
+  // حفظ بيانات الحاويات للبحث
+  containersData = WC.features;
+});
     // تحميل مناطق رام الله
     $.getJSON("RamallahZones.json", function (RZ) {
       L.geoJson(RZ, {
@@ -316,3 +323,4 @@
   </script>
 </body>
 </html>
+
