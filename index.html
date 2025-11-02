@@ -120,6 +120,26 @@
       color: #333;
       margin-bottom: 6px;
     }
+
+    /* 📋 صندوق عرض الشكاوي */
+    #complaints-list-box {
+      position: absolute;
+      top: 300px;
+      right: 20px;
+      width: 260px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      font-size: 13px;
+    }
+
+    #complaints-list-box h3 {
+      text-align: center;
+      margin: 0 0 5px 0;
+      font-size: 14px;
+    }
   </style>
 </head>
 
@@ -152,17 +172,22 @@
     <div id="coords">موقع الشكوى: لم يُحدد بعد</div>
 
     <button id="submit">إرسال الشكوى</button>
-    <button id="view-btn">📥 عرض الشكاوى</button>
+    <button id="view-btn">📥 عرض الشكاوى على الخريطة</button>
+  </div>
+
+  <!-- 📋 صندوق عرض الشكاوي -->
+  <div id="complaints-list-box">
+    <h3>قائمة الشكاوي</h3>
+    <div id="complaints-list" style="max-height: 200px; overflow-y: auto;">
+      <p>لا توجد شكاوى بعد.</p>
+    </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
   <script>
-    const map = L.map("map", {
-      center: [31.9045, 35.2045],
-      zoom: 17.5
-    });
+    const map = L.map("map", { center: [31.9045, 35.2045], zoom: 17.5 });
 
     L.control.scale({ position: "bottomleft", metric: true }).addTo(map);
 
@@ -174,6 +199,26 @@
 
     let zonesData = [];
     let containersData = [];
+    let complaints = [];
+    let complaintsLayer = L.layerGroup().addTo(map);
+    let complaintMarker = null;
+    let complaintCoords = null;
+
+    // تحديث صندوق الشكاوي
+    function updateComplaintsList() {
+      const listDiv = document.getElementById("complaints-list");
+      if (complaints.length === 0) {
+        listDiv.innerHTML = "<p>لا توجد شكاوى بعد.</p>";
+        return;
+      }
+      let html = "<ul style='padding-left: 15px;'>";
+      complaints.forEach((c, index) => {
+        html += `<li><b>${index + 1}.</b> ${c.name} - ${c.phone} - ${c.type}<br>
+                 (${c.location.lat.toFixed(5)}, ${c.location.lng.toFixed(5)})</li>`;
+      });
+      html += "</ul>";
+      listDiv.innerHTML = html;
+    }
 
     // تحميل الحاويات
     $.getJSON("wasteContainer.json", function (WC) {
@@ -181,7 +226,6 @@
         pointToLayer: function (feature, latlng) {
           const name = feature.properties.Name || "حاوية بدون اسم";
 
-          // إنشاء marker للحاوية
           const marker = L.circleMarker(latlng, {
             radius: 6,
             fillColor: "orange",
@@ -196,7 +240,7 @@
             marker.bindPopup(`<b>اسم الحاوية:</b> ${name}`).openPopup();
           });
 
-          // buffer أخضر حول الحاوية
+          // buffer أخضر
           L.circle(latlng, {
             radius: 10,
             color: "green",
@@ -209,20 +253,13 @@
         }
       }).addTo(map);
 
-      // حفظ بيانات الحاويات للبحث
       containersData = WC.features;
     });
 
     // تحميل مناطق رام الله
     $.getJSON("RamallahZones.json", function (RZ) {
       L.geoJson(RZ, {
-        style: {
-          fillColor: "yellow",
-          fillOpacity: 0.3,
-          color: "yellow",
-          weight: 1,
-          opacity: 0.7
-        },
+        style: { fillColor: "yellow", fillOpacity: 0.3, color: "yellow", weight: 1, opacity: 0.7 },
         onEachFeature: function (feature, layer) {
           layer.on('click', function () {
             alert("Zone: " + feature.properties.NAME_ENGLI + "\nMAIL_CODE: " + feature.properties.MAIL_CODE);
@@ -232,12 +269,7 @@
       zonesData = RZ.features;
     });
 
-    // 📍 الشكاوي
-    let complaintMarker = null;
-    let complaintCoords = null;
-    let complaints = [];
-    let complaintsLayer = L.layerGroup().addTo(map);
-
+    // تحديد موقع الشكوى على الخريطة
     map.on('click', function (e) {
       complaintCoords = e.latlng;
       if (complaintMarker) map.removeLayer(complaintMarker);
@@ -246,6 +278,7 @@
         `موقع الشكوى: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`;
     });
 
+    // إرسال الشكوى
     document.getElementById("submit").addEventListener("click", function () {
       const name = document.getElementById("name").value.trim();
       const phone = document.getElementById("phone").value.trim();
@@ -257,6 +290,8 @@
       }
 
       complaints.push({ name, phone, type, location: complaintCoords });
+      updateComplaintsList();
+
       alert("✅ تم إرسال الشكوى بنجاح!");
       document.getElementById("name").value = "";
       document.getElementById("phone").value = "";
@@ -270,6 +305,7 @@
       }
     });
 
+    // عرض الشكاوي على الخريطة
     document.getElementById("view-btn").addEventListener("click", function () {
       complaintsLayer.clearLayers();
       if (complaints.length === 0) {
@@ -289,20 +325,16 @@
       alert(`تم عرض ${complaints.length} شكوى على الخريطة ✅`);
     });
 
-    // 🔍 البحث
+    // البحث
     document.getElementById("search-btn").addEventListener("click", function () {
       const query = document.getElementById("search-input").value.trim().toLowerCase();
-      if (!query) {
-        alert("اكتب اسم المنطقة أو الحاوية للبحث.");
-        return;
-      }
+      if (!query) { alert("اكتب اسم المنطقة أو الحاوية للبحث."); return; }
 
       const foundZone = zonesData.find(z => z.properties.NAME_ENGLI && z.properties.NAME_ENGLI.toLowerCase().includes(query));
       if (foundZone) {
         const bounds = L.geoJson(foundZone).getBounds();
         map.fitBounds(bounds);
-        L.popup()
-          .setLatLng(bounds.getCenter())
+        L.popup().setLatLng(bounds.getCenter())
           .setContent(`<b>منطقة:</b> ${foundZone.properties.NAME_ENGLI}`)
           .openOn(map);
         return;
@@ -312,8 +344,7 @@
       if (foundContainer) {
         const latlng = [foundContainer.geometry.coordinates[1], foundContainer.geometry.coordinates[0]];
         map.setView(latlng, 19);
-        L.popup()
-          .setLatLng(latlng)
+        L.popup().setLatLng(latlng)
           .setContent(`<b>حاوية:</b> ${foundContainer.properties.Name}`)
           .openOn(map);
         return;
