@@ -167,13 +167,12 @@
       zoom: 17.5
     });
 
-    // مقياس الخريطة (أسفل اليسار)
+    // مقياس الخريطة
     L.control.scale({ position: "bottomleft", metric: true }).addTo(map);
 
     // طبقة الأساس
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution:
-        '&copy; OpenStreetMap & CARTO',
+      attribution: '&copy; OpenStreetMap & CARTO',
       subdomains: 'abcd',
       maxZoom: 20
     }).addTo(map);
@@ -187,6 +186,7 @@
     $.getJSON("wasteContainer.json", function (WC) {
       wasteContainersLayer = L.geoJson(WC, {
         pointToLayer: function (feature, latlng) {
+          // إنشاء دائرة صغيرة لتمثيل الحاوية
           const marker = L.circleMarker(latlng, {
             radius: 6,
             fillColor: "orange",
@@ -195,7 +195,22 @@
             opacity: 1,
             fillOpacity: 0.9
           });
-          marker.bindPopup(`<b>اسم الحاوية:</b> ${feature.properties.Name || "غير معروف"}`);
+
+          // إنشاء Buffer دائري بنصف قطر 10 متر
+          const buffer = L.circle(latlng, {
+            radius: 10, // 10 متر
+            color: "orange",
+            fillColor: "orange",
+            fillOpacity: 0.1,
+            weight: 1
+          }).addTo(map);
+
+          // عند الضغط على الحاوية تظهر نافذة بالاسم
+          marker.on('click', function () {
+            const name = feature.properties.Name || "غير معروف";
+            marker.bindPopup(`<b>اسم الحاوية:</b> ${name}`).openPopup();
+          });
+
           return marker;
         }
       }).addTo(map);
