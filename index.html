@@ -4,6 +4,8 @@
 <head>
   <meta charset="utf-8" />
   <title>Ramallah Waste Containers</title>
+
+  <!-- مكتبة Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
 
   <style>
@@ -24,6 +26,7 @@
 <body>
   <div id="map"></div>
 
+  <!-- مكتبات جافاسكريبت -->
   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
@@ -31,13 +34,13 @@
     // إعداد الخريطة
     const mapOptions = {
       zoomSnap: 0.5,
-      center: [31.9045, 35.2045],
-      zoom: 17.5,
+      center: [31.9045, 35.2045], // مركز رام الله
+      zoom: 17.5
     };
 
     const map = L.map("map", mapOptions);
 
-    // خريطة الأساس
+    // طبقة الأساس (خلفية الخريطة)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -45,11 +48,11 @@
       maxZoom: 20
     }).addTo(map);
 
-    // تعريف متغيرات الطبقات (فارغة بالبداية)
+    // تعريف متغيرات الطبقات
     let zonesLayer;
     let wasteContainersLayer;
 
-    // تحميل بيانات حاويات النفايات
+    // تحميل طبقة الحاويات
     $.getJSON("wasteContainer.json", function (WC) {
       wasteContainersLayer = L.geoJson(WC, {
         pointToLayer: function (feature, latlng) {
@@ -65,7 +68,7 @@
       }).addTo(map);
     });
 
-    // تحميل بيانات المناطق
+    // تحميل طبقة مناطق رام الله
     $.getJSON("RamallahZones.json", function (RZ) {
       zonesLayer = L.geoJson(RZ, {
         style: function (feature) {
@@ -78,18 +81,22 @@
           };
         },
         onEachFeature: function (feature, layer) {
-          layer.on('click', function (e) {
+          layer.on('click', function () {
             alert("Zone: " + feature.properties.NAME_ENGLI + "\nMAIL_CODE: " + feature.properties.MAIL_CODE);
           });
         }
       }).addTo(map);
 
-      // لما تنتهي تحميل الطبقات، أضيف التحكم في الطبقات
+      // بعد تحميل المناطق، خريطة تتحرك لتغطيها كلها
+      map.fitBounds(zonesLayer.getBounds());
+
+      // إنشاء التحكم في الطبقات
       const baseLayers = {};
       const overlays = {
         "Zones": zonesLayer,
         "Waste Containers": wasteContainersLayer
       };
+
       L.control.layers(baseLayers, overlays).addTo(map);
     });
   </script>
