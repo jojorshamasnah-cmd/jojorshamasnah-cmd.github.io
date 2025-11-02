@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="ar">
-
 <head>
   <meta charset="utf-8" />
   <title>Ramallah Waste Containers</title>
@@ -29,7 +28,7 @@
       background: rgba(255, 255, 255, 0.95);
       padding: 10px;
       border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
       width: 240px;
       z-index: 1000;
     }
@@ -57,7 +56,7 @@
       background: #000;
     }
 
-    /* 📦 صندوق الشكاوي */
+    /* 📦 صندوق تعبئة الشكاوي */
     #complaint-box {
       position: absolute;
       top: 20px;
@@ -65,7 +64,7 @@
       background: rgba(255, 255, 255, 0.95);
       padding: 15px;
       border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
       width: 260px;
       z-index: 1000;
     }
@@ -121,28 +120,34 @@
       margin-bottom: 6px;
     }
 
-    /* 📋 صندوق عرض الشكاوي */
+    /* 📃 صندوق عرض الشكاوي */
     #complaints-list-box {
       position: absolute;
-      top: 300px;
+      top: 350px; /* تم رفعه لتحت صندوق تعبئة الشكاوي */
       right: 20px;
       width: 260px;
-      background: rgba(255, 255, 255, 0.95);
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(255,255,255,0.95);
       padding: 10px;
       border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
       z-index: 1000;
       font-size: 13px;
     }
 
-    #complaints-list-box h3 {
+    #complaints-list-box h4 {
+      margin-top: 0;
       text-align: center;
-      margin: 0 0 5px 0;
-      font-size: 14px;
     }
+
+    .complaint-item {
+      border-bottom: 1px solid #ccc;
+      padding: 4px 0;
+    }
+
   </style>
 </head>
-
 <body>
   <div id="map"></div>
 
@@ -152,15 +157,13 @@
     <button id="search-btn">بحث</button>
   </div>
 
-  <!-- 📦 صندوق الشكاوي -->
+  <!-- 📦 صندوق تعبئة الشكاوي -->
   <div id="complaint-box">
     <h3>صندوق الشكاوي</h3>
     <label>الاسم:</label>
     <input type="text" id="name" placeholder="اكتب اسمك">
-
     <label>رقم الهاتف:</label>
     <input type="text" id="phone" placeholder="05XXXXXXXX">
-
     <label>نوع الشكوى:</label>
     <select id="type">
       <option value="نظافة">نظافة</option>
@@ -168,33 +171,24 @@
       <option value="موقع خاطئ للحاوية">موقع خاطئ للحاوية</option>
       <option value="أخرى">أخرى</option>
     </select>
-
     <div id="coords">موقع الشكوى: لم يُحدد بعد</div>
-
     <button id="submit">إرسال الشكوى</button>
-    <button id="view-btn">📥 عرض الشكاوى على الخريطة</button>
+    <button id="view-btn">📥 عرض الشكاوى</button>
   </div>
 
-  <!-- 📋 صندوق عرض الشكاوي -->
+  <!-- 📃 صندوق عرض الشكاوي -->
   <div id="complaints-list-box">
-    <h3>قائمة الشكاوي</h3>
-    <div id="complaints-list" style="max-height: 200px; overflow-y: auto;">
-      <p>لا توجد شكاوى بعد.</p>
-    </div>
+    <h4>الشكاوى المسجلة</h4>
+    <div id="complaints-list"></div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-
   <script>
-    const map = L.map("map", { center: [31.9045, 35.2045], zoom: 17.5 });
-
-    L.control.scale({ position: "bottomleft", metric: true }).addTo(map);
-
+    const map = L.map("map", { center:[31.9045,35.2045], zoom:17.5 });
+    L.control.scale({ position:"bottomleft", metric:true }).addTo(map);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap & CARTO',
-      subdomains: 'abcd',
-      maxZoom: 20
+      attribution:'&copy; OpenStreetMap & CARTO', subdomains:'abcd', maxZoom:20
     }).addTo(map);
 
     let zonesData = [];
@@ -204,154 +198,103 @@
     let complaintMarker = null;
     let complaintCoords = null;
 
-    // تحديث صندوق الشكاوي
-    function updateComplaintsList() {
-      const listDiv = document.getElementById("complaints-list");
-      if (complaints.length === 0) {
-        listDiv.innerHTML = "<p>لا توجد شكاوى بعد.</p>";
-        return;
-      }
-      let html = "<ul style='padding-left: 15px;'>";
-      complaints.forEach((c, index) => {
-        html += `<li><b>${index + 1}.</b> ${c.name} - ${c.phone} - ${c.type}<br>
-                 (${c.location.lat.toFixed(5)}, ${c.location.lng.toFixed(5)})</li>`;
-      });
-      html += "</ul>";
-      listDiv.innerHTML = html;
-    }
-
     // تحميل الحاويات
-    $.getJSON("wasteContainer.json", function (WC) {
-      L.geoJson(WC, {
-        pointToLayer: function (feature, latlng) {
+    $.getJSON("wasteContainer.json", function(WC){
+      L.geoJson(WC,{
+        pointToLayer:function(feature, latlng){
           const name = feature.properties.Name || "حاوية بدون اسم";
-
-          const marker = L.circleMarker(latlng, {
-            radius: 6,
-            fillColor: "orange",
-            color: "orange",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.9
-          }).addTo(map);
-
-          // عند الضغط على الحاوية يظهر اسمها
-          marker.on("click", function () {
-            marker.bindPopup(`<b>اسم الحاوية:</b> ${name}`).openPopup();
-          });
-
-          // buffer أخضر
-          L.circle(latlng, {
-            radius: 10,
-            color: "green",
-            fillColor: "green",
-            fillOpacity: 0.15,
-            weight: 1
-          }).addTo(map);
-
+          const marker = L.circleMarker(latlng,{radius:6, fillColor:"orange", color:"orange", weight:1, opacity:1, fillOpacity:0.9}).addTo(map);
+          L.circle(latlng,{radius:10,color:"green", fillColor:"green", fillOpacity:0.15, weight:1}).addTo(map);
+          containersData = WC.features;
           return marker;
         }
       }).addTo(map);
-
-      containersData = WC.features;
     });
 
-    // تحميل مناطق رام الله
-    $.getJSON("RamallahZones.json", function (RZ) {
-      L.geoJson(RZ, {
-        style: { fillColor: "yellow", fillOpacity: 0.3, color: "yellow", weight: 1, opacity: 0.7 },
-        onEachFeature: function (feature, layer) {
-          layer.on('click', function () {
-            alert("Zone: " + feature.properties.NAME_ENGLI + "\nMAIL_CODE: " + feature.properties.MAIL_CODE);
-          });
+    // تحميل المناطق
+    $.getJSON("RamallahZones.json", function(RZ){
+      L.geoJson(RZ,{
+        style:{fillColor:"yellow", fillOpacity:0.3, color:"yellow", weight:1, opacity:0.7},
+        onEachFeature:function(feature,layer){
+          layer.on('click',function(){ alert("Zone: "+feature.properties.NAME_ENGLI+"\nMAIL_CODE: "+feature.properties.MAIL_CODE); });
         }
       }).addTo(map);
       zonesData = RZ.features;
     });
 
     // تحديد موقع الشكوى على الخريطة
-    map.on('click', function (e) {
+    map.on('click', function(e){
       complaintCoords = e.latlng;
-      if (complaintMarker) map.removeLayer(complaintMarker);
+      if(complaintMarker) map.removeLayer(complaintMarker);
       complaintMarker = L.marker(complaintCoords).addTo(map);
-      document.getElementById("coords").innerText =
-        `موقع الشكوى: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`;
+      document.getElementById("coords").innerText = `موقع الشكوى: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`;
     });
 
-    // إرسال الشكوى
-    document.getElementById("submit").addEventListener("click", function () {
+    // إرسال الشكوى وتحديث قائمة الشكاوى
+    function updateComplaintsList(){
+      const listDiv = document.getElementById("complaints-list");
+      listDiv.innerHTML = "";
+      complaints.forEach((c,i)=>{
+        const div = document.createElement("div");
+        div.className = "complaint-item";
+        div.innerHTML = `<b>${i+1}.</b> ${c.name} - ${c.type} - (${c.location.lat.toFixed(5)},${c.location.lng.toFixed(5)})`;
+        listDiv.appendChild(div);
+      });
+    }
+
+    document.getElementById("submit").addEventListener("click", function(){
       const name = document.getElementById("name").value.trim();
       const phone = document.getElementById("phone").value.trim();
       const type = document.getElementById("type").value;
 
-      if (!name || !phone || !complaintCoords) {
-        alert("املأ كل الحقول وحدد موقع الشكوى على الخريطة.");
-        return;
-      }
+      if(!name || !phone || !complaintCoords){ alert("املأ كل الحقول وحدد موقع الشكوى على الخريطة."); return; }
 
-      complaints.push({ name, phone, type, location: complaintCoords });
+      complaints.push({name, phone, type, location:complaintCoords});
       updateComplaintsList();
 
       alert("✅ تم إرسال الشكوى بنجاح!");
       document.getElementById("name").value = "";
       document.getElementById("phone").value = "";
-      document.getElementById("type").value = "نظافة";
-      document.getElementById("coords").innerText = "موقع الشكوى: لم يُحدد بعد";
+      document.getElementById("type").value="نظافة";
+      document.getElementById("coords").innerText="موقع الشكوى: لم يُحدد بعد";
 
-      if (complaintMarker) {
-        map.removeLayer(complaintMarker);
-        complaintMarker = null;
-        complaintCoords = null;
-      }
+      if(complaintMarker){ map.removeLayer(complaintMarker); complaintMarker=null; complaintCoords=null; }
     });
 
-    // عرض الشكاوي على الخريطة
-    document.getElementById("view-btn").addEventListener("click", function () {
+    // عرض الشكاوى على الخريطة
+    document.getElementById("view-btn").addEventListener("click", function(){
       complaintsLayer.clearLayers();
-      if (complaints.length === 0) {
-        alert("لا توجد شكاوى بعد.");
-        return;
-      }
-      complaints.forEach(c => {
-        L.circleMarker(c.location, {
-          radius: 6,
-          fillColor: "red",
-          color: "white",
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 0.9
-        }).bindPopup(`<b>الاسم:</b> ${c.name}<br><b>النوع:</b> ${c.type}`).addTo(complaintsLayer);
+      complaints.forEach(c=>{
+        L.circleMarker(c.location,{radius:6, fillColor:"red", color:"white", weight:1, opacity:1, fillOpacity:0.9})
+          .bindPopup(`<b>الاسم:</b> ${c.name}<br><b>النوع:</b> ${c.type}`).addTo(complaintsLayer);
       });
       alert(`تم عرض ${complaints.length} شكوى على الخريطة ✅`);
     });
 
     // البحث
-    document.getElementById("search-btn").addEventListener("click", function () {
-      const query = document.getElementById("search-input").value.trim().toLowerCase();
-      if (!query) { alert("اكتب اسم المنطقة أو الحاوية للبحث."); return; }
+    document.getElementById("search-btn").addEventListener("click", function(){
+      const query=document.getElementById("search-input").value.trim().toLowerCase();
+      if(!query){ alert("اكتب اسم المنطقة أو الحاوية للبحث."); return; }
 
-      const foundZone = zonesData.find(z => z.properties.NAME_ENGLI && z.properties.NAME_ENGLI.toLowerCase().includes(query));
-      if (foundZone) {
-        const bounds = L.geoJson(foundZone).getBounds();
+      const foundZone = zonesData.find(z=> z.properties.NAME_ENGLI && z.properties.NAME_ENGLI.toLowerCase().includes(query));
+      if(foundZone){
+        const bounds=L.geoJson(foundZone).getBounds();
         map.fitBounds(bounds);
-        L.popup().setLatLng(bounds.getCenter())
-          .setContent(`<b>منطقة:</b> ${foundZone.properties.NAME_ENGLI}`)
-          .openOn(map);
+        L.popup().setLatLng(bounds.getCenter()).setContent(`<b>منطقة:</b> ${foundZone.properties.NAME_ENGLI}`).openOn(map);
         return;
       }
 
-      const foundContainer = containersData.find(c => c.properties.Name && c.properties.Name.toLowerCase().includes(query));
-      if (foundContainer) {
-        const latlng = [foundContainer.geometry.coordinates[1], foundContainer.geometry.coordinates[0]];
-        map.setView(latlng, 19);
-        L.popup().setLatLng(latlng)
-          .setContent(`<b>حاوية:</b> ${foundContainer.properties.Name}`)
-          .openOn(map);
+      const foundContainer = containersData.find(c=>c.properties.Name && c.properties.Name.toLowerCase().includes(query));
+      if(foundContainer){
+        const latlng=[foundContainer.geometry.coordinates[1],foundContainer.geometry.coordinates[0]];
+        map.setView(latlng,19);
+        L.popup().setLatLng(latlng).setContent(`<b>حاوية:</b> ${foundContainer.properties.Name}`).openOn(map);
         return;
       }
 
       alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
+
   </script>
 </body>
 </html>
