@@ -59,7 +59,7 @@
     /* 📦 صندوق تعبئة الشكاوي */
     #complaint-box {
       position: absolute;
-      top: 100px; /* تم نزوله لتحت */
+      top: 120px; /* نزلته قليلاً لتحت */
       right: 20px;
       background: rgba(255, 255, 255, 0.95);
       padding: 15px;
@@ -123,7 +123,7 @@
     /* 📃 صندوق عرض الشكاوي */
     #complaints-list-box {
       position: absolute;
-      top: 450px; /* تم رفعه لتحت صندوق تعبئة الشكاوي الجديد */
+      top: 450px; /* أسفل صندوق الشكاوي */
       right: 20px;
       width: 260px;
       max-height: 300px;
@@ -146,24 +146,12 @@
       padding: 4px 0;
     }
 
-    /* مودال تأكيد الطوارئ */
-    .em-modal {
-      position: fixed; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
-      background: rgba(0,0,0,0.5); z-index: 2000; display:none;
-    }
-    .em-modal .card{
-      background:white; padding:18px; border-radius:10px; width:320px; text-align:center; direction:rtl;
-    }
-    .em-modal button{ width:48%; margin:6px 4px; }
-
-    #em-log { margin-top:8px; font-size:12px; color:#555; }
-
-    /* زر الطوارئ العائم أعلى يسار */
+    /* زر الطوارئ العائم أعلى يمين */
     #emergency-btn {
-      position: absolute;
-      top: 20px; /* أعلى يسار */
-      left: 20px;
-      z-index: 1000;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
       background: #dc3545;
       color: white;
       border: none;
@@ -174,18 +162,29 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     }
     #emergency-btn:hover { background: #b02a37; }
+
+    /* مودال تأكيد الطوارئ */
+    .em-modal {
+      position: fixed; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
+      background: rgba(0,0,0,0.5); z-index: 2000; display:none;
+    }
+    .em-modal .card{
+      background:white; padding:18px; border-radius:10px; width:320px; text-align:center; direction:rtl;
+    }
+    .em-modal button{ width:48%; margin:6px 4px; }
+    #em-log { margin-top:8px; font-size:12px; color:#555; }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- 🔍 صندوق البحث -->
+  <!-- صندوق البحث -->
   <div id="search-box">
     <input type="text" id="search-input" placeholder="ابحث عن منطقة أو حاوية..." />
     <button id="search-btn">بحث</button>
   </div>
 
-  <!-- 📦 صندوق تعبئة الشكاوي -->
+  <!-- صندوق تعبئة الشكاوي -->
   <div id="complaint-box">
     <h3>صندوق الشكاوي</h3>
     <label>الاسم:</label>
@@ -202,14 +201,13 @@
     <div id="coords">موقع الشكوى: لم يُحدد بعد</div>
     <button id="submit">إرسال الشكوى</button>
     <button id="view-btn">📥 عرض الشكاوى</button>
-
     <div id="em-log">سجل الطوارئ: لا توجد نداءات حالياً.</div>
   </div>
 
-  <!-- زر الطوارئ العائم أعلى يسار -->
+  <!-- زر الطوارئ -->
   <button id="emergency-btn">📞 نداء طوارئ</button>
 
-  <!-- 📃 صندوق عرض الشكاوي -->
+  <!-- صندوق عرض الشكاوى -->
   <div id="complaints-list-box">
     <h4>الشكاوى المسجلة</h4>
     <div id="complaints-list"></div>
@@ -219,7 +217,7 @@
   <div id="em-modal" class="em-modal">
     <div class="card">
       <h4>تأكيد نداء الطوارئ</h4>
-      <p id="em-modal-text">هل تريد إرسال نداء طوارئ لرفع النفايات عند الموقع المحدد؟</p>
+      <p id="em-modal-text"></p>
       <div style="display:flex; justify-content:space-between;">
         <button id="em-confirm" style="background:#dc3545; color:white;">نعم أرسل</button>
         <button id="em-cancel" style="background:#6c757d; color:white;">إلغاء</button>
@@ -292,7 +290,7 @@
       const type = document.getElementById("type").value;
       if(!name || !phone || !complaintCoords){ alert("املأ كل الحقول وحدد موقع الشكوى على الخريطة."); return; }
 
-      complaints.push({name, phone, type, location:complaintCoords, time: new Date().toISOString()});
+      complaints.push({name, phone, type, location:complaintCoords});
       updateComplaintsList();
 
       alert("✅ تم إرسال الشكوى بنجاح!");
@@ -337,7 +335,7 @@
       alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
 
-    // ============== نداء الطوارئ ==============
+    // نداء الطوارئ
     const EMERGENCY_CONTACTS = [
       { name: 'قسم النظافة - رام الله', phone: '+970599123456' },
       { name: 'مشغل الطوارئ', phone: '+970599654321' }
@@ -357,12 +355,10 @@
       EMERGENCY_CONTACTS.forEach(c=>{
         console.log(`🚨 إرسال نداء إلى ${c.name} (${c.phone}) عند الموقع ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`);
       });
-      const log = `🟢 تم إرسال نداء طوارئ عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)} في ${new Date().toLocaleString()}`;
-      document.getElementById('em-log').innerText=log;
-      try{ localStorage.setItem('em-log', log); }catch(e){}
+      document.getElementById('em-log').innerText=
+        `🟢 تم إرسال نداء طوارئ عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)} في ${new Date().toLocaleString()}`;
       alert('✅ تم إرسال نداء الطوارئ! (تم تسجيله في وحدة التحكم للعرض التجريبي)');
     });
-
   </script>
 </body>
 </html>
