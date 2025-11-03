@@ -20,7 +20,7 @@
       z-index: 1;
     }
 
-    /* 🔍 صندوق البحث */
+    /* صندوق البحث */
     #search-box {
       position: absolute;
       top: 20px;
@@ -56,10 +56,10 @@
       background: #000;
     }
 
-    /* 📦 صندوق تعبئة الشكاوي */
+    /* صندوق تعبئة الشكاوي */
     #complaint-box {
       position: absolute;
-      top: 120px; /* نزلته قليلاً لتحت */
+      top: 120px; /* أسفل قليلاً لتجنب التداخل */
       right: 20px;
       background: rgba(255, 255, 255, 0.95);
       padding: 15px;
@@ -120,7 +120,7 @@
       margin-bottom: 6px;
     }
 
-    /* 📃 صندوق عرض الشكاوي */
+    /* صندوق عرض الشكاوي */
     #complaints-list-box {
       position: absolute;
       top: 450px; /* أسفل صندوق الشكاوي */
@@ -146,11 +146,12 @@
       padding: 4px 0;
     }
 
-    /* زر الطوارئ العائم أعلى يمين */
+    /* زر الطوارئ أعلى الوسط */
     #emergency-btn {
       position: fixed;
       top: 20px;
-      right: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 9999;
       background: #dc3545;
       color: white;
