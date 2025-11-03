@@ -5,193 +5,58 @@
   <title>Ramallah Waste Containers</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
   <style>
-    body {
-      margin: 0;
-      height: 100%;
-      width: 100%;
-      font-family: Arial, sans-serif;
-      direction: rtl;
-    }
+    body { margin:0; height:100%; width:100%; font-family:Arial,sans-serif; direction:rtl; }
+    #map { position:absolute; width:100%; height:100%; z-index:1; }
 
-    #map {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-
-    /* صندوق البحث */
+    /* 🔍 صندوق البحث */
     #search-box {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 10px;
-      border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
-      width: 240px;
-      z-index: 1000;
+      position: absolute; top:20px; left:20px; background: rgba(255,255,255,0.95); padding:10px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.3); width:240px; z-index:1000;
     }
+    #search-box input { width:100%; padding:6px; border:1px solid #aaa; border-radius:5px; }
+    #search-box button { width:100%; margin-top:5px; padding:6px; background:#444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
+    #search-box button:hover { background:#000; }
 
-    #search-box input {
-      width: 100%;
-      padding: 6px;
-      border: 1px solid #aaa;
-      border-radius: 5px;
-    }
-
-    #search-box button {
-      width: 100%;
-      margin-top: 5px;
-      padding: 6px;
-      background: #444;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    #search-box button:hover {
-      background: #000;
-    }
-
-    /* صندوق تعبئة الشكاوي */
+    /* 📦 صندوق تعبئة الشكاوي */
     #complaint-box {
-      position: absolute;
-      top: 120px; /* أسفل قليلاً لتجنب التداخل */
-      right: 20px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
-      width: 260px;
-      z-index: 1000;
+      position: absolute; top:80px; right:20px; background: rgba(255,255,255,0.95); padding:15px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.3); width:260px; z-index:1000;
     }
+    #complaint-box h3 { margin-top:0; font-size:16px; text-align:center; }
+    #complaint-box label { font-size:13px; font-weight:bold; }
+    #complaint-box input, #complaint-box select { width:100%; margin-bottom:8px; padding:5px; border:1px solid #ccc; border-radius:5px; font-size:13px; }
+    #complaint-box button { width:100%; background:#007bff; color:white; border:none; padding:8px; border-radius:5px; cursor:pointer; font-weight:bold; margin-top:5px; }
+    #complaint-box button:hover { background:#0056b3; }
+    #view-btn { background:#28a745; }
+    #view-btn:hover { background:#1e7e34; }
+    #coords { font-size:12px; color:#333; margin-bottom:6px; }
 
-    #complaint-box h3 {
-      margin-top: 0;
-      font-size: 16px;
-      text-align: center;
-    }
-
-    #complaint-box label {
-      font-size: 13px;
-      font-weight: bold;
-    }
-
-    #complaint-box input,
-    #complaint-box select {
-      width: 100%;
-      margin-bottom: 8px;
-      padding: 5px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 13px;
-    }
-
-    #complaint-box button {
-      width: 100%;
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 8px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      margin-top: 5px;
-    }
-
-    #complaint-box button:hover {
-      background: #0056b3;
-    }
-
-    #view-btn {
-      background: #28a745;
-    }
-
-    #view-btn:hover {
-      background: #1e7e34;
-    }
-
-    #coords {
-      font-size: 12px;
-      color: #333;
-      margin-bottom: 6px;
-    }
-
-    /* صندوق عرض الشكاوي */
+    /* 📃 صندوق عرض الشكاوي */
     #complaints-list-box {
-      position: absolute;
-      top: 450px; /* أسفل صندوق الشكاوي */
-      right: 20px;
-      width: 260px;
-      max-height: 300px;
-      overflow-y: auto;
-      background: rgba(255,255,255,0.95);
-      padding: 10px;
-      border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
-      z-index: 1000;
-      font-size: 13px;
+      position:absolute; top:400px; right:20px; width:260px; max-height:300px; overflow-y:auto; background:rgba(255,255,255,0.95); padding:10px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.3); z-index:1000; font-size:13px;
     }
+    #complaints-list-box h4 { margin-top:0; text-align:center; }
+    .complaint-item { border-bottom:1px solid #ccc; padding:4px 0; }
 
-    #complaints-list-box h4 {
-      margin-top: 0;
-      text-align: center;
-    }
-
-    .complaint-item {
-      border-bottom: 1px solid #ccc;
-      padding: 4px 0;
-    }
-
-    /* زر الطوارئ أعلى الوسط */
+    /* زر الطوارئ */
     #emergency-btn {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 9999;
-      background: #dc3545;
-      color: white;
-      border: none;
-      padding: 12px 18px;
-      border-radius: 50px;
-      font-size: 14px;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      position: fixed; top:20px; left:50%; transform:translateX(-50%); z-index:9999; background:#dc3545; color:white; border:none; padding:12px 18px; border-radius:50px; font-size:14px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4);
     }
-    #emergency-btn:hover { background: #b02a37; }
-
-    /* مودال تأكيد الطوارئ */
-    .em-modal {
-      position: fixed; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
-      background: rgba(0,0,0,0.5); z-index: 2000; display:none;
-    }
-    .em-modal .card{
-      background:white; padding:18px; border-radius:10px; width:320px; text-align:center; direction:rtl;
-    }
-    .em-modal button{ width:48%; margin:6px 4px; }
-    #em-log { margin-top:8px; font-size:12px; color:#555; }
+    #emergency-btn:hover { background:#b02a37; }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- صندوق البحث -->
+  <!-- 🔍 صندوق البحث -->
   <div id="search-box">
     <input type="text" id="search-input" placeholder="ابحث عن منطقة أو حاوية..." />
     <button id="search-btn">بحث</button>
   </div>
 
-  <!-- صندوق تعبئة الشكاوي -->
+  <!-- 📦 صندوق تعبئة الشكاوي -->
   <div id="complaint-box">
     <h3>صندوق الشكاوي</h3>
-    <label>الاسم:</label>
-    <input type="text" id="name" placeholder="اكتب اسمك">
-    <label>رقم الهاتف:</label>
-    <input type="text" id="phone" placeholder="05XXXXXXXX">
+    <label>الاسم:</label><input type="text" id="name" placeholder="اكتب اسمك">
+    <label>رقم الهاتف:</label><input type="text" id="phone" placeholder="05XXXXXXXX">
     <label>نوع الشكوى:</label>
     <select id="type">
       <option value="نظافة">نظافة</option>
@@ -202,45 +67,27 @@
     <div id="coords">موقع الشكوى: لم يُحدد بعد</div>
     <button id="submit">إرسال الشكوى</button>
     <button id="view-btn">📥 عرض الشكاوى</button>
-    <div id="em-log">سجل الطوارئ: لا توجد نداءات حالياً.</div>
   </div>
 
-  <!-- زر الطوارئ -->
-  <button id="emergency-btn">📞 نداء طوارئ</button>
-
-  <!-- صندوق عرض الشكاوى -->
+  <!-- 📃 صندوق عرض الشكاوي -->
   <div id="complaints-list-box">
     <h4>الشكاوى المسجلة</h4>
     <div id="complaints-list"></div>
   </div>
 
-  <!-- مودال تأكيد الطوارئ -->
-  <div id="em-modal" class="em-modal">
-    <div class="card">
-      <h4>تأكيد نداء الطوارئ</h4>
-      <p id="em-modal-text"></p>
-      <div style="display:flex; justify-content:space-between;">
-        <button id="em-confirm" style="background:#dc3545; color:white;">نعم أرسل</button>
-        <button id="em-cancel" style="background:#6c757d; color:white;">إلغاء</button>
-      </div>
-    </div>
-  </div>
+  <!-- زر الطوارئ -->
+  <button id="emergency-btn">📞 نداء طوارئ</button>
 
   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
   <script>
     const map = L.map("map", { center:[31.9045,35.2045], zoom:17.5 });
     L.control.scale({ position:"bottomleft", metric:true }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution:'&copy; OpenStreetMap & CARTO', subdomains:'abcd', maxZoom:20
-    }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; OpenStreetMap & CARTO', subdomains:'abcd', maxZoom:20 }).addTo(map);
 
-    let zonesData = [];
-    let containersData = [];
-    let complaints = [];
-    let complaintsLayer = L.layerGroup().addTo(map);
-    let complaintMarker = null;
-    let complaintCoords = null;
+    let zonesData = [], containersData = [], complaints = [], complaintsLayer = L.layerGroup().addTo(map);
+    let complaintMarker = null, complaintCoords = null;
 
     // تحميل الحاويات
     $.getJSON("wasteContainer.json", function(WC){
@@ -256,11 +103,8 @@
 
     // تحميل المناطق
     $.getJSON("RamallahZones.json", function(RZ){
-      L.geoJson(RZ,{
-        style:{fillColor:"yellow", fillOpacity:0.3, color:"yellow", weight:1, opacity:0.7},
-        onEachFeature:function(feature,layer){
-          layer.on('click',function(){ alert("Zone: "+feature.properties.NAME_ENGLI+"\nMAIL_CODE: "+feature.properties.MAIL_CODE); });
-        }
+      L.geoJson(RZ,{ style:{fillColor:"yellow", fillOpacity:0.3, color:"yellow", weight:1, opacity:0.7},
+        onEachFeature:function(feature,layer){ layer.on('click',()=>{ alert("Zone: "+feature.properties.NAME_ENGLI+"\nMAIL_CODE: "+feature.properties.MAIL_CODE); }); }
       }).addTo(map);
       zonesData = RZ.features;
     });
@@ -273,37 +117,31 @@
       document.getElementById("coords").innerText = `موقع الشكوى: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`;
     });
 
-    // إرسال الشكوى وتحديث قائمة الشكاوى
+    // إرسال الشكوى
     function updateComplaintsList(){
-      const listDiv = document.getElementById("complaints-list");
-      listDiv.innerHTML = "";
+      const listDiv = document.getElementById("complaints-list"); listDiv.innerHTML="";
       complaints.forEach((c,i)=>{
-        const div = document.createElement("div");
-        div.className = "complaint-item";
-        div.innerHTML = `<b>${i+1}.</b> ${c.name} - ${c.type} - (${c.location.lat.toFixed(5)},${c.location.lng.toFixed(5)})`;
+        const div=document.createElement("div"); div.className="complaint-item";
+        div.innerHTML=`<b>${i+1}.</b> ${c.name} - ${c.type} - (${c.location.lat.toFixed(5)},${c.location.lng.toFixed(5)})`;
         listDiv.appendChild(div);
       });
     }
 
-    document.getElementById("submit").addEventListener("click", function(){
+    document.getElementById("submit").addEventListener("click",()=>{
       const name = document.getElementById("name").value.trim();
       const phone = document.getElementById("phone").value.trim();
       const type = document.getElementById("type").value;
       if(!name || !phone || !complaintCoords){ alert("املأ كل الحقول وحدد موقع الشكوى على الخريطة."); return; }
-
       complaints.push({name, phone, type, location:complaintCoords});
       updateComplaintsList();
-
       alert("✅ تم إرسال الشكوى بنجاح!");
-      document.getElementById("name").value = "";
-      document.getElementById("phone").value = "";
-      document.getElementById("type").value="نظافة";
+      document.getElementById("name").value = ""; document.getElementById("phone").value = ""; document.getElementById("type").value="نظافة";
       document.getElementById("coords").innerText="موقع الشكوى: لم يُحدد بعد";
       if(complaintMarker){ map.removeLayer(complaintMarker); complaintMarker=null; complaintCoords=null; }
     });
 
     // عرض الشكاوى على الخريطة
-    document.getElementById("view-btn").addEventListener("click", function(){
+    document.getElementById("view-btn").addEventListener("click",()=>{
       complaintsLayer.clearLayers();
       complaints.forEach(c=>{
         L.circleMarker(c.location,{radius:6, fillColor:"red", color:"white", weight:1, opacity:1, fillOpacity:0.9})
@@ -313,53 +151,38 @@
     });
 
     // البحث
-    document.getElementById("search-btn").addEventListener("click", function(){
+    document.getElementById("search-btn").addEventListener("click",()=>{
       const query=document.getElementById("search-input").value.trim().toLowerCase();
       if(!query){ alert("اكتب اسم المنطقة أو الحاوية للبحث."); return; }
-
       const foundZone = zonesData.find(z=> z.properties.NAME_ENGLI && z.properties.NAME_ENGLI.toLowerCase().includes(query));
-      if(foundZone){
-        const bounds=L.geoJson(foundZone).getBounds();
-        map.fitBounds(bounds);
-        L.popup().setLatLng(bounds.getCenter()).setContent(`<b>منطقة:</b> ${foundZone.properties.NAME_ENGLI}`).openOn(map);
-        return;
-      }
-
+      if(foundZone){ const bounds=L.geoJson(foundZone).getBounds(); map.fitBounds(bounds); L.popup().setLatLng(bounds.getCenter()).setContent(`<b>منطقة:</b> ${foundZone.properties.NAME_ENGLI}`).openOn(map); return; }
       const foundContainer = containersData.find(c=>c.properties.Name && c.properties.Name.toLowerCase().includes(query));
-      if(foundContainer){
-        const latlng=[foundContainer.geometry.coordinates[1],foundContainer.geometry.coordinates[0]];
-        map.setView(latlng,19);
-        L.popup().setLatLng(latlng).setContent(`<b>حاوية:</b> ${foundContainer.properties.Name}`).openOn(map);
-        return;
-      }
-
+      if(foundContainer){ const latlng=[foundContainer.geometry.coordinates[1],foundContainer.geometry.coordinates[0]]; map.setView(latlng,19); L.popup().setLatLng(latlng).setContent(`<b>حاوية:</b> ${foundContainer.properties.Name}`).openOn(map); return; }
       alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
 
-    // نداء الطوارئ
+    // 🔹 مسار جمع الحاويات الممتلئة
+    function drawCollectionRoute(){
+      // افترضنا الحاويات الممتلئة هي كل الحاويات (يمكن فلترتها حسب خاصية)
+      const filledContainers = containersData.map(c => [c.geometry.coordinates[1], c.geometry.coordinates[0]]);
+      if(filledContainers.length<2) return;
+      const line = turf.lineString(filledContainers.map(c=>[c[1],c[0]]));
+      L.geoJSON(line,{style:{color:'blue',weight:4,opacity:0.7}}).addTo(map);
+    }
+
+    // زر الطوارئ
     const EMERGENCY_CONTACTS = [
       { name: 'قسم النظافة - رام الله', phone: '+970599123456' },
       { name: 'مشغل الطوارئ', phone: '+970599654321' }
     ];
-
     document.getElementById('emergency-btn').addEventListener('click',()=>{
       if(!complaintCoords){ alert('حدد موقع الطوارئ على الخريطة أولاً!'); return; }
-      document.getElementById('em-modal').style.display='flex';
-      document.getElementById('em-modal-text').innerText=
-        `هل تريد إرسال نداء طوارئ لرفع النفايات عند الموقع: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}؟`;
+      EMERGENCY_CONTACTS.forEach(c=>{ console.log(`🚨 نداء إلى ${c.name} (${c.phone}) عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`); });
+      alert('✅ تم إرسال نداء الطوارئ! (راجع وحدة التحكم للعرض التجريبي)');
     });
 
-    document.getElementById('em-cancel').addEventListener('click',()=>{ document.getElementById('em-modal').style.display='none'; });
-
-    document.getElementById('em-confirm').addEventListener('click',()=>{
-      document.getElementById('em-modal').style.display='none';
-      EMERGENCY_CONTACTS.forEach(c=>{
-        console.log(`🚨 إرسال نداء إلى ${c.name} (${c.phone}) عند الموقع ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`);
-      });
-      document.getElementById('em-log').innerText=
-        `🟢 تم إرسال نداء طوارئ عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)} في ${new Date().toLocaleString()}`;
-      alert('✅ تم إرسال نداء الطوارئ! (تم تسجيله في وحدة التحكم للعرض التجريبي)');
-    });
+    // رسم المسار بعد تحميل الحاويات
+    setTimeout(drawCollectionRoute, 1000); // ننتظر تحميل الحاويات
   </script>
 </body>
 </html>
