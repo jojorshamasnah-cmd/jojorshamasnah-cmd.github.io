@@ -162,18 +162,61 @@
       alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
 
-    // زر الطوارئ
-    const EMERGENCY_CONTACTS = [
-      { name: 'قسم النظافة - رام الله', phone: '+970599123456' },
-      { name: 'مشغل الطوارئ', phone: '+970599654321' }
-    ];
-    document.getElementById('emergency-btn').addEventListener('click',()=>{
-      if(!complaintCoords){ alert('حدد موقع الطوارئ على الخريطة أولاً!'); return; }
-      EMERGENCY_CONTACTS.forEach(c=>{ console.log(`🚨 نداء إلى ${c.name} (${c.phone}) عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`); });
-      alert('✅ تم إرسال نداء الطوارئ! (راجع وحدة التحكم للعرض التجريبي)');
-    });
+// <!-- زر الطوارئ -->
+<button id="emergency-btn">📞 نداء طوارئ</button>
 
-  </script>
-</body>
+<!-- مودال تأكيد الطوارئ -->
+<div id="em-modal" class="em-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:2000;">
+  <div class="card" style="background:white; padding:18px; border-radius:10px; width:320px; text-align:center; direction:rtl;">
+    <h4>تأكيد نداء الطوارئ</h4>
+    <p id="em-modal-text"></p>
+    <div style="display:flex; justify-content:space-between;">
+      <button id="em-confirm" style="background:#dc3545; color:white; width:48%; margin:6px 4px;">نعم أرسل</button>
+      <button id="em-cancel" style="background:#6c757d; color:white; width:48%; margin:6px 4px;">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- سجل الطوارئ -->
+<div id="em-log" style="font-size:12px; color:#555; margin-top:8px;"></div>
+
+<script>
+  // قائمة جهات الاتصال للطوارئ
+  const EMERGENCY_CONTACTS = [
+    { name: 'قسم النظافة - رام الله', phone: '+970599123456' },
+    { name: 'مشغل الطوارئ', phone: '+970599654321' }
+  ];
+
+  let complaintCoords = null; // الموقع الذي يحدده المستخدم على الخريطة
+
+  // عند الضغط على زر الطوارئ
+  document.getElementById('emergency-btn').addEventListener('click',()=>{
+    if(!complaintCoords){
+      alert('حدد موقع الطوارئ على الخريطة أولاً!');
+      return;
+    }
+    document.getElementById('em-modal').style.display='flex';
+    document.getElementById('em-modal-text').innerText=
+      `هل تريد إرسال نداء طوارئ لرفع النفايات عند الموقع: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}؟`;
+  });
+
+  // إغلاق المودال عند الإلغاء
+  document.getElementById('em-cancel').addEventListener('click',()=>{
+    document.getElementById('em-modal').style.display='none';
+  });
+
+  // تأكيد إرسال نداء الطوارئ
+  document.getElementById('em-confirm').addEventListener('click',()=>{
+    document.getElementById('em-modal').style.display='none';
+    EMERGENCY_CONTACTS.forEach(c=>{
+      console.log(`🚨 إرسال نداء إلى ${c.name} (${c.phone}) عند الموقع ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`);
+    });
+    document.getElementById('em-log').innerText=
+      `🟢 تم إرسال نداء طوارئ عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)} في ${new Date().toLocaleString()}`;
+    alert('✅ تم إرسال نداء الطوارئ! (تم تسجيله في وحدة التحكم للعرض التجريبي)');
+  });
+</script>
+  </body>
 </html>
+
 
