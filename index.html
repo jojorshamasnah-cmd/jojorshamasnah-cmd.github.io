@@ -16,18 +16,18 @@
     #search-box button { width:100%; margin-top:5px; padding:6px; background:#444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
     #search-box button:hover { background:#000; }
 
-/* 📦 صندوق تعبئة الشكاوي */
-#complaint-box {
-  position: absolute;
-  top: 80px; /* تم رفعه أكثر */
-  right: 20px;
-  background: rgba(255,255,255,0.95);
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 0 8px rgba(0,0,0,0.3);
-  width: 260px;
-  z-index: 1000;
-}
+    /* 📦 صندوق تعبئة الشكاوي */
+    #complaint-box {
+      position: absolute; top:80px; right:20px; background: rgba(255,255,255,0.95); padding: 15px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.3); width:260px; z-index:1000;
+    }
+    #complaint-box h3 { margin-top:0; font-size:16px; text-align:center; }
+    #complaint-box label { font-size:13px; font-weight:bold; }
+    #complaint-box input, #complaint-box select { width:100%; margin-bottom:8px; padding:5px; border:1px solid #ccc; border-radius:5px; font-size:13px; }
+    #complaint-box button { width:100%; background:#007bff; color:white; border:none; padding:8px; border-radius:5px; cursor:pointer; font-weight:bold; margin-top:5px; }
+    #complaint-box button:hover { background:#0056b3; }
+    #view-btn { background:#28a745; }
+    #view-btn:hover { background:#1e7e34; }
+    #coords { font-size:12px; color:#333; margin-bottom:6px; }
 
     /* 📃 صندوق عرض الشكاوي */
     #complaints-list-box {
@@ -41,6 +41,11 @@
       position: fixed; top:20px; left:50%; transform:translateX(-50%); z-index:9999; background:#dc3545; color:white; border:none; padding:12px 18px; border-radius:50px; font-size:14px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4);
     }
     #emergency-btn:hover { background:#b02a37; }
+
+    /* مودال الطوارئ */
+    .em-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:2000; }
+    .em-modal .card { background:white; padding:18px; border-radius:10px; width:320px; text-align:center; direction:rtl; }
+    .em-modal button { padding:8px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
   </style>
 </head>
 <body>
@@ -78,6 +83,21 @@
   <!-- زر الطوارئ -->
   <button id="emergency-btn">📞 نداء طوارئ</button>
 
+  <!-- مودال تأكيد الطوارئ -->
+  <div id="em-modal" class="em-modal">
+    <div class="card">
+      <h4>تأكيد نداء الطوارئ</h4>
+      <p id="em-modal-text"></p>
+      <div style="display:flex; justify-content:space-between;">
+        <button id="em-confirm" style="background:#dc3545; color:white; width:48%;">نعم أرسل</button>
+        <button id="em-cancel" style="background:#6c757d; color:white; width:48%;">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- سجل الطوارئ -->
+  <div id="em-log" style="font-size:12px; color:#555; margin-top:8px;"></div>
+
   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script>
@@ -86,7 +106,7 @@
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; OpenStreetMap & CARTO', subdomains:'abcd', maxZoom:20 }).addTo(map);
 
     let zonesData = [], containersData = [], complaints = [], complaintsLayer = L.layerGroup().addTo(map);
-    let complaintMarker = null, complaintCoords = null;
+    let complaintMarker = null, complaintCoords = null; // هنا التعريف الوحيد
 
     // تحميل الحاويات
     $.getJSON("wasteContainer.json", function(WC){
@@ -162,61 +182,33 @@
       alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
 
-// <!-- زر الطوارئ -->
-<button id="emergency-btn">📞 نداء طوارئ</button>
+    // الطوارئ
+    const EMERGENCY_CONTACTS = [
+      { name: 'قسم النظافة - رام الله', phone: '+970599123456' },
+      { name: 'مشغل الطوارئ', phone: '+970599654321' }
+    ];
 
-<!-- مودال تأكيد الطوارئ -->
-<div id="em-modal" class="em-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:2000;">
-  <div class="card" style="background:white; padding:18px; border-radius:10px; width:320px; text-align:center; direction:rtl;">
-    <h4>تأكيد نداء الطوارئ</h4>
-    <p id="em-modal-text"></p>
-    <div style="display:flex; justify-content:space-between;">
-      <button id="em-confirm" style="background:#dc3545; color:white; width:48%; margin:6px 4px;">نعم أرسل</button>
-      <button id="em-cancel" style="background:#6c757d; color:white; width:48%; margin:6px 4px;">إلغاء</button>
-    </div>
-  </div>
-</div>
-
-<!-- سجل الطوارئ -->
-<div id="em-log" style="font-size:12px; color:#555; margin-top:8px;"></div>
-
-<script>
-  // قائمة جهات الاتصال للطوارئ
-  const EMERGENCY_CONTACTS = [
-    { name: 'قسم النظافة - رام الله', phone: '+970599123456' },
-    { name: 'مشغل الطوارئ', phone: '+970599654321' }
-  ];
-
-  let complaintCoords = null; // الموقع الذي يحدده المستخدم على الخريطة
-
-  // عند الضغط على زر الطوارئ
-  document.getElementById('emergency-btn').addEventListener('click',()=>{
-    if(!complaintCoords){
-      alert('حدد موقع الطوارئ على الخريطة أولاً!');
-      return;
-    }
-    document.getElementById('em-modal').style.display='flex';
-    document.getElementById('em-modal-text').innerText=
-      `هل تريد إرسال نداء طوارئ لرفع النفايات عند الموقع: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}؟`;
-  });
-
-  // إغلاق المودال عند الإلغاء
-  document.getElementById('em-cancel').addEventListener('click',()=>{
-    document.getElementById('em-modal').style.display='none';
-  });
-
-  // تأكيد إرسال نداء الطوارئ
-  document.getElementById('em-confirm').addEventListener('click',()=>{
-    document.getElementById('em-modal').style.display='none';
-    EMERGENCY_CONTACTS.forEach(c=>{
-      console.log(`🚨 إرسال نداء إلى ${c.name} (${c.phone}) عند الموقع ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`);
+    document.getElementById('emergency-btn').addEventListener('click',()=>{
+      if(!complaintCoords){
+        alert('حدد موقع الطوارئ على الخريطة أولاً!');
+        return;
+      }
+      document.getElementById('em-modal').style.display='flex';
+      document.getElementById('em-modal-text').innerText=
+        `هل تريد إرسال نداء طوارئ عند الموقع: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}؟`;
     });
-    document.getElementById('em-log').innerText=
-      `🟢 تم إرسال نداء طوارئ عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)} في ${new Date().toLocaleString()}`;
-    alert('✅ تم إرسال نداء الطوارئ! (تم تسجيله في وحدة التحكم للعرض التجريبي)');
-  });
-</script>
-  </body>
+
+    document.getElementById('em-cancel').addEventListener('click',()=>{ document.getElementById('em-modal').style.display='none'; });
+
+    document.getElementById('em-confirm').addEventListener('click',()=>{
+      document.getElementById('em-modal').style.display='none';
+      EMERGENCY_CONTACTS.forEach(c=>{
+        console.log(`🚨 إرسال نداء إلى ${c.name} (${c.phone}) عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`);
+      });
+      document.getElementById('em-log').innerText=
+        `🟢 تم إرسال نداء طوارئ عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)} في ${new Date().toLocaleString()}`;
+      alert('✅ تم إرسال نداء الطوارئ! (راجع وحدة التحكم للعرض التجريبي)');
+    });
+  </script>
+</body>
 </html>
-
-
