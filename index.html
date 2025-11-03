@@ -120,16 +120,10 @@
       margin-bottom: 6px;
     }
 
-    /* زر الطوارئ */
-    #emergency-btn {
-      background: #dc3545;
-    }
-    #emergency-btn:hover { background: #b02a37; }
-
     /* 📃 صندوق عرض الشكاوي */
     #complaints-list-box {
       position: absolute;
-      top: 350px; /* تم رفعه لتحت صندوق تعبئة الشكاوي */
+      top: 350px; /* تحت صندوق تعبئة الشكاوي */
       right: 20px;
       width: 260px;
       max-height: 300px;
@@ -152,7 +146,7 @@
       padding: 4px 0;
     }
 
-    /* مودال تأكيد */
+    /* مودال تأكيد الطوارئ */
     .em-modal {
       position: fixed; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
       background: rgba(0,0,0,0.5); z-index: 2000; display:none;
@@ -161,8 +155,25 @@
       background:white; padding:18px; border-radius:10px; width:320px; text-align:center; direction:rtl;
     }
     .em-modal button{ width:48%; margin:6px 4px; }
+
     #em-log { margin-top:8px; font-size:12px; color:#555; }
 
+    /* زر الطوارئ العائم */
+    #emergency-btn {
+      position: absolute;
+      bottom: 30px;
+      left: 30px;
+      z-index: 1000;
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 50px;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+    #emergency-btn:hover { background: #b02a37; }
   </style>
 </head>
 <body>
@@ -191,10 +202,12 @@
     <div id="coords">موقع الشكوى: لم يُحدد بعد</div>
     <button id="submit">إرسال الشكوى</button>
     <button id="view-btn">📥 عرض الشكاوى</button>
-    <button id="emergency-btn">📞 نداء طوارئ: جمع نفايات</button>
 
     <div id="em-log">سجل الطوارئ: لا توجد نداءات حالياً.</div>
   </div>
+
+  <!-- زر الطوارئ العائم -->
+  <button id="emergency-btn">📞 نداء طوارئ</button>
 
   <!-- 📃 صندوق عرض الشكاوي -->
   <div id="complaints-list-box">
@@ -234,7 +247,6 @@
     $.getJSON("wasteContainer.json", function(WC){
       L.geoJson(WC,{
         pointToLayer:function(feature, latlng){
-          const name = feature.properties.Name || "حاوية بدون اسم";
           const marker = L.circleMarker(latlng,{radius:6, fillColor:"orange", color:"orange", weight:1, opacity:1, fillOpacity:0.9}).addTo(map);
           L.circle(latlng,{radius:10,color:"green", fillColor:"green", fillOpacity:0.15, weight:1}).addTo(map);
           containersData = WC.features;
@@ -278,7 +290,6 @@
       const name = document.getElementById("name").value.trim();
       const phone = document.getElementById("phone").value.trim();
       const type = document.getElementById("type").value;
-
       if(!name || !phone || !complaintCoords){ alert("املأ كل الحقول وحدد موقع الشكوى على الخريطة."); return; }
 
       complaints.push({name, phone, type, location:complaintCoords, time: new Date().toISOString()});
@@ -289,7 +300,6 @@
       document.getElementById("phone").value = "";
       document.getElementById("type").value="نظافة";
       document.getElementById("coords").innerText="موقع الشكوى: لم يُحدد بعد";
-
       if(complaintMarker){ map.removeLayer(complaintMarker); complaintMarker=null; complaintCoords=null; }
     });
 
@@ -327,97 +337,36 @@
       alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
 
-    // ================== إضافة خاصية نداء الطوارئ ==================
-    // ضع أرقام الطوارئ الحقيقية هنا (يمكن تعديلها لاحقاً)
+    // ============== نداء الطوارئ ==============
     const EMERGENCY_CONTACTS = [
       { name: 'قسم النظافة - رام الله', phone: '+970599123456' },
       { name: 'مشغل الطوارئ', phone: '+970599654321' }
     ];
 
-    // سجل نداءات الطوارئ في localStorage (للاختبار)
     function loadEmLog(){
-      try{ const raw = localStorage.getItem('rw_emlog'); return raw? JSON.parse(raw): []; }catch(e){ return []; }
+      try{ const raw = localStorage.getItem('em-log'); if(raw) document.getElementById('em-log').innerText=raw; }catch(e){}
     }
-    function saveEmLog(log){ try{ localStorage.setItem('rw_emlog', JSON.stringify(log)); }catch(e){} }
+    loadEmLog();
 
-    function appendEmLog(entry){
-      const log = loadEmLog();
-      log.unshift(entry);
-      saveEmLog(log);
-      renderEmLog();
-    }
-
-    function renderEmLog(){
-      const log = loadEmLog();
-      const el = document.getElementById('em-log');
-      if(log.length === 0) { el.innerText = 'سجل الطوارئ: لا توجد نداءات حالياً.'; return; }
-      el.innerHTML = '<b>سجل الطوارئ (أحدث 5):</b><br>' + log.slice(0,5).map(it=>`• ${new Date(it.time).toLocaleString()} — ${it.contact || 'مستخدم'} (${it.lat.toFixed(5)}, ${it.lng.toFixed(5)})`).join('<br>');
-    }
-
-    renderEmLog();
-
-    // عناصر الواجهة للمودال
-    const emBtn = document.getElementById('emergency-btn');
-    const emModal = document.getElementById('em-modal');
-    const emConfirm = document.getElementById('em-confirm');
-    const emCancel = document.getElementById('em-cancel');
-
-    emBtn.addEventListener('click', ()=>{
-      if(!complaintCoords){ alert('حدّد الموقع على الخريطة أولاً (انقر على الخريطة)'); return; }
-      document.getElementById('em-modal-text').innerText = `هل تريد إرسال نداء طوارئ لرفع النفايات عند الموقع: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}؟`;
-      emModal.style.display = 'flex';
-    });
-    emCancel.addEventListener('click', ()=>{ emModal.style.display='none'; });
-
-    emConfirm.addEventListener('click', async ()=>{
-      emModal.style.display='none';
-      const payload = {
-        lat: complaintCoords.lat,
-        lng: complaintCoords.lng,
-        time: new Date().toISOString(),
-        note: 'نداء طوارئ عبر الواجهة',
-        reporter: { name: document.getElementById('name').value || 'مواطن', phone: document.getElementById('phone').value || '' }
-      };
-
-      // سجل محلي
-      appendEmLog({ ...payload, contact: 'محلي' });
-
-      // محاولة إرسال إلى السيرفر (إن وجد) — استبدل المسار بعنوان API الحقيقي لديك
-      try{
-        fetch('/api/emergency-notify', {
-          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
-        }).then(r=>{
-          if(r.ok){
-            appendEmLog({ ...payload, contact: 'server' });
-          }
-        }).catch(e=>{
-          // إن فشل، نترك السجل المحلي كاحتياط
-        });
-      }catch(e){}
-
-      // عرض أرقام الاتصال وروابط سريعة للاتصال أو واتساب
-      const detailsLines = EMERGENCY_CONTACTS.map(c=> `${c.name}: ${c.phone}`).join('\n');
-      alert('تم إرسال نداء الطوارئ محلياً.\nيمكنك الآن الاتصال بالأرقام التالية أو إرسال رسالة واتساب:\n\n' + detailsLines);
-
-      // تفعيل Notification إن سمح المستخدم
-      try{ if('Notification' in window && Notification.permission !== 'granted') await Notification.requestPermission(); }catch(e){}
-      if('Notification' in window && Notification.permission === 'granted'){
-        new Notification('نداء طوارئ - جمع نفايات', { body: `موقع: ${payload.lat.toFixed(5)}, ${payload.lng.toFixed(5)}` });
-      }
-
-      // تشغيل صوت تنبيه بسيط (يمكن استبداله بملف حقيقي)
-      try{
-        const audio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=');
-        audio.play().catch(()=>{});
-      }catch(e){}
-      
-      // بعد النداء، نعرض نافذة صغيرة تحتوي على روابط الاتصال (ضمّنها إن أردت في واجهة أجمل)
-      // مثال: مباشرة الانتقال إلى تطبيق الاتصال على الجوال (اختياري):
-      // window.location.href = 'tel:+970599123456';
+    document.getElementById('emergency-btn').addEventListener('click',()=>{
+      if(!complaintCoords){ alert('حدد موقع الطوارئ على الخريطة أولاً!'); return; }
+      document.getElementById('em-modal').style.display='flex';
+      document.getElementById('em-modal-text').innerText=
+        `هل تريد إرسال نداء طوارئ لرفع النفايات عند الموقع: ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}؟`;
     });
 
-    // --- اختياري: render أزرار اتصالات سريعة (لو تريد مكان ثابت) ---
-    // لو أردت إضافة زر صغير يعرض قائمة بالأرقام في واجهة منبثقة بدل alert، أخبرني وأضيفها.
+    document.getElementById('em-cancel').addEventListener('click',()=>{ document.getElementById('em-modal').style.display='none'; });
+
+    document.getElementById('em-confirm').addEventListener('click',()=>{
+      document.getElementById('em-modal').style.display='none';
+      EMERGENCY_CONTACTS.forEach(c=>{
+        console.log(`🚨 إرسال نداء إلى ${c.name} (${c.phone}) عند الموقع ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)}`);
+      });
+      const log = `🟢 تم إرسال نداء طوارئ عند ${complaintCoords.lat.toFixed(5)}, ${complaintCoords.lng.toFixed(5)} في ${new Date().toLocaleString()}`;
+      document.getElementById('em-log').innerText=log;
+      try{ localStorage.setItem('em-log', log); }catch(e){}
+      alert('✅ تم إرسال نداء الطوارئ! (تم تسجيله في وحدة التحكم للعرض التجريبي)');
+    });
 
   </script>
 </body>
