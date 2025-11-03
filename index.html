@@ -80,7 +80,6 @@
 
   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
   <script>
     const map = L.map("map", { center:[31.9045,35.2045], zoom:17.5 });
     L.control.scale({ position:"bottomleft", metric:true }).addTo(map);
@@ -96,7 +95,6 @@
           const marker = L.circleMarker(latlng,{radius:6, fillColor:"orange", color:"orange", weight:1, opacity:1, fillOpacity:0.9}).addTo(map);
           L.circle(latlng,{radius:10,color:"green", fillColor:"green", fillOpacity:0.15, weight:1}).addTo(map);
           containersData = WC.features;
-          drawCollectionRoute(); // ارسم المسار بعد تحميل الحاويات
           return marker;
         }
       }).addTo(map);
@@ -136,7 +134,9 @@
       complaints.push({name, phone, type, location:complaintCoords});
       updateComplaintsList();
       alert("✅ تم إرسال الشكوى بنجاح!");
-      document.getElementById("name").value = ""; document.getElementById("phone").value = ""; document.getElementById("type").value="نظافة";
+      document.getElementById("name").value = ""; 
+      document.getElementById("phone").value = ""; 
+      document.getElementById("type").value="نظافة";
       document.getElementById("coords").innerText="موقع الشكوى: لم يُحدد بعد";
       if(complaintMarker){ map.removeLayer(complaintMarker); complaintMarker=null; complaintCoords=null; }
     });
@@ -161,14 +161,6 @@
       if(foundContainer){ const latlng=[foundContainer.geometry.coordinates[1],foundContainer.geometry.coordinates[0]]; map.setView(latlng,19); L.popup().setLatLng(latlng).setContent(`<b>حاوية:</b> ${foundContainer.properties.Name}`).openOn(map); return; }
       alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
-
-    // 🔹 رسم خط جمع الحاويات
-    function drawCollectionRoute(){
-      if(!containersData || containersData.length<2) return;
-      const points = containersData.map(c=>[c.geometry.coordinates[1], c.geometry.coordinates[0]]);
-      const line = turf.lineString(points.map(p=>[p[1],p[0]]));
-      L.geoJSON(line,{style:{color:'blue', weight:4, opacity:0.7}}).addTo(map);
-    }
 
     // زر الطوارئ
     const EMERGENCY_CONTACTS = [
