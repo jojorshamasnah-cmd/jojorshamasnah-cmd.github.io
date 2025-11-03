@@ -18,7 +18,7 @@
 
     /* 📦 صندوق تعبئة الشكاوي */
     #complaint-box {
-      position: absolute; top:80px; right:20px; background: rgba(255,255,255,0.95); padding:15px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.3); width:260px; z-index:1000;
+      position: absolute; top:120px; right:20px; background: rgba(255,255,255,0.95); padding:15px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.3); width:260px; z-index:1000;
     }
     #complaint-box h3 { margin-top:0; font-size:16px; text-align:center; }
     #complaint-box label { font-size:13px; font-weight:bold; }
@@ -96,6 +96,7 @@
           const marker = L.circleMarker(latlng,{radius:6, fillColor:"orange", color:"orange", weight:1, opacity:1, fillOpacity:0.9}).addTo(map);
           L.circle(latlng,{radius:10,color:"green", fillColor:"green", fillOpacity:0.15, weight:1}).addTo(map);
           containersData = WC.features;
+          drawCollectionRoute(); // ارسم المسار بعد تحميل الحاويات
           return marker;
         }
       }).addTo(map);
@@ -161,13 +162,12 @@
       alert("❌ لم يتم العثور على أي منطقة أو حاوية بهذا الاسم.");
     });
 
-    // 🔹 مسار جمع الحاويات الممتلئة
+    // 🔹 رسم خط جمع الحاويات
     function drawCollectionRoute(){
-      // افترضنا الحاويات الممتلئة هي كل الحاويات (يمكن فلترتها حسب خاصية)
-      const filledContainers = containersData.map(c => [c.geometry.coordinates[1], c.geometry.coordinates[0]]);
-      if(filledContainers.length<2) return;
-      const line = turf.lineString(filledContainers.map(c=>[c[1],c[0]]));
-      L.geoJSON(line,{style:{color:'blue',weight:4,opacity:0.7}}).addTo(map);
+      if(!containersData || containersData.length<2) return;
+      const points = containersData.map(c=>[c.geometry.coordinates[1], c.geometry.coordinates[0]]);
+      const line = turf.lineString(points.map(p=>[p[1],p[0]]));
+      L.geoJSON(line,{style:{color:'blue', weight:4, opacity:0.7}}).addTo(map);
     }
 
     // زر الطوارئ
@@ -181,8 +181,6 @@
       alert('✅ تم إرسال نداء الطوارئ! (راجع وحدة التحكم للعرض التجريبي)');
     });
 
-    // رسم المسار بعد تحميل الحاويات
-    setTimeout(drawCollectionRoute, 1000); // ننتظر تحميل الحاويات
   </script>
 </body>
 </html>
