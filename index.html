@@ -2,9 +2,14 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>Ramallah Boundary Map</title>
+  <title>Ramallah Boundary Map with Search</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <!-- Leaflet Search CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-search@2.9.9/dist/leaflet-search.min.css"/>
+
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; }
   </style>
@@ -12,8 +17,13 @@
 <body>
   <div id="map"></div>
 
+  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Search JS -->
+  <script src="https://unpkg.com/leaflet-control-search@2.9.9/dist/leaflet-search.min.js"></script>
+
   <script>
     // ================================
     // Initialize map focused on Ramallah
@@ -23,7 +33,7 @@
     map.fitBounds(ramallahBounds);
     map.setMaxBounds(ramallahBounds);
 
-    // ✅ إضافة Scale Control
+    // ✅ Add Scale Control
     L.control.scale({
         position: 'bottomleft',
         metric: true,
@@ -31,21 +41,29 @@
     }).addTo(map);
 
     // ================================
-    // Load Ramallah Boundary
+    // Load Ramallah Boundary GeoJSON
     // ================================
     $.getJSON("Ramallah.json", function(data){
-      L.geoJson(data, {
-        style: {
-          color: "yellow",
-          weight: 2,
-          fillColor: "yellow",
-          fillOpacity: 0.2
-        },
+      var ramallahLayer = L.geoJson(data, {
+        style: {color: "yellow", weight: 2, fillOpacity: 0.2},
         onEachFeature: function(feature, layer){
-          layer.bindPopup("Zone: " + (feature.properties.NAME || "N/A"));
-          layer.bindTooltip(feature.properties.NAME || "N/A");
+          layer.bindPopup(feature.properties.NAME || "N/A");
         }
       }).addTo(map);
+
+      // ================================
+      // Add Search Control
+      // ================================
+      var searchControl = new L.Control.Search({
+        layer: ramallahLayer,
+        propertyName: 'NAME', // الاسم اللي يظهر في البحث
+        marker: false,
+        moveToLocation: function(latlng, title, map) {
+          map.setView(latlng, 12); // تكبير على المنطقة
+        }
+      });
+      searchControl.addTo(map);
+
     });
   </script>
 </body>
