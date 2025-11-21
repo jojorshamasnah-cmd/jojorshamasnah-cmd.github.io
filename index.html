@@ -23,139 +23,82 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Layers objects
+    // Layers variables
     let wellsLayer, temperatureLayer, streamsLayer, settlementsLayer, schoolsLayer,
         roadsLayer, ramallahLayer, quarriesLayer, buildingsLayer, 
         wallAreasLayer, wallLayer, agriLayer;
 
-    // Wells
-    $.getJSON("Wells.json", function(data){
-      wellsLayer = L.geoJson(data, {
-        pointToLayer: function(feature, latlng){
-          return L.circleMarker(latlng, {
-            radius: 5, fillColor: "#00A86B", color: "#00A86B", fillOpacity: 0.8
-          });
-        },
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Well ID: " + (feature.properties.ID || "N/A"));
-        }
-      }).addTo(map);
-    });
+    // Function to load GeoJSON and add popup
+    function loadLayer(fileName, options, callback){
+      $.getJSON(fileName + ".json", function(data){
+        let layer = L.geoJson(data, options).addTo(map);
+        if(callback) callback(layer);
+      });
+    }
 
-    // Temperature
-    $.getJSON("Temperature.json", function(data){
-      temperatureLayer = L.geoJson(data, {
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Temperature: " + (feature.properties.value || "N/A"));
-        }
-      }).addTo(map);
-    });
+    // Load all layers
+    loadLayer("Wells", {
+      pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:5, fillColor:"#00A86B", color:"#00A86B", fillOpacity:0.8}),
+      onEachFeature: (f, layer) => layer.bindPopup("Well ID: " + (f.properties.ID || "N/A"))
+    }, layer => { wellsLayer = layer; });
 
-    // Streams
-    $.getJSON("Streams.json", function(data){
-      streamsLayer = L.geoJson(data, {
-        style: {color:"#2980B9", weight:2},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Stream: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Temperature", {
+      onEachFeature: (f, layer) => layer.bindPopup("Temperature: " + (f.properties.value || "N/A"))
+    }, layer => { temperatureLayer = layer; });
 
-    // Settlements
-    $.getJSON("Settlements.json", function(data){
-      settlementsLayer = L.geoJson(data, {
-        style: {color:"#FF3B30", weight:1, fillColor:"#FF6B6B", fillOpacity:0.5},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Settlement: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Streams", {
+      style:{color:"#2980B9", weight:2},
+      onEachFeature: (f, layer) => layer.bindPopup("Stream: " + (f.properties.NAME || "N/A"))
+    }, layer => { streamsLayer = layer; });
 
-    // Schools
-    $.getJSON("Schools.json", function(data){
-      schoolsLayer = L.geoJson(data, {
-        pointToLayer: function(feature, latlng){
-          return L.circleMarker(latlng, {radius:5, fillColor:"#FFD60A", color:"#FFD60A", fillOpacity:0.8});
-        },
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("School: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Settlements", {
+      style:{color:"#FF3B30", weight:1, fillColor:"#FF6B6B", fillOpacity:0.5},
+      onEachFeature: (f, layer) => layer.bindPopup("Settlement: " + (f.properties.NAME || "N/A"))
+    }, layer => { settlementsLayer = layer; });
 
-    // Roads
-    $.getJSON("Roads.json", function(data){
-      roadsLayer = L.geoJson(data, {
-        style:{color:"#0A84FF", weight:1.5},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Road: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Schools", {
+      pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:5, fillColor:"#FFD60A", color:"#FFD60A", fillOpacity:0.8}),
+      onEachFeature: (f, layer) => layer.bindPopup("School: " + (f.properties.NAME || "N/A"))
+    }, layer => { schoolsLayer = layer; });
 
-    // Ramallah (City boundary)
-    $.getJSON("Ramallah.json", function(data){
-      ramallahLayer = L.geoJson(data, {
-        style:{fillColor:"yellow", fillOpacity:0.3, color:"yellow", weight:1},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Zone: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Roads", {
+      style:{color:"#0A84FF", weight:1.5},
+      onEachFeature: (f, layer) => layer.bindPopup("Road: " + (f.properties.NAME || "N/A"))
+    }, layer => { roadsLayer = layer; });
 
-    // Quarries
-    $.getJSON("Quarries.json", function(data){
-      quarriesLayer = L.geoJson(data, {
-        style:{color:"#6D4C41", weight:1, fillColor:"#8D6E63", fillOpacity:0.6},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Quarry: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Ramallah", {
+      style:{fillColor:"yellow", fillOpacity:0.3, color:"yellow", weight:1},
+      onEachFeature: (f, layer) => layer.bindPopup("Zone: " + (f.properties.NAME || "N/A"))
+    }, layer => { ramallahLayer = layer; });
 
-    // Buildings
-    $.getJSON("Buildings.json", function(data){
-      buildingsLayer = L.geoJson(data, {
-        style:{color:"#4A4A4A", weight:0.5, fillColor:"#BDBDBD", fillOpacity:0.4},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Building: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Quarries", {
+      style:{color:"#6D4C41", weight:1, fillColor:"#8D6E63", fillOpacity:0.6},
+      onEachFeature: (f, layer) => layer.bindPopup("Quarry: " + (f.properties.NAME || "N/A"))
+    }, layer => { quarriesLayer = layer; });
 
-    // Areas totally closed by the wall
-    $.getJSON("Areas_totaly_closed_by_the_wall.json", function(data){
-      wallAreasLayer = L.geoJson(data, {
-        style:{color:"#7F8C8D", weight:1, fillColor:"#95A5A6", fillOpacity:0.5},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Closed Area: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Buildings", {
+      style:{color:"#4A4A4A", weight:0.5, fillColor:"#BDBDBD", fillOpacity:0.4},
+      onEachFeature: (f, layer) => layer.bindPopup("Building: " + (f.properties.NAME || "N/A"))
+    }, layer => { buildingsLayer = layer; });
 
-    // Annexation Wall
-    $.getJSON("Annexation_Wall.json", function(data){
-      wallLayer = L.geoJson(data, {
-        style:{color:"#000000", weight:3},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Wall Section: " + (feature.properties.NAME || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Areas_totaly_closed_by_the_wall", {
+      style:{color:"#7F8C8D", weight:1, fillColor:"#95A5A6", fillOpacity:0.5},
+      onEachFeature: (f, layer) => layer.bindPopup("Closed Area: " + (f.properties.NAME || "N/A"))
+    }, layer => { wallAreasLayer = layer; });
 
-    // Agricultural Land
-    $.getJSON("Agricultural_Land.json", function(data){
-      agriLayer = L.geoJson(data, {
-        style:{color:"#27AE60", weight:1, fillColor:"#2ECC71", fillOpacity:0.5},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup("Agri Land Score: " + (feature.properties.SCORE || "N/A"));
-        }
-      }).addTo(map);
-    });
+    loadLayer("Annexation_Wall", {
+      style:{color:"#000000", weight:3},
+      onEachFeature: (f, layer) => layer.bindPopup("Wall Section: " + (f.properties.NAME || "N/A"))
+    }, layer => { wallLayer = layer; });
 
-    // Layer control
-    function addLayerControl() {
-      const overlays = {
+    loadLayer("Agricultural_Land", {
+      style:{color:"#27AE60", weight:1, fillColor:"#2ECC71", fillOpacity:0.5},
+      onEachFeature: (f, layer) => layer.bindPopup("Agri Land Score: " + (f.properties.SCORE || "N/A"))
+    }, layer => { agriLayer = layer; });
+
+    // Layer Control (wait 1.5s to ensure layers are loaded)
+    setTimeout(function(){
+      L.control.layers({}, {
         "Wells": wellsLayer,
         "Temperature": temperatureLayer,
         "Streams": streamsLayer,
@@ -168,35 +111,9 @@
         "Closed Areas": wallAreasLayer,
         "Annexation Wall": wallLayer,
         "Agricultural Land": agriLayer
-      };
-      L.control.layers({}, overlays).addTo(map);
-    }
-
-    // Wait a little to add layer control after layers are loaded
-    setTimeout(addLayerControl, 1000);
+      }).addTo(map);
+    }, 1500);
 
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
