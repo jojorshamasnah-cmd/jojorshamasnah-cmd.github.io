@@ -1,63 +1,185 @@
-$.getJSON("Wells.json", function(data) {
-  L.geoJson(data, {
-    pointToLayer: function (feature, latlng) {
-      return L.circleMarker(latlng, {
-        radius: 5,
-        color: "#00A86B",
-        fillColor: "#00A86B",
-        fillOpacity: 0.8
-      });
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>West Bank GeoBrain</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Initialize map
+    var map = L.map('map').setView([31.9, 35.2], 10);
+
+    // Base map
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Layers objects
+    let wellsLayer, temperatureLayer, streamsLayer, settlementsLayer, schoolsLayer,
+        roadsLayer, ramallahLayer, quarriesLayer, buildingsLayer, 
+        wallAreasLayer, wallLayer, agriLayer;
+
+    // Wells
+    $.getJSON("Wells.json", function(data){
+      wellsLayer = L.geoJson(data, {
+        pointToLayer: function(feature, latlng){
+          return L.circleMarker(latlng, {
+            radius: 5, fillColor: "#00A86B", color: "#00A86B", fillOpacity: 0.8
+          });
+        },
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Well ID: " + (feature.properties.ID || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Temperature
+    $.getJSON("Temperature.json", function(data){
+      temperatureLayer = L.geoJson(data, {
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Temperature: " + (feature.properties.value || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Streams
+    $.getJSON("Streams.json", function(data){
+      streamsLayer = L.geoJson(data, {
+        style: {color:"#2980B9", weight:2},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Stream: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Settlements
+    $.getJSON("Settlements.json", function(data){
+      settlementsLayer = L.geoJson(data, {
+        style: {color:"#FF3B30", weight:1, fillColor:"#FF6B6B", fillOpacity:0.5},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Settlement: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Schools
+    $.getJSON("Schools.json", function(data){
+      schoolsLayer = L.geoJson(data, {
+        pointToLayer: function(feature, latlng){
+          return L.circleMarker(latlng, {radius:5, fillColor:"#FFD60A", color:"#FFD60A", fillOpacity:0.8});
+        },
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("School: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Roads
+    $.getJSON("Roads.json", function(data){
+      roadsLayer = L.geoJson(data, {
+        style:{color:"#0A84FF", weight:1.5},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Road: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Ramallah (City boundary)
+    $.getJSON("Ramallah.json", function(data){
+      ramallahLayer = L.geoJson(data, {
+        style:{fillColor:"yellow", fillOpacity:0.3, color:"yellow", weight:1},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Zone: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Quarries
+    $.getJSON("Quarries.json", function(data){
+      quarriesLayer = L.geoJson(data, {
+        style:{color:"#6D4C41", weight:1, fillColor:"#8D6E63", fillOpacity:0.6},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Quarry: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Buildings
+    $.getJSON("Buildings.json", function(data){
+      buildingsLayer = L.geoJson(data, {
+        style:{color:"#4A4A4A", weight:0.5, fillColor:"#BDBDBD", fillOpacity:0.4},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Building: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Areas totally closed by the wall
+    $.getJSON("Areas_totaly_closed_by_the_wall.json", function(data){
+      wallAreasLayer = L.geoJson(data, {
+        style:{color:"#7F8C8D", weight:1, fillColor:"#95A5A6", fillOpacity:0.5},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Closed Area: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Annexation Wall
+    $.getJSON("Annexation_Wall.json", function(data){
+      wallLayer = L.geoJson(data, {
+        style:{color:"#000000", weight:3},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Wall Section: " + (feature.properties.NAME || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Agricultural Land
+    $.getJSON("Agricultural_Land.json", function(data){
+      agriLayer = L.geoJson(data, {
+        style:{color:"#27AE60", weight:1, fillColor:"#2ECC71", fillOpacity:0.5},
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Agri Land Score: " + (feature.properties.SCORE || "N/A"));
+        }
+      }).addTo(map);
+    });
+
+    // Layer control
+    function addLayerControl() {
+      const overlays = {
+        "Wells": wellsLayer,
+        "Temperature": temperatureLayer,
+        "Streams": streamsLayer,
+        "Settlements": settlementsLayer,
+        "Schools": schoolsLayer,
+        "Roads": roadsLayer,
+        "Ramallah": ramallahLayer,
+        "Quarries": quarriesLayer,
+        "Buildings": buildingsLayer,
+        "Closed Areas": wallAreasLayer,
+        "Annexation Wall": wallLayer,
+        "Agricultural Land": agriLayer
+      };
+      L.control.layers({}, overlays).addTo(map);
     }
-  }).addTo(map);
-});
+
+    // Wait a little to add layer control after layers are loaded
+    setTimeout(addLayerControl, 1000);
+
+  </script>
+</body>
+</html>
 
 
-$.getJSON("Temperature.json", function(temp) {
-  L.geoJson(temp).addTo(map);
-});
-
-
-$.getJSON("Streams.json", function(streams) {
-  L.geoJson(streams).addTo(map);
-});
-
-$.getJSON("Settlements.json", function(settlements) {
-  L.geoJson(settlements).addTo(map);
-});
-
-$.getJSON("Schools.json", function(schools) {
-  L.geoJson(schools).addTo(map);
-});
-
-$.getJSON("Roads.json", function(roads) {
-  L.geoJson(roads).addTo(map);
-});
-
-$.getJSON("Ramallah.json", function(ramallah) {
-  L.geoJson(ramallah).addTo(map);
-});
-
-
-$.getJSON("Quarries.json", function(quarries) {
-  L.geoJson(quarries).addTo(map);
-});
-
-
-
-$.getJSON("Areas_totaly_closed_by_the_wall.json", function(closedAreas) {
-  L.geoJson(closedAreas).addTo(map);
-});
-
-
-
-
-$.getJSON("Annexation_Wall.json", function(wall) {
-  L.geoJson(wall).addTo(map);
-});
-
-$.getJSON("Agricultural_Land.json", function(agri) {
-  L.geoJson(agri).addTo(map);
-});
 
 
 
