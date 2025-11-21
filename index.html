@@ -1,140 +1,146 @@
-<!DOCTYPE html>
-<html lang="ar">
-<head>
-  <meta charset="UTF-8">
-  <title>West Bank GeoBrain - Ramallah</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <!-- Leaflet Search CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-search@2.9.9/dist/leaflet-search.min.css"/>
-
-  <style>
-    html, body, #map { height: 100%; margin: 0; padding: 0; }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-
-  <!-- jQuery -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Leaflet Search JS -->
-  <script src="https://unpkg.com/leaflet-control-search@2.9.9/dist/leaflet-search.min.js"></script>
-
-  <script>
-    // ================================
-    // Initialize map focused on Ramallah
-    // ================================
-    var map = L.map('map');
-    var ramallahBounds = L.latLngBounds([[31.7, 35.0], [32.05, 35.35]]);
-    map.fitBounds(ramallahBounds);
-    map.setMaxBounds(ramallahBounds);
-
-    // ✅ Add Scale Control
-    L.control.scale({
-        position: 'bottomleft',
-        metric: true,
-        imperial: false
-    }).addTo(map);
-
-    // ================================
-    // Layer Groups
-    // ================================
-    var overlays = {};
-
-    // ===== Ramallah Boundary =====
-    var ramallahLayer = L.layerGroup();
-    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Ramallah.json", function(data){
-      var geo = L.geoJson(data, {
-        style: {color: "yellow", weight: 2, fillOpacity: 0.2},
-        onEachFeature: function(feature, layer){
-          layer.bindPopup(feature.properties.NAME || "N/A");
-        }
+// 1) Agricultural_Land
+$.getJSON("Agricultural_Land.json", function(data) {
+  L.geoJson(data, {
+    pointToLayer: function(feature, latlng) {
+      return L.circleMarker(latlng, {
+        radius: 5,
+        fillColor: "orange",
+        color: "orange",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
       });
-      geo.addTo(ramallahLayer);
-      ramallahLayer.addTo(map);
+    }
+  }).addTo(map);
+});
 
-      // ===== Search Control =====
-      var searchControl = new L.Control.Search({
-        layer: geo,
-        propertyName: 'NAME',
-        marker: false,
-        moveToLocation: function(latlng, title, map) {
-          map.setView(latlng, 12);
-        }
+
+// 2) Annexation_Wall
+$.getJSON("Annexation_Wall.json", function(data) {
+  L.geoJson(data, {
+    style: {
+      color: "orange",
+      weight: 2
+    }
+  }).addTo(map);
+});
+
+
+// 3) Areas_totaly_closed_by_the_wall
+$.getJSON("Areas_totaly_closed_by_the_wall.json", function(data) {
+  L.geoJson(data, {
+    style: {
+      color: "orange",
+      weight: 1,
+      fillOpacity: 0.5
+    }
+  }).addTo(map);
+});
+
+
+// 4) Quarries
+$.getJSON("Quarries.json", function(data) {
+  L.geoJson(data, {
+    pointToLayer: function(feature, latlng) {
+      return L.circleMarker(latlng, {
+        radius: 6,
+        fillColor: "orange",
+        color: "orange",
+        weight: 1,
+        fillOpacity: 0.8
       });
-      searchControl.addTo(map);
-    });
-    overlays["Ramallah Boundary"] = ramallahLayer;
+    }
+  }).addTo(map);
+});
 
-    // ===== Roads Layer =====
-    var roadsLayer = L.layerGroup();
-    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Roads.json", function(data){
-      L.geoJson(data, {
-        style: {color: "blue", weight: 2},
-        onEachFeature: function(feature, layer){
-          if(feature.properties.NAME){
-            layer.bindPopup("Road: " + feature.properties.NAME);
-          }
-        }
-      }).addTo(roadsLayer);
-      roadsLayer.addTo(map);
-    });
-    overlays["Roads"] = roadsLayer;
 
-    // ===== Schools Layer =====
-    var schoolsLayer = L.layerGroup();
-    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Schools.json", function(data){
-      L.geoJson(data, {
-        pointToLayer: function(feature, latlng){
-          return L.circleMarker(latlng, {radius:5, color:"green", fillColor:"green", fillOpacity:0.7});
-        },
-        onEachFeature: function(feature, layer){
-          if(feature.properties.NAME){
-            layer.bindPopup("School: " + feature.properties.NAME);
-          }
-        }
-      }).addTo(schoolsLayer);
-      schoolsLayer.addTo(map);
-    });
-    overlays["Schools"] = schoolsLayer;
+// 5) Ramallah
+$.getJSON("Ramallah.json", function(data) {
+  L.geoJson(data, {
+    style: {
+      color: "orange",
+      weight: 2
+    }
+  }).addTo(map);
+});
 
-    // ===== Buildings Layer =====
-    var buildingsLayer = L.layerGroup();
-    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Buildings.json", function(data){
-      L.geoJson(data, {
-        style: {color: "red", weight:1, fillOpacity:0.5},
-        onEachFeature: function(feature, layer){
-          if(feature.properties.NAME){
-            layer.bindPopup("Building: " + feature.properties.NAME);
-          }
-        }
-      }).addTo(buildingsLayer);
-      buildingsLayer.addTo(map);
-    });
-    overlays["Buildings"] = buildingsLayer;
 
-    // ===== Settlements Layer =====
-    var settlementsLayer = L.layerGroup();
-    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Settlements.json", function(data){
-      L.geoJson(data, {
-        style: {color:"brown", weight:1.5, fillOpacity:0.4},
-        onEachFeature: function(feature, layer){
-          if(feature.properties.NAME){
-            layer.bindPopup("Settlement: " + feature.properties.NAME);
-          }
-        }
-      }).addTo(settlementsLayer);
-      settlementsLayer.addTo(map);
-    });
-    overlays["Settlements"] = settlementsLayer;
+// 6) Roads
+$.getJSON("Roads.json", function(data) {
+  L.geoJson(data, {
+    style: {
+      color: "orange",
+      weight: 1.5
+    }
+  }).addTo(map);
+});
 
-    // ===== Add Layer Control =====
-    L.control.layers(null, overlays, {collapsed:false}).addTo(map);
 
-  </script>
-</body>
-</html>
+// 7) Schools
+$.getJSON("Schools.json", function(data) {
+  L.geoJson(data, {
+    pointToLayer: function(feature, latlng) {
+      return L.circleMarker(latlng, {
+        radius: 5,
+        fillColor: "orange",
+        color: "orange",
+        weight: 1,
+        fillOpacity: 0.9
+      });
+    }
+  }).addTo(map);
+});
+
+
+// 8) Settlements
+$.getJSON("Settlements.json", function(data) {
+  L.geoJson(data, {
+    style: {
+      color: "orange",
+      weight: 1,
+      fillOpacity: 0.5
+    }
+  }).addTo(map);
+});
+
+
+// 9) Streams
+$.getJSON("Streams.json", function(data) {
+  L.geoJson(data, {
+    style: {
+      color: "orange",
+      weight: 1
+    }
+  }).addTo(map);
+});
+
+
+// 10) Temperature
+$.getJSON("Temperature.json", function(data) {
+  L.geoJson(data, {
+    pointToLayer: function(feature, latlng) {
+      return L.circleMarker(latlng, {
+        radius: 5,
+        color: "orange",
+        fillColor: "orange",
+        fillOpacity: 0.8
+      });
+    }
+  }).addTo(map);
+});
+
+
+// 11) Wells
+$.getJSON("Wells.json", function(data) {
+  L.geoJson(data, {
+    pointToLayer: function(feature, latlng) {
+      return L.circleMarker(latlng, {
+        radius: 6,
+        fillColor: "orange",
+        color: "orange",
+        weight: 1,
+        fillOpacity: 0.8
+      });
+    }
+  }).addTo(map);
+});
