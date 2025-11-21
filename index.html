@@ -16,7 +16,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // ================================
-    // Initialize map centered on Ramallah
+    // Initialize map focused on Ramallah
     // ================================
     var map = L.map('map');
 
@@ -26,11 +26,6 @@
     );
     map.fitBounds(ramallahBounds);
     map.setMaxBounds(ramallahBounds);
-
-    // Base map (OSM)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
 
     // ================================
     // Layers variables
@@ -112,7 +107,7 @@
     }, layer => { agriLayer = layer; });
 
     // ================================
-    // Layer Control (تفعيل وإخفاء)
+    // Layer Control
     // ================================
     setTimeout(function(){
       L.control.layers({}, {
