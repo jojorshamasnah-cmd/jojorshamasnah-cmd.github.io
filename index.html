@@ -2,12 +2,11 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>West Bank GeoBrain - Ramallah</title>
+  <title>Ramallah Boundary Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; }
-    .legend { background:white; padding:10px; line-height:1.5em; }
   </style>
 </head>
 <body>
@@ -24,7 +23,7 @@
     map.fitBounds(ramallahBounds);
     map.setMaxBounds(ramallahBounds);
 
-    // ✅ إضافة مقياس المسافة
+    // ✅ إضافة Scale Control
     L.control.scale({
         position: 'bottomleft',
         metric: true,
@@ -32,140 +31,22 @@
     }).addTo(map);
 
     // ================================
-    // Layers variables
+    // Load Ramallah Boundary
     // ================================
-    let wellsLayer, temperatureLayer, streamsLayer, settlementsLayer, schoolsLayer,
-        roadsLayer, ramallahLayer, quarriesLayer, buildingsLayer, 
-        wallAreasLayer, wallLayer, agriLayer;
-
-    // ================================
-    // Function to load GeoJSON layer
-    // ================================
-    function loadLayer(fileName, options, callback){
-      $.getJSON(fileName + ".json", function(data){
-        let layer = L.geoJson(data, options).addTo(map);
-        if(callback) callback(layer);
-      });
-    }
-
-    // ================================
-    // Load all layers
-    // ================================
-    loadLayer("Ramallah", {
-      style:{fillColor:"yellow", fillOpacity:0.2, color:"yellow", weight:1},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Zone: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip(f.properties.NAME || "N/A");
-      }
-    }, layer => { ramallahLayer = layer; });
-
-    loadLayer("Wells", {
-      pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:5, fillColor:"#00A86B", color:"#00A86B", fillOpacity:0.8}),
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Well ID: " + (f.properties.ID || "N/A"));
-        layer.bindTooltip("Well ID: " + (f.properties.ID || "N/A"));
-      }
-    }, layer => { wellsLayer = layer; });
-
-    loadLayer("Temperature", {
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Temperature: " + (f.properties.value || "N/A"));
-        layer.bindTooltip("Temperature: " + (f.properties.value || "N/A"));
-      }
-    }, layer => { temperatureLayer = layer; });
-
-    loadLayer("Streams", {
-      style:{color:"#2980B9", weight:2},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Stream: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip(f.properties.NAME || "N/A");
-      }
-    }, layer => { streamsLayer = layer; });
-
-    loadLayer("Settlements", {
-      style:{color:"#FF3B30", weight:1, fillColor:"#FF6B6B", fillOpacity:0.5},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Settlement: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip(f.properties.NAME || "N/A");
-      }
-    }, layer => { settlementsLayer = layer; });
-
-    loadLayer("Schools", {
-      pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:5, fillColor:"#FFD60A", color:"#FFD60A", fillOpacity:0.8}),
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("School: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip(f.properties.NAME || "N/A");
-      }
-    }, layer => { schoolsLayer = layer; });
-
-    loadLayer("Roads", {
-      style:{color:"#0A84FF", weight:1.5},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Road: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip(f.properties.NAME || "N/A");
-      }
-    }, layer => { roadsLayer = layer; });
-
-    loadLayer("Quarries", {
-      style:{color:"#6D4C41", weight:1, fillColor:"#8D6E63", fillOpacity:0.6},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Quarry: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip(f.properties.NAME || "N/A");
-      }
-    }, layer => { quarriesLayer = layer; });
-
-    loadLayer("Buildings", {
-      style:{color:"#4A4A4A", weight:0.5, fillColor:"#BDBDBD", fillOpacity:0.4},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Building: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip(f.properties.NAME || "N/A");
-      }
-    }, layer => { buildingsLayer = layer; });
-
-    loadLayer("Areas_totaly_closed_by_the_wall", {
-      style:{color:"#7F8C8D", weight:1, fillColor:"#95A5A6", fillOpacity:0.5},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Closed Area: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip(f.properties.NAME || "N/A");
-      }
-    }, layer => { wallAreasLayer = layer; });
-
-    loadLayer("Annexation_Wall", {
-      style:{color:"#000000", weight:3},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Wall Section: " + (f.properties.NAME || "N/A"));
-        layer.bindTooltip("Wall Section");
-      }
-    }, layer => { wallLayer = layer; });
-
-    loadLayer("Agricultural_Land", {
-      style:{color:"#27AE60", weight:1, fillColor:"#2ECC71", fillOpacity:0.5},
-      onEachFeature: (f, layer) => {
-        layer.bindPopup("Agri Land Score: " + (f.properties.SCORE || "N/A"));
-        layer.bindTooltip("Agri Land Score: " + (f.properties.SCORE || "N/A"));
-      }
-    }, layer => { agriLayer = layer; });
-
-    // ================================
-    // Layer Control
-    // ================================
-    setTimeout(function(){
-      L.control.layers({}, {
-        "Ramallah Zone": ramallahLayer,
-        "Wells": wellsLayer,
-        "Temperature": temperatureLayer,
-        "Streams": streamsLayer,
-        "Settlements": settlementsLayer,
-        "Schools": schoolsLayer,
-        "Roads": roadsLayer,
-        "Quarries": quarriesLayer,
-        "Buildings": buildingsLayer,
-        "Closed Areas": wallAreasLayer,
-        "Annexation Wall": wallLayer,
-        "Agricultural Land": agriLayer
+    $.getJSON("Ramallah.json", function(data){
+      L.geoJson(data, {
+        style: {
+          color: "yellow",
+          weight: 2,
+          fillColor: "yellow",
+          fillOpacity: 0.2
+        },
+        onEachFeature: function(feature, layer){
+          layer.bindPopup("Zone: " + (feature.properties.NAME || "N/A"));
+          layer.bindTooltip(feature.properties.NAME || "N/A");
+        }
       }).addTo(map);
-    }, 1500);
-
+    });
   </script>
 </body>
 </html>
