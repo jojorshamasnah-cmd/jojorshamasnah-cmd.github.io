@@ -1,3 +1,10 @@
+// إنشاء الخريطة
+var map = L.map('map').setView([31.9, 35.2], 11);
+
+// إضافة السكيل للخريطة
+L.control.scale().addTo(map);
+
+
 // 1) Agricultural_Land
 $.getJSON("Agricultural_Land.json", function(data) {
   L.geoJson(data, {
