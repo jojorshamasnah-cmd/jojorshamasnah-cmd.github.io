@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>West Bank GeoBrain</title>
+  <title>West Bank GeoBrain - Ramallah</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
@@ -15,20 +15,26 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Initialize map
-    var map = L.map('map').setView([31.9, 35.2], 10);
+    // ================================
+    // Initialize map centered on Ramallah
+    // ================================
+    var map = L.map('map').setView([31.907, 35.212], 12);
 
-    // Base map
+    // Base map (OSM)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // ================================
     // Layers variables
+    // ================================
     let wellsLayer, temperatureLayer, streamsLayer, settlementsLayer, schoolsLayer,
         roadsLayer, ramallahLayer, quarriesLayer, buildingsLayer, 
         wallAreasLayer, wallLayer, agriLayer;
 
-    // Function to load GeoJSON and add popup
+    // ================================
+    // Function to load GeoJSON layer
+    // ================================
     function loadLayer(fileName, options, callback){
       $.getJSON(fileName + ".json", function(data){
         let layer = L.geoJson(data, options).addTo(map);
@@ -36,7 +42,14 @@
       });
     }
 
-    // Load all layers
+    // ================================
+    // Load layers
+    // ================================
+    loadLayer("Ramallah", {
+      style:{fillColor:"yellow", fillOpacity:0.2, color:"yellow", weight:1},
+      onEachFeature: (f, layer) => layer.bindPopup("Zone: " + (f.properties.NAME || "N/A"))
+    }, layer => { ramallahLayer = layer; });
+
     loadLayer("Wells", {
       pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:5, fillColor:"#00A86B", color:"#00A86B", fillOpacity:0.8}),
       onEachFeature: (f, layer) => layer.bindPopup("Well ID: " + (f.properties.ID || "N/A"))
@@ -66,11 +79,6 @@
       onEachFeature: (f, layer) => layer.bindPopup("Road: " + (f.properties.NAME || "N/A"))
     }, layer => { roadsLayer = layer; });
 
-    loadLayer("Ramallah", {
-      style:{fillColor:"yellow", fillOpacity:0.3, color:"yellow", weight:1},
-      onEachFeature: (f, layer) => layer.bindPopup("Zone: " + (f.properties.NAME || "N/A"))
-    }, layer => { ramallahLayer = layer; });
-
     loadLayer("Quarries", {
       style:{color:"#6D4C41", weight:1, fillColor:"#8D6E63", fillOpacity:0.6},
       onEachFeature: (f, layer) => layer.bindPopup("Quarry: " + (f.properties.NAME || "N/A"))
@@ -96,16 +104,18 @@
       onEachFeature: (f, layer) => layer.bindPopup("Agri Land Score: " + (f.properties.SCORE || "N/A"))
     }, layer => { agriLayer = layer; });
 
-    // Layer Control (wait 1.5s to ensure layers are loaded)
+    // ================================
+    // Layer Control (بعد تحميل كل الطبقات)
+    // ================================
     setTimeout(function(){
       L.control.layers({}, {
+        "Ramallah Zone": ramallahLayer,
         "Wells": wellsLayer,
         "Temperature": temperatureLayer,
         "Streams": streamsLayer,
         "Settlements": settlementsLayer,
         "Schools": schoolsLayer,
         "Roads": roadsLayer,
-        "Ramallah": ramallahLayer,
         "Quarries": quarriesLayer,
         "Buildings": buildingsLayer,
         "Closed Areas": wallAreasLayer,
