@@ -24,6 +24,13 @@
     map.fitBounds(ramallahBounds);
     map.setMaxBounds(ramallahBounds);
 
+    // ✅ إضافة مقياس المسافة
+    L.control.scale({
+        position: 'bottomleft',
+        metric: true,
+        imperial: false
+    }).addTo(map);
+
     // ================================
     // Layers variables
     // ================================
