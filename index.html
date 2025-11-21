@@ -18,7 +18,14 @@
     // ================================
     // Initialize map centered on Ramallah
     // ================================
-    var map = L.map('map').setView([31.907, 35.212], 12);
+    var map = L.map('map');
+
+    // حدود محافظة رام الله
+    var ramallahBounds = L.latLngBounds(
+      [[31.7, 35.0], [32.05, 35.35]]  // جنوب غرب → شمال شرق
+    );
+    map.fitBounds(ramallahBounds);
+    map.setMaxBounds(ramallahBounds);
 
     // Base map (OSM)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -43,7 +50,7 @@
     }
 
     // ================================
-    // Load layers
+    // Load all layers
     // ================================
     loadLayer("Ramallah", {
       style:{fillColor:"yellow", fillOpacity:0.2, color:"yellow", weight:1},
@@ -105,7 +112,7 @@
     }, layer => { agriLayer = layer; });
 
     // ================================
-    // Layer Control (بعد تحميل كل الطبقات)
+    // Layer Control (تفعيل وإخفاء)
     // ================================
     setTimeout(function(){
       L.control.layers({}, {
