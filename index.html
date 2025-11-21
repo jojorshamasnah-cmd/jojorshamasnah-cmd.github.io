@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>Ramallah Map with Roads</title>
+  <title>West Bank GeoBrain - Ramallah</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet CSS -->
@@ -43,12 +43,11 @@
     // ================================
     // Layer Groups
     // ================================
-    var layersControl = {};
     var overlays = {};
 
-    // ===== Ramallah Boundary Layer =====
+    // ===== Ramallah Boundary =====
     var ramallahLayer = L.layerGroup();
-    $.getJSON("Ramallah.json", function(data){
+    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Ramallah.json", function(data){
       var geo = L.geoJson(data, {
         style: {color: "yellow", weight: 2, fillOpacity: 0.2},
         onEachFeature: function(feature, layer){
@@ -73,22 +72,69 @@
 
     // ===== Roads Layer =====
     var roadsLayer = L.layerGroup();
-    $.getJSON("Roads.json", function(data){
-      var geo = L.geoJson(data, {
+    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Roads.json", function(data){
+      L.geoJson(data, {
         style: {color: "blue", weight: 2},
         onEachFeature: function(feature, layer){
           if(feature.properties.NAME){
             layer.bindPopup("Road: " + feature.properties.NAME);
           }
         }
-      });
-      geo.addTo(roadsLayer);
+      }).addTo(roadsLayer);
       roadsLayer.addTo(map);
     });
     overlays["Roads"] = roadsLayer;
 
-    // ===== Layer Control =====
-    L.control.layers(null, overlays, {collapsed: false}).addTo(map);
+    // ===== Schools Layer =====
+    var schoolsLayer = L.layerGroup();
+    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Schools.json", function(data){
+      L.geoJson(data, {
+        pointToLayer: function(feature, latlng){
+          return L.circleMarker(latlng, {radius:5, color:"green", fillColor:"green", fillOpacity:0.7});
+        },
+        onEachFeature: function(feature, layer){
+          if(feature.properties.NAME){
+            layer.bindPopup("School: " + feature.properties.NAME);
+          }
+        }
+      }).addTo(schoolsLayer);
+      schoolsLayer.addTo(map);
+    });
+    overlays["Schools"] = schoolsLayer;
+
+    // ===== Buildings Layer =====
+    var buildingsLayer = L.layerGroup();
+    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Buildings.json", function(data){
+      L.geoJson(data, {
+        style: {color: "red", weight:1, fillOpacity:0.5},
+        onEachFeature: function(feature, layer){
+          if(feature.properties.NAME){
+            layer.bindPopup("Building: " + feature.properties.NAME);
+          }
+        }
+      }).addTo(buildingsLayer);
+      buildingsLayer.addTo(map);
+    });
+    overlays["Buildings"] = buildingsLayer;
+
+    // ===== Settlements Layer =====
+    var settlementsLayer = L.layerGroup();
+    $.getJSON("https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/Settlements.json", function(data){
+      L.geoJson(data, {
+        style: {color:"brown", weight:1.5, fillOpacity:0.4},
+        onEachFeature: function(feature, layer){
+          if(feature.properties.NAME){
+            layer.bindPopup("Settlement: " + feature.properties.NAME);
+          }
+        }
+      }).addTo(settlementsLayer);
+      settlementsLayer.addTo(map);
+    });
+    overlays["Settlements"] = settlementsLayer;
+
+    // ===== Add Layer Control =====
+    L.control.layers(null, overlays, {collapsed:false}).addTo(map);
+
   </script>
 </body>
 </html>
