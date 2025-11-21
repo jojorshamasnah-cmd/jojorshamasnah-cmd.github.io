@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .legend { background:white; padding:10px; line-height:1.5em; }
   </style>
 </head>
 <body>
@@ -19,11 +20,7 @@
     // Initialize map focused on Ramallah
     // ================================
     var map = L.map('map');
-
-    // حدود محافظة رام الله
-    var ramallahBounds = L.latLngBounds(
-      [[31.7, 35.0], [32.05, 35.35]]  // جنوب غرب → شمال شرق
-    );
+    var ramallahBounds = L.latLngBounds([[31.7, 35.0], [32.05, 35.35]]);
     map.fitBounds(ramallahBounds);
     map.setMaxBounds(ramallahBounds);
 
@@ -49,61 +46,97 @@
     // ================================
     loadLayer("Ramallah", {
       style:{fillColor:"yellow", fillOpacity:0.2, color:"yellow", weight:1},
-      onEachFeature: (f, layer) => layer.bindPopup("Zone: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Zone: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip(f.properties.NAME || "N/A");
+      }
     }, layer => { ramallahLayer = layer; });
 
     loadLayer("Wells", {
       pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:5, fillColor:"#00A86B", color:"#00A86B", fillOpacity:0.8}),
-      onEachFeature: (f, layer) => layer.bindPopup("Well ID: " + (f.properties.ID || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Well ID: " + (f.properties.ID || "N/A"));
+        layer.bindTooltip("Well ID: " + (f.properties.ID || "N/A"));
+      }
     }, layer => { wellsLayer = layer; });
 
     loadLayer("Temperature", {
-      onEachFeature: (f, layer) => layer.bindPopup("Temperature: " + (f.properties.value || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Temperature: " + (f.properties.value || "N/A"));
+        layer.bindTooltip("Temperature: " + (f.properties.value || "N/A"));
+      }
     }, layer => { temperatureLayer = layer; });
 
     loadLayer("Streams", {
       style:{color:"#2980B9", weight:2},
-      onEachFeature: (f, layer) => layer.bindPopup("Stream: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Stream: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip(f.properties.NAME || "N/A");
+      }
     }, layer => { streamsLayer = layer; });
 
     loadLayer("Settlements", {
       style:{color:"#FF3B30", weight:1, fillColor:"#FF6B6B", fillOpacity:0.5},
-      onEachFeature: (f, layer) => layer.bindPopup("Settlement: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Settlement: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip(f.properties.NAME || "N/A");
+      }
     }, layer => { settlementsLayer = layer; });
 
     loadLayer("Schools", {
       pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:5, fillColor:"#FFD60A", color:"#FFD60A", fillOpacity:0.8}),
-      onEachFeature: (f, layer) => layer.bindPopup("School: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("School: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip(f.properties.NAME || "N/A");
+      }
     }, layer => { schoolsLayer = layer; });
 
     loadLayer("Roads", {
       style:{color:"#0A84FF", weight:1.5},
-      onEachFeature: (f, layer) => layer.bindPopup("Road: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Road: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip(f.properties.NAME || "N/A");
+      }
     }, layer => { roadsLayer = layer; });
 
     loadLayer("Quarries", {
       style:{color:"#6D4C41", weight:1, fillColor:"#8D6E63", fillOpacity:0.6},
-      onEachFeature: (f, layer) => layer.bindPopup("Quarry: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Quarry: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip(f.properties.NAME || "N/A");
+      }
     }, layer => { quarriesLayer = layer; });
 
     loadLayer("Buildings", {
       style:{color:"#4A4A4A", weight:0.5, fillColor:"#BDBDBD", fillOpacity:0.4},
-      onEachFeature: (f, layer) => layer.bindPopup("Building: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Building: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip(f.properties.NAME || "N/A");
+      }
     }, layer => { buildingsLayer = layer; });
 
     loadLayer("Areas_totaly_closed_by_the_wall", {
       style:{color:"#7F8C8D", weight:1, fillColor:"#95A5A6", fillOpacity:0.5},
-      onEachFeature: (f, layer) => layer.bindPopup("Closed Area: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Closed Area: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip(f.properties.NAME || "N/A");
+      }
     }, layer => { wallAreasLayer = layer; });
 
     loadLayer("Annexation_Wall", {
       style:{color:"#000000", weight:3},
-      onEachFeature: (f, layer) => layer.bindPopup("Wall Section: " + (f.properties.NAME || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Wall Section: " + (f.properties.NAME || "N/A"));
+        layer.bindTooltip("Wall Section");
+      }
     }, layer => { wallLayer = layer; });
 
     loadLayer("Agricultural_Land", {
       style:{color:"#27AE60", weight:1, fillColor:"#2ECC71", fillOpacity:0.5},
-      onEachFeature: (f, layer) => layer.bindPopup("Agri Land Score: " + (f.properties.SCORE || "N/A"))
+      onEachFeature: (f, layer) => {
+        layer.bindPopup("Agri Land Score: " + (f.properties.SCORE || "N/A"));
+        layer.bindTooltip("Agri Land Score: " + (f.properties.SCORE || "N/A"));
+      }
     }, layer => { agriLayer = layer; });
 
     // ================================
