@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>Ramallah Boundary Map with Search</title>
+  <title>Ramallah Map with Roads</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet CSS -->
@@ -41,30 +41,54 @@
     }).addTo(map);
 
     // ================================
-    // Load Ramallah Boundary GeoJSON
+    // Layer Groups
     // ================================
+    var layersControl = {};
+    var overlays = {};
+
+    // ===== Ramallah Boundary Layer =====
+    var ramallahLayer = L.layerGroup();
     $.getJSON("Ramallah.json", function(data){
-      var ramallahLayer = L.geoJson(data, {
+      var geo = L.geoJson(data, {
         style: {color: "yellow", weight: 2, fillOpacity: 0.2},
         onEachFeature: function(feature, layer){
           layer.bindPopup(feature.properties.NAME || "N/A");
         }
-      }).addTo(map);
+      });
+      geo.addTo(ramallahLayer);
+      ramallahLayer.addTo(map);
 
-      // ================================
-      // Add Search Control
-      // ================================
+      // ===== Search Control =====
       var searchControl = new L.Control.Search({
-        layer: ramallahLayer,
-        propertyName: 'NAME', // الاسم اللي يظهر في البحث
+        layer: geo,
+        propertyName: 'NAME',
         marker: false,
         moveToLocation: function(latlng, title, map) {
-          map.setView(latlng, 12); // تكبير على المنطقة
+          map.setView(latlng, 12);
         }
       });
       searchControl.addTo(map);
-
     });
+    overlays["Ramallah Boundary"] = ramallahLayer;
+
+    // ===== Roads Layer =====
+    var roadsLayer = L.layerGroup();
+    $.getJSON("Roads.json", function(data){
+      var geo = L.geoJson(data, {
+        style: {color: "blue", weight: 2},
+        onEachFeature: function(feature, layer){
+          if(feature.properties.NAME){
+            layer.bindPopup("Road: " + feature.properties.NAME);
+          }
+        }
+      });
+      geo.addTo(roadsLayer);
+      roadsLayer.addTo(map);
+    });
+    overlays["Roads"] = roadsLayer;
+
+    // ===== Layer Control =====
+    L.control.layers(null, overlays, {collapsed: false}).addTo(map);
   </script>
 </body>
 </html>
