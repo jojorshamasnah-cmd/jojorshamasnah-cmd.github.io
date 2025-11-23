@@ -25,7 +25,6 @@
         box-shadow: 0 0 10px rgba(0,0,0,0.3);
         font-family: Arial;
         z-index: 9998;
-        transition: bottom 0.3s;
     }
 
     #legend-title {
@@ -42,6 +41,7 @@
         font-size: 14px;
     }
 
+    /* Symbols */
     .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
     .emoji { font-size: 18px; width: 22px; margin-right: 6px; }
     .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
@@ -50,7 +50,7 @@
     /* ----------- OPACITY BOX ----------- */
     #opacity-box {
         position: absolute;
-        bottom: 150px; /* lowered more */
+        bottom: 180px; /* مكانه الطبيعي */
         left: 10px;
         background: white;
         padding: 12px;
@@ -59,7 +59,7 @@
         box-shadow: 0 0 10px rgba(0,0,0,0.3);
         font-family: Arial;
         z-index: 9999;
-        transition: bottom 0.3s;
+        transition: bottom 0.3s ease; /* حركة سلسة */
     }
 
     #opacity-title {
@@ -74,7 +74,7 @@
         margin-top: 6px;
     }
 
-    /* ----------- SCALE CENTER ----------- */
+    /* ----------- SCALE IN CENTER ----------- */
     .leaflet-control-scale {
         left: 50% !important;
         transform: translateX(-50%);
@@ -87,6 +87,7 @@
 
 <div id="map"></div>
 
+<!-- OPACITY BOX (DROP DOWN) -->
 <div id="opacity-box">
     <div id="opacity-title">Layer Opacity</div>
 
@@ -97,10 +98,12 @@
     <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
+<!-- LEGEND -->
 <div id="legend-box">
     <div id="legend-title">Legend ▼</div>
 
     <div id="legend-content">
+
         <div class="legend-item"><span class="emoji">🏫</span> Schools (Point)</div>
         <div class="legend-item"><span class="emoji">💧</span> Wells (Point)</div>
         <div class="legend-item"><span class="emoji">⛏️</span> Quarries (Point)</div>
@@ -118,10 +121,12 @@
         <div class="legend-item"><span class="symbol-poly"></span> Settlements</div>
         <div class="legend-item"><span class="symbol-poly"></span> Temperature Zones</div>
         <div class="legend-item"><span class="symbol-poly"></span> Ramallah Boundary</div>
+
     </div>
 </div>
 
 <script>
+/* ---------------- MAP ---------------- */
 var map = L.map("map").setView([31.903, 35.203], 11);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
@@ -130,6 +135,8 @@ L.control.scale({ imperial: false }).addTo(map);
 var layers = {};
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
+
+/* ----------- LOAD LAYERS + ADD TO DROPDOWN ----------- */
 function loadLayer(file, name, color="blue") {
     $.getJSON(file, function(data) {
 
@@ -138,6 +145,7 @@ function loadLayer(file, name, color="blue") {
         }).addTo(map);
 
         layers[name] = layer;
+
         control.addOverlay(layer, name);
 
         let opSelect = document.getElementById("opacity-select");
@@ -145,6 +153,8 @@ function loadLayer(file, name, color="blue") {
     });
 }
 
+
+/* ----------- APPLY OPACITY ----------- */
 document.getElementById("opacity-slider").oninput = function() {
     let selected = document.getElementById("opacity-select").value;
     if (selected && layers[selected]) {
@@ -155,22 +165,31 @@ document.getElementById("opacity-slider").oninput = function() {
     }
 };
 
-// --- MOVE OPACITY BOX WHEN LEGEND OPENS ---
+
+/* ----------- LEGEND TOGGLE ----------- */
 document.getElementById("legend-title").onclick = function () {
+
     let c = document.getElementById("legend-content");
     let opacityBox = document.getElementById("opacity-box");
 
     if (c.style.display === "none") {
         c.style.display = "block";
         this.innerHTML = "Legend ▲";
-        opacityBox.style.bottom = "260px"; // moves up when legend expands
+
+        /* يرتفع 10 سم = 100px فوق */
+        opacityBox.style.bottom = "280px";
+
     } else {
         c.style.display = "none";
         this.innerHTML = "Legend ▼";
-        opacityBox.style.bottom = "150px"; // returns back down
+
+        /* يرجع مكانه */
+        opacityBox.style.bottom = "180px";
     }
 };
 
+
+/* ----------- LOAD ALL LAYERS ----------- */
 loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
 loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
 loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
@@ -184,6 +203,7 @@ loadLayer("Settlements.geojson", "Settlements", "darkred");
 loadLayer("Streams.geojson", "Streams", "cyan");
 loadLayer("Temperature.geojson", "Temperature Zones", "pink");
 loadLayer("Wells.geojson", "Wells", "aqua");
+
 </script>
 
 </body>
