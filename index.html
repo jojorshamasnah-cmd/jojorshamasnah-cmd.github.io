@@ -17,6 +17,13 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; }
         #map { height: 100vh; width: 100%; }
+
+        /* لتوسيط السكيل */
+        .leaflet-control-scale {
+            margin: 0 auto !important;
+            left: 50% !important;
+            transform: translateX(-50%);
+        }
     </style>
 </head>
 
@@ -25,50 +32,52 @@
 <div id="map"></div>
 
 <script>
-    // Create the map
-    var map = L.map("map").setView([31.903, 35.203], 11);
 
-    // Base map
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19
-    }).addTo(map);
+var map = L.map("map").setView([31.903, 35.203], 11);
 
-    // Layers dictionary
-    var layers = {};
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19
+}).addTo(map);
 
-    // Function to load a GeoJSON layer
-    function loadLayer(filename, layerName, color="blue") {
-        $.getJSON(filename, function(data) {
-            var layer = L.geoJson(data, {
-                style: {
-                    color: color,
-                    weight: 1,
-                    fillOpacity: 0.3
-                }
-            });
-            layers[layerName] = layer;
-            layer.addTo(map);
-            control.addOverlay(layer, layerName);
+// Add Scale in center bottom  
+L.control.scale({
+    imperial: false,
+    position: "bottomleft"  // لازم تكون left عشان نقدر نعيد تموضعها بالـ CSS
+}).addTo(map);
+
+
+// Layers dictionary
+var layers = {};
+
+// Function to load a GeoJSON layer
+function loadLayer(filename, layerName, color="blue") {
+    $.getJSON(filename, function(data) {
+        var layer = L.geoJson(data, {
+            style: { color: color, weight: 1, fillOpacity: 0.3 }
         });
-    }
+        layers[layerName] = layer;
+        layer.addTo(map);
+        control.addOverlay(layer, layerName);
+    });
+}
 
-    // Create Layer Control (empty at start)
-    var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
+// Create Layer Control (empty at start)
+var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-    // Load all layers
-    loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
-    loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
-    loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
-    loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "orange");
-    loadLayer("Built_up.geojson", "Built-up Areas", "brown");
-    loadLayer("Quarries.geojson", "Quarries", "gray");
-    loadLayer("Ramallah.geojson", "Ramallah Boundary", "red");
-    loadLayer("Roads.geojson", "Roads", "yellow");
-    loadLayer("Schools.geojson", "Schools", "blue");
-    loadLayer("Settlements.geojson", "Settlements", "darkred");
-    loadLayer("Streams.geojson", "Streams", "cyan");
-    loadLayer("Temperature.geojson", "Temperature", "pink");
-    loadLayer("Wells.geojson", "Wells", "aqua");
+// Load all layers
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
+loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "orange");
+loadLayer("Built_up.geojson", "Built-up Areas", "brown");
+loadLayer("Quarries.geojson", "Quarries", "gray");
+loadLayer("Ramallah.geojson", "Ramallah Boundary", "red");
+loadLayer("Roads.geojson", "Roads", "yellow");
+loadLayer("Schools.geojson", "Schools", "blue");
+loadLayer("Settlements.geojson", "Settlements", "darkred");
+loadLayer("Streams.geojson", "Streams", "cyan");
+loadLayer("Temperature.geojson", "Temperature", "pink");
+loadLayer("Wells.geojson", "Wells", "aqua");
 
 </script>
 
