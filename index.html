@@ -18,26 +18,28 @@
         body, html { margin: 0; padding: 0; height: 100%; }
         #map { height: 100vh; width: 100%; }
 
-        /* توسيط السكيل */
+        /* Center bottom scale */
         .leaflet-control-scale {
             margin: 0 auto !important;
             left: 50% !important;
             transform: translateX(-50%);
         }
 
-        /* صندوق الشفافية */
+        /* Opacity box (right-center) */
         #opacityBox {
             position: absolute;
-            top: 20px;
+            top: 50%;
             right: 20px;
+            transform: translateY(-50%);
             background: white;
-            padding: 10px;
+            padding: 12px;
             border-radius: 6px;
             z-index: 9999;
-            width: 160px;
+            width: 170px;
+            box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
         }
 
-        /* الليجند */
+        /* Legend (bottom-left) */
         #legend {
             position: absolute;
             bottom: 60px;
@@ -66,14 +68,14 @@
 
 <div id="map"></div>
 
-<!-- صندوق التحكم بالشفافية -->
+<!-- Layer opacity control -->
 <div id="opacityBox">
     <h4>Layer Opacity</h4>
     <select id="opacityLayer"></select>
     <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="1">
 </div>
 
-<!-- الليجند -->
+<!-- Legend -->
 <div id="legend">
     <h4>Legend</h4>
     <div id="legendItems"></div>
@@ -87,13 +89,13 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19
 }).addTo(map);
 
-// مركز السكيل
+// Center scale
 L.control.scale({
     imperial: false,
     position: "bottomleft"
 }).addTo(map);
 
-// ------------- طبقات -------------
+// Layers
 var layers = {};
 var layerColors = {
     "Agricultural Land": "green",
@@ -113,7 +115,7 @@ var layerColors = {
 
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-// تحميل طبقة GeoJSON
+// Load a GeoJSON layer
 function loadLayer(filename, layerName) {
     $.getJSON(filename, function(data) {
         var layer = L.geoJson(data, {
@@ -122,13 +124,12 @@ function loadLayer(filename, layerName) {
 
         layers[layerName] = layer;
         layer.addTo(map);
-
         control.addOverlay(layer, layerName);
 
-        // إضافة إلى قائمة الشفافية
+        // Add to opacity dropdown
         $("#opacityLayer").append(`<option value="${layerName}">${layerName}</option>`);
 
-        // إضافة إلى الليجند
+        // Add to legend
         $("#legendItems").append(`
             <div>
                 <span class="legend-color-box" style="background:${layerColors[layerName]}"></span>
@@ -138,7 +139,7 @@ function loadLayer(filename, layerName) {
     });
 }
 
-// تحميل كل الطبقات
+// Load all layers
 loadLayer("Agricultural_Land.geojson", "Agricultural Land");
 loadLayer("Annexation_Wall.geojson", "Annexation Wall");
 loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans");
@@ -153,11 +154,14 @@ loadLayer("Streams.geojson", "Streams");
 loadLayer("Temperature.geojson", "Temperature");
 loadLayer("Wells.geojson", "Wells");
 
-// ----------- التحكم بالشفافية -----------
+// Opacity control
 $("#opacitySlider").on("input", function() {
     var selected = $("#opacityLayer").val();
     if (layers[selected]) {
-        layers[selected].setStyle({ fillOpacity: this.value, opacity: this.value });
+        layers[selected].setStyle({
+            fillOpacity: this.value,
+            opacity: this.value
+        });
     }
 });
 
