@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -59,7 +60,7 @@
         box-shadow: 0 0 10px rgba(0,0,0,0.3);
         font-family: Arial;
         z-index: 9999;
-        transition: bottom 0.3s ease; /* حركة سلسة */
+        transition: bottom 0.3s ease;
     }
 
     #opacity-title {
@@ -87,7 +88,7 @@
 
 <div id="map"></div>
 
-<!-- OPACITY BOX (DROP DOWN) -->
+<!-- OPACITY BOX -->
 <div id="opacity-box">
     <div id="opacity-title">Layer Opacity</div>
 
@@ -136,7 +137,7 @@ var layers = {};
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 
-/* ----------- LOAD LAYERS + ADD TO DROPDOWN ----------- */
+/* ----------- LOAD LAYERS ----------- */
 function loadLayer(file, name, color="blue") {
     $.getJSON(file, function(data) {
 
@@ -148,8 +149,8 @@ function loadLayer(file, name, color="blue") {
 
         control.addOverlay(layer, name);
 
-        let opSelect = document.getElementById("opacity-select");
-        opSelect.innerHTML += `<option value="${name}">${name}</option>`;
+        document.getElementById("opacity-select").innerHTML +=
+            `<option value="${name}">${name}</option>`;
     });
 }
 
@@ -166,24 +167,26 @@ document.getElementById("opacity-slider").oninput = function() {
 };
 
 
-/* ----------- LEGEND TOGGLE ----------- */
+/* ----------- LEGEND TOGGLE WITH EXTRA LIFT ----------- */
 document.getElementById("legend-title").onclick = function () {
 
     let c = document.getElementById("legend-content");
     let opacityBox = document.getElementById("opacity-box");
 
     if (c.style.display === "none") {
+
         c.style.display = "block";
         this.innerHTML = "Legend ▲";
 
-        /* يرتفع 10 سم = 100px فوق */
-        opacityBox.style.bottom = "280px";
+        /* يرتفع أكثر (330px) */
+        opacityBox.style.bottom = "330px";
 
     } else {
+
         c.style.display = "none";
         this.innerHTML = "Legend ▼";
 
-        /* يرجع مكانه */
+        /* يرجع مكانه الطبيعي */
         opacityBox.style.bottom = "180px";
     }
 };
