@@ -1,210 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ramallah WebGIS</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ramallah WebGIS</title>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <style>
     body, html { margin: 0; padding: 0; height: 100%; }
-    #map { height: 100vh; width: 100%; }
+    #map { height: 100vh; }
 
-    /* Legend */
-    .legend {
+    /* Legend Box */
+    #legend-box {
+        position: absolute;
+        bottom: 50px;
+        left: 10px;
         background: white;
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 14px;
-        line-height: 20px;
-        box-shadow: 0 0 8px rgba(0,0,0,0.3);
-        max-width: 200px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        font-family: Arial, sans-serif;
+        width: 210px;
+        cursor: pointer;
+        user-select: none;
     }
-    .legend h4 {
-        margin: 0 0 8px;
-        text-align: center;
-        font-size: 16px;
+
+    #legend-title {
         font-weight: bold;
+        font-size: 16px;
+        text-align: center;
+        margin-bottom: 8px;
     }
+
+    #legend-content {
+        display: none; /* مغلق افتراضياً */
+        font-size: 14px;
+        margin-top: 8px;
+    }
+
     .legend-item {
         display: flex;
         align-items: center;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
-    .legend-icon {
-        width: 22px;
-        height: 22px;
+
+    .symbol-line {
+        width: 25px;
+        height: 4px;
+        background: black;
         margin-right: 6px;
     }
-    .legend-line, .legend-poly {
-        margin-bottom: 6px;
-        padding-left: 4px;
-        border-left: 4px solid #444;
+
+    .symbol-poly {
+        width: 20px;
+        height: 14px;
+        background: gray;
+        margin-right: 6px;
     }
 
-    /* Opacity Control */
-    #opacityControl {
-        position: fixed;
-        top: 50%;
-        right: 20px;
-        transform: translateY(-50%);
-        background: white;
-        padding: 12px;
-        border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.4);
-        width: 200px;
-        z-index: 9999;
-    }
-    #opacityControl select, #opacityControl input {
-        width: 100%;
-        margin-top: 5px;
+    .emoji {
+        font-size: 18px;
+        width: 22px;
+        margin-right: 6px;
     }
 
+    .leaflet-control-scale {
+        margin: 0 auto !important;
+        left: 50% !important;
+        transform: translateX(-50%);
+    }
 </style>
-</head>
 
+</head>
 <body>
 
 <div id="map"></div>
 
-<!-- Dropdown Opacity Control -->
-<div id="opacityControl">
-    <label><strong>Layer Opacity</strong></label><br>
-    <select id="opacityLayerSelect">
-        <option value="">Select Layer</option>
-    </select>
-    <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="1">
+<!-- Legend -->
+<div id="legend-box">
+    <div id="legend-title">Legend ▼</div>
+
+    <div id="legend-content">
+
+        <!-- Point Layers -->
+        <div class="legend-item"><span class="emoji">🏫</span> Schools (Point)</div>
+        <div class="legend-item"><span class="emoji">💧</span> Wells (Point)</div>
+        <div class="legend-item"><span class="emoji">⛏️</span> Quarries (Point)</div>
+
+        <hr>
+
+        <!-- Line Layers -->
+        <div class="legend-item"><span class="symbol-line"></span> Roads (Line)</div>
+        <div class="legend-item"><span class="symbol-line"></span> Streams (Line)</div>
+        <div class="legend-item"><span class="symbol-line"></span> Annexation Wall (Line)</div>
+
+        <hr>
+
+        <!-- Polygon Layers -->
+        <div class="legend-item"><span class="symbol-poly"></span> Agricultural Land (Polygon)</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Closed Areas (Polygon)</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Built-up Areas (Polygon)</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Master Plans (Polygon)</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Settlements (Polygon)</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Temperature Zones (Polygon)</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Ramallah Boundary (Polygon)</div>
+
+    </div>
 </div>
 
 <script>
-
-// Init Map
+// MAP
 var map = L.map("map").setView([31.903, 35.203], 11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19
-}).addTo(map);
-
-// Scale
-L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
-
-// Layers container
+// Layers
 var layers = {};
-
-// Layer Control
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-// Custom Load Function
-function loadLayer(file, name, color = "blue", type = "poly") {
-
+function loadLayer(file, name, color="blue") {
     $.getJSON(file, function(data) {
-        var layer;
-
-        if (type === "point") {
-            layer = L.geoJson(data, {
-                pointToLayer: function (feature, latlng) {
-                    return L.marker(latlng, { icon: L.icon({
-                        iconUrl: icons[name],
-                        iconSize: [26, 26]
-                    }) });
-                }
-            });
-        } 
-        else {
-            layer = L.geoJson(data, {
-                style: { color: color, weight: 1, fillOpacity: 0.3 }
-            });
-        }
-
+        var layer = L.geoJson(data, { style: { color: color, weight: 1, fillOpacity: 0.3 }});
         layers[name] = layer;
         layer.addTo(map);
         control.addOverlay(layer, name);
-
-        // Add to opacity dropdown
-        $("#opacityLayerSelect").append(`<option value="${name}">${name}</option>`);
     });
 }
 
-// Icons for point layers
-var icons = {
-    "Schools": "https://cdn-icons-png.flaticon.com/512/167/167707.png",
-    "Wells": "https://cdn-icons-png.flaticon.com/512/727/727240.png",
-    "Quarries": "https://cdn-icons-png.flaticon.com/512/616/616490.png"
-};
-
-// Load Layers
+// Load all layers
 loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
-loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black", "line");
+loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
 loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
 loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "orange");
 loadLayer("Built_up.geojson", "Built-up Areas", "brown");
-loadLayer("Quarries.geojson", "Quarries", "gray", "point");
+loadLayer("Quarries.geojson", "Quarries", "gray");
 loadLayer("Ramallah.geojson", "Ramallah Boundary", "red");
-loadLayer("Roads.geojson", "Roads", "yellow", "line");
-loadLayer("Schools.geojson", "Schools", "blue", "point");
+loadLayer("Roads.geojson", "Roads", "yellow");
+loadLayer("Schools.geojson", "Schools", "blue");
 loadLayer("Settlements.geojson", "Settlements", "darkred");
-loadLayer("Streams.geojson", "Streams", "cyan", "line");
+loadLayer("Streams.geojson", "Streams", "cyan");
 loadLayer("Temperature.geojson", "Temperature Zones", "pink");
-loadLayer("Wells.geojson", "Wells", "aqua", "point");
+loadLayer("Wells.geojson", "Wells", "aqua");
 
 
-// Opacity Control
-$("#opacitySlider").on("input", function() {
-    let layerName = $("#opacityLayerSelect").val();
-    if (layerName && layers[layerName]) {
-        layers[layerName].setStyle
-            ? layers[layerName].setStyle({ opacity: this.value, fillOpacity: this.value })
-            : null;
+// Legend Toggle
+document.getElementById("legend-title").onclick = function () {
+    let content = document.getElementById("legend-content");
+    if (content.style.display === "none") {
+        content.style.display = "block";
+        this.innerHTML = "Legend ▲";
+    } else {
+        content.style.display = "none";
+        this.innerHTML = "Legend ▼";
     }
-});
-
-
-// Legend
-var legend = L.control({ position: "bottomleft" });
-
-legend.onAdd = function (map) {
-    var div = L.DomUtil.create("div", "legend");
-
-    div.innerHTML += `<h4>Legend</h4>`;
-
-    // Points
-    div.innerHTML += `
-        <div class="legend-item"><img src="${icons["Schools"]}" class="legend-icon"><span>Schools (Point)</span></div>
-        <div class="legend-item"><img src="${icons["Wells"]}" class="legend-icon"><span>Wells (Point)</span></div>
-        <div class="legend-item"><img src="${icons["Quarries"]}" class="legend-icon"><span>Quarries (Point)</span></div>
-    `;
-
-    // Lines
-    div.innerHTML += `
-        <div class="legend-line">Roads (Line)</div>
-        <div class="legend-line">Annexation Wall (Line)</div>
-        <div class="legend-line">Streams (Line)</div>
-    `;
-
-    // Polygons
-    div.innerHTML += `
-        <div class="legend-poly">Agricultural Land (Polygon)</div>
-        <div class="legend-poly">Closed Areas (Polygon)</div>
-        <div class="legend-poly">Built-up Areas (Polygon)</div>
-        <div class="legend-poly">Master Plans (Polygon)</div>
-        <div class="legend-poly">Settlements (Polygon)</div>
-        <div class="legend-poly">Temperature Zones (Polygon)</div>
-        <div class="legend-poly">Ramallah Boundary (Polygon)</div>
-    `;
-
-    return div;
 };
 
-legend.addTo(map);
-
 </script>
+
 </body>
 </html>
