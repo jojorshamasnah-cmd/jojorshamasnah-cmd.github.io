@@ -42,6 +42,7 @@
         font-size: 14px;
     }
 
+    /* Symbols */
     .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
     .emoji { font-size: 18px; width: 22px; margin-right: 6px; }
     .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
@@ -166,23 +167,23 @@ document.getElementById("opacity-slider").oninput = function() {
 };
 
 
-/* ----------- LEGEND TOGGLE WITH 350PX LIFT ----------- */
+/* ----------- LEGEND TOGGLE ----------- */
 document.getElementById("legend-title").onclick = function () {
 
-    let c = document.getElementById("legend-content");
+    let legendContent = document.getElementById("legend-content");
     let opacityBox = document.getElementById("opacity-box");
 
-    if (c.style.display === "none") {
+    if (legendContent.style.display === "none") {
 
-        c.style.display = "block";
+        legendContent.style.display = "block";
         this.innerHTML = "Legend ▲";
 
-        /* يرتفع الصندوق 350px */
+        /* يرتفع أكثر (350px) */
         opacityBox.style.bottom = "350px";
 
     } else {
 
-        c.style.display = "none";
+        legendContent.style.display = "none";
         this.innerHTML = "Legend ▼";
 
         /* يرجع مكانه الطبيعي */
