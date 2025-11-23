@@ -16,15 +16,15 @@
     /* ----------- LEGEND ----------- */
     #legend-box {
         position: absolute;
-        bottom: 20px;
+        bottom: 45px;
         left: 10px;
         background: white;
         padding: 10px 14px;
         border-radius: 10px;
-        width: 230px;
+        width: 220px;
         box-shadow: 0 0 10px rgba(0,0,0,0.3);
         font-family: Arial;
-        z-index: 9998;
+        z-index: 9999;
     }
 
     #legend-title {
@@ -68,54 +68,43 @@
         border: 1px solid #00000080;
     }
 
-    /* ---------- OPACITY PANEL ---------- */
+    /* ---------- OPACITY CONTROL ---------- */
     #opacity-box {
         position: absolute;
-        top: 20px;
-        left: 10px; /* فوق الليجند */
+        bottom: 260px;   /* فوق الليجند مباشرة */
+        left: 10px;
         background: white;
-        padding: 12px;
+        padding: 10px;
         border-radius: 10px;
+        width: 220px;
         box-shadow: 0 0 10px rgba(0,0,0,0.3);
         font-family: Arial;
-        width: 230px;
         z-index: 9999;
     }
 
     #opacity-title {
         font-weight: bold;
         text-align: center;
-        margin-bottom: 10px;
         font-size: 15px;
+        margin-bottom: 5px;
     }
 
-    select {
+    select, input[type=range] {
         width: 100%;
-        padding: 5px;
-        margin-bottom: 10px;
+        margin-top: 6px;
     }
 
-    input[type=range] {
-        width: 100%;
+    /* center scale */
+    .leaflet-control-scale {
+        left: 50% !important;
+        transform: translateX(-50%);
     }
-
 </style>
-
 </head>
+
 <body>
 
 <div id="map"></div>
-
-<!-- OPACITY CONTROL (TOP-LEFT) -->
-<div id="opacity-box">
-    <div id="opacity-title">Layer Opacity</div>
-
-    <select id="opacity-select">
-        <option value="">Select Layer</option>
-    </select>
-
-    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
-</div>
 
 <!-- LEGEND -->
 <div id="legend-box">
@@ -148,54 +137,50 @@
     </div>
 </div>
 
+<!-- OPACITY CONTROL -->
+<div id="opacity-box">
+    <div id="opacity-title">Layer Opacity</div>
+
+    <select id="layer-select">
+        <option value="">Select Layer</option>
+    </select>
+
+    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
+</div>
+
+
 <script>
-/* ---------------- MAP ---------------- */
+/* ---------- MAP ---------- */
 var map = L.map("map").setView([31.903, 35.203], 11);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
 
-
-/* ---------------- LAYERS ---------------- */
 var layers = {};
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 
-/* ----------- LOAD LAYER FUNCTION ----------- */
+/* ---------- LOAD LAYERS ---------- */
 function loadLayer(file, name, color = "blue") {
-    $.getJSON(file, function (data) {
+    $.getJSON(file, function(data) {
 
         var layer = L.geoJson(data, {
-            style: function () {
-                return { color: color, weight: 1, fillOpacity: 0.6, opacity: 1 };
-            }
+            style: () => ({ color: color, weight: 1, fillOpacity: 0.6, opacity: 0.6 })
         });
 
         layer.addTo(map);
+
         layers[name] = layer;
         control.addOverlay(layer, name);
 
-        let select = document.getElementById("opacity-select");
-        select.innerHTML += `<option value="${name}">${name}</option>`;
+        let opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        document.getElementById("layer-select").appendChild(opt);
     });
 }
 
-
-/* ----------- OPACITY CONTROL LOGIC ----------- */
-document.getElementById("opacity-select").onchange = function () {
-    let selected = this.value;
-
-    if (!selected) return;
-
-    document.getElementById("opacity-slider").oninput = function () {
-        layers[selected].setStyle({
-            opacity: this.value,
-            fillOpacity: this.value
-        });
-    };
-};
-
-
-/* ----------- LOAD ALL LAYERS ----------- */
+/* -------- LAYERS LOADING -------- */
 loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
 loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
 loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
@@ -211,9 +196,22 @@ loadLayer("Temperature.geojson", "Temperature Zones", "pink");
 loadLayer("Wells.geojson", "Wells", "aqua");
 
 
-/* ----------- LEGEND TOGGLE ----------- */
+/* ---------- OPACITY CONTROL ---------- */
+document.getElementById("opacity-slider").oninput = function () {
+    let selected = document.getElementById("layer-select").value;
+    if (!selected) return;
+
+    layers[selected].setStyle({
+        opacity: this.value,
+        fillOpacity: this.value
+    });
+};
+
+
+/* ---------- LEGEND TOGGLE ---------- */
 document.getElementById("legend-title").onclick = function () {
     let c = document.getElementById("legend-content");
+
     if (c.style.display === "none") {
         c.style.display = "block";
         this.innerHTML = "Legend ▲";
