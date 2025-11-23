@@ -1,171 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ramallah WebGIS</title>
 
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; }
-        #map { height: 100vh; width: 100%; }
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-        /* Center bottom scale */
-        .leaflet-control-scale {
-            margin: 0 auto !important;
-            left: 50% !important;
-            transform: translateX(-50%);
-        }
+<style>
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { height: 100vh; width: 100%; }
 
-        /* Opacity box (right-center) */
-        #opacityBox {
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            background: white;
-            padding: 12px;
-            border-radius: 6px;
-            z-index: 9999;
-            width: 170px;
-            box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
-        }
+    /* Legend */
+    .legend {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 14px;
+        line-height: 20px;
+        box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        max-width: 200px;
+    }
+    .legend h4 {
+        margin: 0 0 8px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: bold;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+    .legend-icon {
+        width: 22px;
+        height: 22px;
+        margin-right: 6px;
+    }
+    .legend-line, .legend-poly {
+        margin-bottom: 6px;
+        padding-left: 4px;
+        border-left: 4px solid #444;
+    }
 
-        /* Legend (bottom-left) */
-        #legend {
-            position: absolute;
-            bottom: 60px;
-            left: 20px;
-            background: white;
-            padding: 10px;
-            border-radius: 6px;
-            z-index: 9999;
-            width: 180px;
-        }
+    /* Opacity Control */
+    #opacityControl {
+        position: fixed;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        background: white;
+        padding: 12px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.4);
+        width: 200px;
+        z-index: 9999;
+    }
+    #opacityControl select, #opacityControl input {
+        width: 100%;
+        margin-top: 5px;
+    }
 
-        #legend div {
-            margin-bottom: 6px;
-        }
-
-        .legend-color-box {
-            width: 14px;
-            height: 14px;
-            display: inline-block;
-            margin-right: 5px;
-        }
-    </style>
+</style>
 </head>
 
 <body>
 
 <div id="map"></div>
 
-<!-- Layer opacity control -->
-<div id="opacityBox">
-    <h4>Layer Opacity</h4>
-    <select id="opacityLayer"></select>
+<!-- Dropdown Opacity Control -->
+<div id="opacityControl">
+    <label><strong>Layer Opacity</strong></label><br>
+    <select id="opacityLayerSelect">
+        <option value="">Select Layer</option>
+    </select>
     <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="1">
-</div>
-
-<!-- Legend -->
-<div id="legend">
-    <h4>Legend</h4>
-    <div id="legendItems"></div>
 </div>
 
 <script>
 
+// Init Map
 var map = L.map("map").setView([31.903, 35.203], 11);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19
 }).addTo(map);
 
-// Center scale
-L.control.scale({
-    imperial: false,
-    position: "bottomleft"
-}).addTo(map);
+// Scale
+L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
 
-// Layers
+// Layers container
 var layers = {};
-var layerColors = {
-    "Agricultural Land": "green",
-    "Annexation Wall": "black",
-    "Master Plans": "purple",
-    "Closed Areas": "orange",
-    "Built-up Areas": "brown",
-    "Quarries": "gray",
-    "Ramallah Boundary": "red",
-    "Roads": "yellow",
-    "Schools": "blue",
-    "Settlements": "darkred",
-    "Streams": "cyan",
-    "Temperature": "pink",
-    "Wells": "aqua"
-};
 
+// Layer Control
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-// Load a GeoJSON layer
-function loadLayer(filename, layerName) {
-    $.getJSON(filename, function(data) {
-        var layer = L.geoJson(data, {
-            style: { color: layerColors[layerName], weight: 1, fillOpacity: 0.3 }
-        });
+// Custom Load Function
+function loadLayer(file, name, color = "blue", type = "poly") {
 
-        layers[layerName] = layer;
+    $.getJSON(file, function(data) {
+        var layer;
+
+        if (type === "point") {
+            layer = L.geoJson(data, {
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, { icon: L.icon({
+                        iconUrl: icons[name],
+                        iconSize: [26, 26]
+                    }) });
+                }
+            });
+        } 
+        else {
+            layer = L.geoJson(data, {
+                style: { color: color, weight: 1, fillOpacity: 0.3 }
+            });
+        }
+
+        layers[name] = layer;
         layer.addTo(map);
-        control.addOverlay(layer, layerName);
+        control.addOverlay(layer, name);
 
         // Add to opacity dropdown
-        $("#opacityLayer").append(`<option value="${layerName}">${layerName}</option>`);
-
-        // Add to legend
-        $("#legendItems").append(`
-            <div>
-                <span class="legend-color-box" style="background:${layerColors[layerName]}"></span>
-                ${layerName}
-            </div>
-        `);
+        $("#opacityLayerSelect").append(`<option value="${name}">${name}</option>`);
     });
 }
 
-// Load all layers
-loadLayer("Agricultural_Land.geojson", "Agricultural Land");
-loadLayer("Annexation_Wall.geojson", "Annexation Wall");
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans");
-loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas");
-loadLayer("Built_up.geojson", "Built-up Areas");
-loadLayer("Quarries.geojson", "Quarries");
-loadLayer("Ramallah.geojson", "Ramallah Boundary");
-loadLayer("Roads.geojson", "Roads");
-loadLayer("Schools.geojson", "Schools");
-loadLayer("Settlements.geojson", "Settlements");
-loadLayer("Streams.geojson", "Streams");
-loadLayer("Temperature.geojson", "Temperature");
-loadLayer("Wells.geojson", "Wells");
+// Icons for point layers
+var icons = {
+    "Schools": "https://cdn-icons-png.flaticon.com/512/167/167707.png",
+    "Wells": "https://cdn-icons-png.flaticon.com/512/727/727240.png",
+    "Quarries": "https://cdn-icons-png.flaticon.com/512/616/616490.png"
+};
 
-// Opacity control
+// Load Layers
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
+loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black", "line");
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "orange");
+loadLayer("Built_up.geojson", "Built-up Areas", "brown");
+loadLayer("Quarries.geojson", "Quarries", "gray", "point");
+loadLayer("Ramallah.geojson", "Ramallah Boundary", "red");
+loadLayer("Roads.geojson", "Roads", "yellow", "line");
+loadLayer("Schools.geojson", "Schools", "blue", "point");
+loadLayer("Settlements.geojson", "Settlements", "darkred");
+loadLayer("Streams.geojson", "Streams", "cyan", "line");
+loadLayer("Temperature.geojson", "Temperature Zones", "pink");
+loadLayer("Wells.geojson", "Wells", "aqua", "point");
+
+
+// Opacity Control
 $("#opacitySlider").on("input", function() {
-    var selected = $("#opacityLayer").val();
-    if (layers[selected]) {
-        layers[selected].setStyle({
-            fillOpacity: this.value,
-            opacity: this.value
-        });
+    let layerName = $("#opacityLayerSelect").val();
+    if (layerName && layers[layerName]) {
+        layers[layerName].setStyle
+            ? layers[layerName].setStyle({ opacity: this.value, fillOpacity: this.value })
+            : null;
     }
 });
 
-</script>
 
+// Legend
+var legend = L.control({ position: "bottomleft" });
+
+legend.onAdd = function (map) {
+    var div = L.DomUtil.create("div", "legend");
+
+    div.innerHTML += `<h4>Legend</h4>`;
+
+    // Points
+    div.innerHTML += `
+        <div class="legend-item"><img src="${icons["Schools"]}" class="legend-icon"><span>Schools (Point)</span></div>
+        <div class="legend-item"><img src="${icons["Wells"]}" class="legend-icon"><span>Wells (Point)</span></div>
+        <div class="legend-item"><img src="${icons["Quarries"]}" class="legend-icon"><span>Quarries (Point)</span></div>
+    `;
+
+    // Lines
+    div.innerHTML += `
+        <div class="legend-line">Roads (Line)</div>
+        <div class="legend-line">Annexation Wall (Line)</div>
+        <div class="legend-line">Streams (Line)</div>
+    `;
+
+    // Polygons
+    div.innerHTML += `
+        <div class="legend-poly">Agricultural Land (Polygon)</div>
+        <div class="legend-poly">Closed Areas (Polygon)</div>
+        <div class="legend-poly">Built-up Areas (Polygon)</div>
+        <div class="legend-poly">Master Plans (Polygon)</div>
+        <div class="legend-poly">Settlements (Polygon)</div>
+        <div class="legend-poly">Temperature Zones (Polygon)</div>
+        <div class="legend-poly">Ramallah Boundary (Polygon)</div>
+    `;
+
+    return div;
+};
+
+legend.addTo(map);
+
+</script>
 </body>
 </html>
