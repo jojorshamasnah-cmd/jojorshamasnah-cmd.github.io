@@ -75,7 +75,7 @@
         margin-top: 6px;
     }
 
-    /* ----------- SCALE CENTER ----------- */
+    /* ----------- SCALE IN CENTER ----------- */
     .leaflet-control-scale {
         left: 50% !important;
         transform: translateX(-50%);
@@ -167,23 +167,23 @@ document.getElementById("opacity-slider").oninput = function() {
 };
 
 
-/* ----------- LEGEND TOGGLE ----------- */
+/* ----------- LEGEND TOGGLE WITH EXTRA LIFT ----------- */
 document.getElementById("legend-title").onclick = function () {
 
-    let legendContent = document.getElementById("legend-content");
+    let c = document.getElementById("legend-content");
     let opacityBox = document.getElementById("opacity-box");
 
-    if (legendContent.style.display === "none") {
+    if (c.style.display === "none") {
 
-        legendContent.style.display = "block";
+        c.style.display = "block";
         this.innerHTML = "Legend ▲";
 
-        /* يرتفع أكثر (350px) */
-        opacityBox.style.bottom = "350px";
+        /* يرتفع أكثر (380px) */
+        opacityBox.style.bottom = "380px";
 
     } else {
 
-        legendContent.style.display = "none";
+        c.style.display = "none";
         this.innerHTML = "Legend ▼";
 
         /* يرجع مكانه الطبيعي */
