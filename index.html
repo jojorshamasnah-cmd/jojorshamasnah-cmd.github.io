@@ -68,7 +68,7 @@
         border: 1px solid #00000080;
     }
 
-    /* ---------- OPACITY PANEL (OPEN ALWAYS) ---------- */
+    /* ---------- OPACITY PANEL (DROPDOWN) ---------- */
     #opacity-box {
         position: absolute;
         top: 170px;
@@ -87,6 +87,12 @@
         text-align: center;
         margin-bottom: 10px;
         font-size: 15px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    #opacity-content {
+        display: none;
     }
 
     .opacity-item {
@@ -146,11 +152,12 @@
     </div>
 </div>
 
-<!-- OPACITY CONTROL PANEL -->
+<!-- OPACITY DROPDOWN -->
 <div id="opacity-box">
-    <div id="opacity-title">Layer Opacity</div>
-
-    <div id="opacity-controls"></div>
+    <div id="opacity-title">Layer Opacity ▼</div>
+    <div id="opacity-content">
+        <div id="opacity-controls"></div>
+    </div>
 </div>
 
 
@@ -225,6 +232,20 @@ document.getElementById("legend-title").onclick = function () {
     } else {
         c.style.display = "none";
         this.innerHTML = "Legend ▼";
+    }
+};
+
+
+/* ----------- OPACITY DROPDOWN TOGGLE ----------- */
+document.getElementById("opacity-title").onclick = function () {
+    let box = document.getElementById("opacity-content");
+
+    if (box.style.display === "none") {
+        box.style.display = "block";
+        this.innerHTML = "Layer Opacity ▲";
+    } else {
+        box.style.display = "none";
+        this.innerHTML = "Layer Opacity ▼";
     }
 };
 </script>
