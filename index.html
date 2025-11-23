@@ -42,17 +42,17 @@
         font-size: 14px;
     }
 
-    /* Symbols */
-    .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
-    .emoji { font-size: 18px; width: 22px; margin-right: 6px; }
-    .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
-    .symbol-poly { width: 20px; height: 12px; background: gray; border: 1px solid #00000080; margin-right: 6px; }
+    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+    .emoji { font-size: 20px; width: 25px; margin-right: 6px; }
+
+    .symbol-line { width: 30px; height: 4px; margin-right: 6px; }
+    .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
 
     /* ----------- OPACITY BOX ----------- */
     #opacity-box {
         position: absolute;
         right: 10px;
-        bottom: 50px;
+        bottom: 45px;
         background: white;
         padding: 12px;
         border-radius: 10px;
@@ -60,7 +60,6 @@
         box-shadow: 0 0 10px rgba(0,0,0,0.3);
         font-family: Arial;
         z-index: 9999;
-        transition: bottom 0.3s ease;
     }
 
     #opacity-title {
@@ -75,7 +74,7 @@
         margin-top: 6px;
     }
 
-    /* ----------- SCALE IN CENTER ----------- */
+    /* ----------- SCALE CENTER ----------- */
     .leaflet-control-scale {
         left: 50% !important;
         transform: translateX(-50%);
@@ -105,48 +104,86 @@
 
     <div id="legend-content">
 
-        <div class="legend-item"><span class="emoji">🏫</span> Schools (Point)</div>
-        <div class="legend-item"><span class="emoji">💧</span> Wells (Point)</div>
-        <div class="legend-item"><span class="emoji">⛏️</span> Quarries (Point)</div>
+        <!-- POINTS -->
+        <div class="legend-item"><span class="emoji">🏫</span> Schools</div>
+        <div class="legend-item"><span class="emoji">💧</span> Wells</div>
+        <div class="legend-item"><span class="emoji">⛏️</span> Quarries</div>
 
         <hr>
-        <div class="legend-item"><span class="symbol-line"></span> Roads</div>
-        <div class="legend-item"><span class="symbol-line"></span> Streams</div>
-        <div class="legend-item"><span class="symbol-line"></span> Annexation Wall</div>
+
+        <!-- LINES -->
+        <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
+        <div class="legend-item"><span class="symbol-line" style="background:#0077ff"></span> Streams</div>
+        <div class="legend-item"><span class="symbol-line" style="background:#555"></span> Annexation Wall</div>
 
         <hr>
-        <div class="legend-item"><span class="symbol-poly"></span> Agricultural Land</div>
-        <div class="legend-item"><span class="symbol-poly"></span> Closed Areas</div>
-        <div class="legend-item"><span class="symbol-poly"></span> Built-up Areas</div>
-        <div class="legend-item"><span class="symbol-poly"></span> Master Plans</div>
-        <div class="legend-item"><span class="symbol-poly"></span> Settlements</div>
-        <div class="legend-item"><span class="symbol-poly"></span> Temperature Zones</div>
-        <div class="legend-item"><span class="symbol-poly"></span> Ramallah Boundary</div>
+
+        <!-- POLYGONS -->
+        <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb"></span> Temperature Zones</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:none"></span> Ramallah Boundary</div>
 
     </div>
 </div>
 
 <script>
-/* ---------------- MAP ---------------- */
 var map = L.map("map").setView([31.903, 35.203], 11);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 L.control.scale({ imperial: false }).addTo(map);
 
-var layers = {};
+/*** ORDERED LAYERS ***/
+var layers = {
+    points: {},
+    lines: {},
+    polys: {}
+};
+
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
+/*** POINT SYMBOLS (matching legend emojis) ***/
+function getPointIcon(type) {
+    return L.divIcon({
+        html: type === "Schools" ? "🏫" :
+              type === "Wells" ? "💧" :
+              type === "Quarries" ? "⛏️" : "•",
+        className: "",
+        iconSize: [25, 25],
+        iconAnchor: [12, 12]
+    });
+}
 
-/* ----------- LOAD LAYERS ----------- */
-function loadLayer(file, name, styleOptions) {
+/*** LOAD LAYER FUNCTION ***/
+function loadLayer(file, name, group, styleObj) {
+    $.getJSON(file, function (data) {
 
-    $.getJSON(file, function(data) {
+        var layer;
 
-        var layer = L.geoJson(data, {
-            style: styleOptions
-        }).addTo(map);
+        if (group === "points") {
+            layer = L.geoJson(data, {
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, { icon: getPointIcon(name) });
+                }
+            }).addTo(map);
+        }
 
-        layers[name] = layer;
+        else if (group === "lines") {
+            layer = L.geoJson(data, {
+                style: styleObj
+            }).addTo(map);
+        }
+
+        else {
+            layer = L.geoJson(data, {
+                style: styleObj
+            }).addTo(map);
+        }
+
+        layers[group][name] = layer;
         control.addOverlay(layer, name);
 
         document.getElementById("opacity-select").innerHTML +=
@@ -154,130 +191,49 @@ function loadLayer(file, name, styleOptions) {
     });
 }
 
-
-/* ----------- APPLY OPACITY ----------- */
-document.getElementById("opacity-slider").oninput = function() {
+/*** APPLY OPACITY ***/
+document.getElementById("opacity-slider").oninput = function () {
     let selected = document.getElementById("opacity-select").value;
-    if (selected && layers[selected]) {
-        layers[selected].setStyle({
-            opacity: this.value,
-            fillOpacity: this.value
-        });
+
+    for (let group in layers) {
+        if (layers[group][selected]) {
+            layers[group][selected].setStyle({
+                opacity: this.value,
+                fillOpacity: this.value
+            });
+        }
     }
 };
 
-
-/* ----------- LEGEND TOGGLE ----------- */
+/*** LEGEND TOGGLE ***/
 document.getElementById("legend-title").onclick = function () {
-
     let c = document.getElementById("legend-content");
-    let opacityBox = document.getElementById("opacity-box");
-
-    if (c.style.display === "none") {
-        c.style.display = "block";
-        this.innerHTML = "Legend ▲";
-        opacityBox.style.bottom = "330px";
-
-    } else {
-        c.style.display = "none";
-        this.innerHTML = "Legend ▼";
-        opacityBox.style.bottom = "50px";
-    }
+    c.style.display = c.style.display === "none" ? "block" : "none";
+    this.innerHTML = c.style.display === "none" ? "Legend ▼" : "Legend ▲";
 };
 
+/*** LOAD ALL LAYERS (ORDERED) ***/
 
+/* POINTS */
+loadLayer("Schools.geojson", "Schools", "points");
+loadLayer("Wells.geojson", "Wells", "points");
+loadLayer("Quarries.geojson", "Quarries", "points");
 
-/* ------------------------------------------------------
-   LOAD LAYERS IN ORDER:
-   POINTS → LINES → POLYGONS → RAMALLAH LAST
------------------------------------------------------- */
+/* LINES */
+loadLayer("Roads.geojson", "Roads", "lines", { color:"black", weight:2 });
+loadLayer("Streams.geojson", "Streams", "lines", { color:"#0077ff", weight:2 });
+loadLayer("Annexation_Wall.geojson", "Annexation Wall", "lines", { color:"#555", weight:3 });
 
+/* POLYGONS */
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "polys", { color:"green", fillColor:"#8fd19e", fillOpacity:0.6 });
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "polys", { color:"orange", fillColor:"#ffb347", fillOpacity:0.6 });
+loadLayer("Built_up.geojson", "Built-up Areas", "polys", { color:"brown", fillColor:"#c49a6c", fillOpacity:0.6 });
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "polys", { color:"purple", fillColor:"#af7ac5", fillOpacity:0.6 });
+loadLayer("Settlements.geojson", "Settlements", "polys", { color:"red", fillColor:"#ff6666", fillOpacity:0.6 });
+loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color:"blue", fillColor:"#87ceeb", fillOpacity:0.6 });
 
-/* ----------- POINTS ----------- */
-loadLayer("Schools.geojson", "Schools", {
-    color: "#005eff",
-    radius: 5,
-    fillColor: "#005eff",
-    fillOpacity: 1
-});
-
-loadLayer("Wells.geojson", "Wells", {
-    color: "#00a2ff",
-    radius: 5,
-    fillColor: "#00a2ff",
-    fillOpacity: 1
-});
-
-loadLayer("Quarries.geojson", "Quarries", {
-    color: "gray",
-    radius: 5,
-    fillColor: "gray",
-    fillOpacity: 1
-});
-
-
-/* ----------- LINES ----------- */
-loadLayer("Roads.geojson", "Roads", {
-    color: "black",
-    weight: 2
-});
-
-loadLayer("Streams.geojson", "Streams", {
-    color: "#0099ff",
-    weight: 2
-});
-
-loadLayer("Annexation_Wall.geojson", "Annexation Wall", {
-    color: "#ff0000",
-    weight: 3
-});
-
-
-/* ----------- POLYGONS ----------- */
-loadLayer("Agricultural_Land.geojson", "Agricultural Land", {
-    color: "green",
-    fillColor: "green",
-    fillOpacity: 0.5
-});
-
-loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", {
-    color: "orange",
-    fillColor: "orange",
-    fillOpacity: 0.5
-});
-
-loadLayer("Built_up.geojson", "Built-up Areas", {
-    color: "brown",
-    fillColor: "brown",
-    fillOpacity: 0.5
-});
-
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", {
-    color: "purple",
-    fillColor: "purple",
-    fillOpacity: 0.5
-});
-
-loadLayer("Settlements.geojson", "Settlements", {
-    color: "red",
-    fillColor: "red",
-    fillOpacity: 0.5
-});
-
-loadLayer("Temperature.geojson", "Temperature Zones", {
-    color: "pink",
-    fillColor: "pink",
-    fillOpacity: 0.5
-});
-
-
-/* ----------- RAMALLAH (LAST) ----------- */
-loadLayer("Ramallah.geojson", "Ramallah Boundary", {
-    color: "#222",
-    weight: 3,
-    fillOpacity: 0
-});
-
+/* LAST (UNDER ALL) */
+loadLayer("Ramallah.geojson", "Ramallah Boundary", "polys", { color:"black", fillOpacity:0 });
 </script>
 
 </body>
