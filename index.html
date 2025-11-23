@@ -42,6 +42,7 @@
         font-size: 14px;
     }
 
+    /* Symbols */
     .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
     .emoji { font-size: 18px; width: 22px; margin-right: 6px; }
     .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
@@ -50,8 +51,8 @@
     /* ----------- OPACITY BOX ----------- */
     #opacity-box {
         position: absolute;
-        bottom: 180px;
-        right: 10px;     /* ⇦ نقلناه يمين */
+        right: 10px;
+        bottom: 50px;
         background: white;
         padding: 12px;
         border-radius: 10px;
@@ -74,7 +75,7 @@
         margin-top: 6px;
     }
 
-    /* ----------- SCALE CENTER ----------- */
+    /* ----------- SCALE IN CENTER ----------- */
     .leaflet-control-scale {
         left: 50% !important;
         transform: translateX(-50%);
@@ -126,7 +127,6 @@
 </div>
 
 <script>
-
 /* ---------------- MAP ---------------- */
 var map = L.map("map").setView([31.903, 35.203], 11);
 
@@ -137,16 +137,16 @@ var layers = {};
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 
-/* LOAD LAYERS WITH NEW COLORS */
-function loadLayer(file, name, color="blue") {
+/* ----------- LOAD LAYERS ----------- */
+function loadLayer(file, name, styleOptions) {
+
     $.getJSON(file, function(data) {
 
         var layer = L.geoJson(data, {
-            style: { color: color, weight: 1.5, fillOpacity: 0.6, opacity: 1 }
+            style: styleOptions
         }).addTo(map);
 
         layers[name] = layer;
-
         control.addOverlay(layer, name);
 
         document.getElementById("opacity-select").innerHTML +=
@@ -155,7 +155,7 @@ function loadLayer(file, name, color="blue") {
 }
 
 
-/* OPACITY SLIDER */
+/* ----------- APPLY OPACITY ----------- */
 document.getElementById("opacity-slider").oninput = function() {
     let selected = document.getElementById("opacity-select").value;
     if (selected && layers[selected]) {
@@ -167,43 +167,116 @@ document.getElementById("opacity-slider").oninput = function() {
 };
 
 
-/* LEGEND TOGGLE */
+/* ----------- LEGEND TOGGLE ----------- */
 document.getElementById("legend-title").onclick = function () {
 
     let c = document.getElementById("legend-content");
     let opacityBox = document.getElementById("opacity-box");
 
     if (c.style.display === "none") {
-
         c.style.display = "block";
         this.innerHTML = "Legend ▲";
-
-        opacityBox.style.bottom = "330px"; /* يرفع الصندوق */
+        opacityBox.style.bottom = "330px";
 
     } else {
-
         c.style.display = "none";
         this.innerHTML = "Legend ▼";
-
-        opacityBox.style.bottom = "180px"; /* يرجع مكانه */
+        opacityBox.style.bottom = "50px";
     }
 };
 
 
-/* LOAD ALL LAYERS WITH GOOD COLORS */
-loadLayer("Agricultural_Land.geojson", "Agricultural Land", "#9be58c");
-loadLayer("Annexation_Wall.geojson", "Annexation Wall", "#555");
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "#7a3cff");
-loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "#ff9933");
-loadLayer("Built_up.geojson", "Built-up Areas", "#b06c3b");
-loadLayer("Quarries.geojson", "Quarries", "#cccccc");
-loadLayer("Ramallah.geojson", "Ramallah Boundary", "#990000");
-loadLayer("Roads.geojson", "Roads", "#000000");
-loadLayer("Schools.geojson", "Schools", "#d4b400");
-loadLayer("Settlements.geojson", "Settlements", "#ff0000");
-loadLayer("Streams.geojson", "Streams", "#00c4ff");
-loadLayer("Temperature.geojson", "Temperature Zones", "#ff77c7");
-loadLayer("Wells.geojson", "Wells", "#00ffe6");
+
+/* ------------------------------------------------------
+   LOAD LAYERS IN ORDER:
+   POINTS → LINES → POLYGONS → RAMALLAH LAST
+------------------------------------------------------ */
+
+
+/* ----------- POINTS ----------- */
+loadLayer("Schools.geojson", "Schools", {
+    color: "#005eff",
+    radius: 5,
+    fillColor: "#005eff",
+    fillOpacity: 1
+});
+
+loadLayer("Wells.geojson", "Wells", {
+    color: "#00a2ff",
+    radius: 5,
+    fillColor: "#00a2ff",
+    fillOpacity: 1
+});
+
+loadLayer("Quarries.geojson", "Quarries", {
+    color: "gray",
+    radius: 5,
+    fillColor: "gray",
+    fillOpacity: 1
+});
+
+
+/* ----------- LINES ----------- */
+loadLayer("Roads.geojson", "Roads", {
+    color: "black",
+    weight: 2
+});
+
+loadLayer("Streams.geojson", "Streams", {
+    color: "#0099ff",
+    weight: 2
+});
+
+loadLayer("Annexation_Wall.geojson", "Annexation Wall", {
+    color: "#ff0000",
+    weight: 3
+});
+
+
+/* ----------- POLYGONS ----------- */
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", {
+    color: "green",
+    fillColor: "green",
+    fillOpacity: 0.5
+});
+
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", {
+    color: "orange",
+    fillColor: "orange",
+    fillOpacity: 0.5
+});
+
+loadLayer("Built_up.geojson", "Built-up Areas", {
+    color: "brown",
+    fillColor: "brown",
+    fillOpacity: 0.5
+});
+
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", {
+    color: "purple",
+    fillColor: "purple",
+    fillOpacity: 0.5
+});
+
+loadLayer("Settlements.geojson", "Settlements", {
+    color: "red",
+    fillColor: "red",
+    fillOpacity: 0.5
+});
+
+loadLayer("Temperature.geojson", "Temperature Zones", {
+    color: "pink",
+    fillColor: "pink",
+    fillOpacity: 0.5
+});
+
+
+/* ----------- RAMALLAH (LAST) ----------- */
+loadLayer("Ramallah.geojson", "Ramallah Boundary", {
+    color: "#222",
+    weight: 3,
+    fillOpacity: 0
+});
 
 </script>
 
