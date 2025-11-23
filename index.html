@@ -42,7 +42,6 @@
         font-size: 14px;
     }
 
-    /* Symbols */
     .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
     .emoji { font-size: 18px; width: 22px; margin-right: 6px; }
     .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
@@ -75,7 +74,7 @@
         margin-top: 6px;
     }
 
-    /* ----------- SCALE IN CENTER ----------- */
+    /* ----------- SCALE CENTER ----------- */
     .leaflet-control-scale {
         left: 50% !important;
         transform: translateX(-50%);
@@ -167,7 +166,7 @@ document.getElementById("opacity-slider").oninput = function() {
 };
 
 
-/* ----------- LEGEND TOGGLE WITH EXTRA LIFT ----------- */
+/* ----------- LEGEND TOGGLE WITH 350PX LIFT ----------- */
 document.getElementById("legend-title").onclick = function () {
 
     let c = document.getElementById("legend-content");
@@ -178,8 +177,8 @@ document.getElementById("legend-title").onclick = function () {
         c.style.display = "block";
         this.innerHTML = "Legend ▲";
 
-        /* يرتفع أكثر (330px) */
-        opacityBox.style.bottom = "330px";
+        /* يرتفع الصندوق 350px */
+        opacityBox.style.bottom = "350px";
 
     } else {
 
