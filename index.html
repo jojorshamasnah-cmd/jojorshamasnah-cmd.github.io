@@ -1,153 +1,211 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
+
 <head>
 <meta charset="UTF-8" />
-<title>Map</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ramallah WebGIS</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <style>
-    body, html {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        direction: rtl;
-        font-family: sans-serif;
-    }
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { height: 100vh; }
 
-    #map {
-        width: 100%;
-        height: 100%;
-    }
-
-    /* ---------------- LEGEND ---------------- */
-    .legend-box {
+    /* ----------- LEGEND ----------- */
+    #legend-box {
         position: absolute;
-        bottom: 20px;
+        bottom: 45px;
         left: 10px;
         background: white;
         padding: 10px 14px;
         border-radius: 10px;
-        border: 2px solid #444;
-        min-width: 180px;
-        font-size: 15px;
-        z-index: 9999;
+        width: 220px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        font-family: Arial;
+        z-index: 9998;
     }
 
-    .legend-title {
+    #legend-title {
         font-weight: bold;
         text-align: center;
-        margin-bottom: 8px;
         font-size: 16px;
+        cursor: pointer;
+        user-select: none;
     }
 
-    /* ------------ Opacity Box ------------- */
-    #opacityBox {
+    #legend-content {
+        display: none;
+        margin-top: 8px;
+        font-size: 14px;
+    }
+
+    /* Symbols */
+    .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
+    .emoji { font-size: 18px; width: 22px; margin-right: 6px; }
+    .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
+    .symbol-poly { width: 20px; height: 12px; background: gray; border: 1px solid #00000080; margin-right: 6px; }
+
+    /* ----------- OPACITY BOX ----------- */
+    #opacity-box {
         position: absolute;
-        right: 10px;
-        bottom: 230px;   /* مكانه الطبيعي */
-        width: 200px;
+        bottom: 180px; /* مكانه الطبيعي */
+        left: 10px;
         background: white;
-        padding: 10px;
+        padding: 12px;
         border-radius: 10px;
-        border: 2px solid #444;
+        width: 220px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        font-family: Arial;
         z-index: 9999;
-        transition: bottom 0.4s ease;
+        transition: bottom 0.3s ease;
     }
 
-    #opacityBox select, #opacitySlider {
+    #opacity-title {
+        font-weight: bold;
+        text-align: center;
+        font-size: 15px;
+        margin-bottom: 8px;
+    }
+
+    select, input[type=range] {
         width: 100%;
         margin-top: 6px;
     }
 
-    /* -------- Scale in center bottom -------- */
+    /* ----------- SCALE IN CENTER ----------- */
     .leaflet-control-scale {
-        margin: 0 auto !important;
         left: 50% !important;
         transform: translateX(-50%);
+        bottom: 5px !important;
     }
 </style>
-
 </head>
+
 <body>
 
 <div id="map"></div>
 
-<!-- -------- Legend -------- -->
-<div class="legend-box" id="legendBox">
-    <div class="legend-title">Legend</div>
+<!-- OPACITY BOX -->
+<div id="opacity-box">
+    <div id="opacity-title">Layer Opacity</div>
 
-    🏫 المدارس (Points)<br>
-    💧 الآبار (Points)<br>
-    ⛏️ المقالع (Points)<br>
-    ——— الطرق (Lines)<br>
-    ——— الأودية (Lines)<br>
-    ███ المناطق المغلقة (Polygons)<br>
-    ███ مناطق مبنية (Polygons)<br>
-</div>
-
-<!-- -------- Opacity Control -------- -->
-<div id="opacityBox">
-    <label>Layer Opacity</label>
-    <select id="opacitySelect">
-        <option value="roads">Roads</option>
-        <option value="streams">Streams</option>
-        <option value="built">Built-up Areas</option>
+    <select id="opacity-select">
+        <option value="" disabled selected>Select Layer</option>
     </select>
 
-    <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="1">
+    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
+<!-- LEGEND -->
+<div id="legend-box">
+    <div id="legend-title">Legend ▼</div>
 
+    <div id="legend-content">
 
+        <div class="legend-item"><span class="emoji">🏫</span> Schools (Point)</div>
+        <div class="legend-item"><span class="emoji">💧</span> Wells (Point)</div>
+        <div class="legend-item"><span class="emoji">⛏️</span> Quarries (Point)</div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <hr>
+        <div class="legend-item"><span class="symbol-line"></span> Roads</div>
+        <div class="legend-item"><span class="symbol-line"></span> Streams</div>
+        <div class="legend-item"><span class="symbol-line"></span> Annexation Wall</div>
+
+        <hr>
+        <div class="legend-item"><span class="symbol-poly"></span> Agricultural Land</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Closed Areas</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Built-up Areas</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Master Plans</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Settlements</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Temperature Zones</div>
+        <div class="legend-item"><span class="symbol-poly"></span> Ramallah Boundary</div>
+
+    </div>
+</div>
+
 <script>
+/* ---------------- MAP ---------------- */
+var map = L.map("map").setView([31.903, 35.203], 11);
 
-// ---------------- MAP ----------------
-var map = L.map('map').setView([31.9, 35.2], 11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
 
-// Basemap
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19
-}).addTo(map);
+var layers = {};
+var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 
-// ------- Example Layers --------
-var roads = L.polyline([[31.9,35.2],[31.92,35.21]], {color:"black"}).addTo(map);
-var streams = L.polyline([[31.91,35.19],[31.925,35.205]], {color:"blue"}).addTo(map);
-var built = L.polygon([[31.9,35.2],[31.9,35.22],[31.92,35.21]], {color:"red",fillOpacity:0.6}).addTo(map);
+/* ----------- LOAD LAYERS ----------- */
+function loadLayer(file, name, color="blue") {
+    $.getJSON(file, function(data) {
 
-// Layer dictionary
-var layers = {
-    roads: roads,
-    streams: streams,
-    built: built
+        var layer = L.geoJson(data, {
+            style: { color: color, weight: 1, fillOpacity: 0.7, opacity: 1 }
+        }).addTo(map);
+
+        layers[name] = layer;
+
+        control.addOverlay(layer, name);
+
+        document.getElementById("opacity-select").innerHTML +=
+            `<option value="${name}">${name}</option>`;
+    });
+}
+
+
+/* ----------- APPLY OPACITY ----------- */
+document.getElementById("opacity-slider").oninput = function() {
+    let selected = document.getElementById("opacity-select").value;
+    if (selected && layers[selected]) {
+        layers[selected].setStyle({
+            opacity: this.value,
+            fillOpacity: this.value
+        });
+    }
 };
 
 
-// ---------- Opacity control logic ----------
-document.getElementById("opacitySlider").addEventListener("input", function() {
-    let layerName = document.getElementById("opacitySelect").value;
-    let layer = layers[layerName];
+/* ----------- LEGEND TOGGLE WITH EXTRA LIFT ----------- */
+document.getElementById("legend-title").onclick = function () {
 
-    if (layer.setStyle) {
-        layer.setStyle({ opacity: this.value, fillOpacity: this.value });
+    let c = document.getElementById("legend-content");
+    let opacityBox = document.getElementById("opacity-box");
+
+    if (c.style.display === "none") {
+
+        c.style.display = "block";
+        this.innerHTML = "Legend ▲";
+
+        /* يرتفع أكثر (330px) */
+        opacityBox.style.bottom = "330px";
+
+    } else {
+
+        c.style.display = "none";
+        this.innerHTML = "Legend ▼";
+
+        /* يرجع مكانه الطبيعي */
+        opacityBox.style.bottom = "180px";
     }
-});
+};
 
 
-// 🎯🎯 **رفع صندوق الشفافية عند فتح الليجند**
-let legendBox = document.getElementById("legendBox");
-let opacityBox = document.getElementById("opacityBox");
-
-// محاكاة فتح وإغلاق الليجند (لأنك حالياً ما عندك زر)
-legendBox.addEventListener("mouseenter", function() {
-    opacityBox.style.bottom = "350px";   // ← ← 350px حسب طلبك
-});
-
-legendBox.addEventListener("mouseleave", function() {
-    opacityBox.style.bottom = "230px";   // يرجع لمكانه العادي
-});
+/* ----------- LOAD ALL LAYERS ----------- */
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
+loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "orange");
+loadLayer("Built_up.geojson", "Built-up Areas", "brown");
+loadLayer("Quarries.geojson", "Quarries", "gray");
+loadLayer("Ramallah.geojson", "Ramallah Boundary", "red");
+loadLayer("Roads.geojson", "Roads", "yellow");
+loadLayer("Schools.geojson", "Schools", "blue");
+loadLayer("Settlements.geojson", "Settlements", "darkred");
+loadLayer("Streams.geojson", "Streams", "cyan");
+loadLayer("Temperature.geojson", "Temperature Zones", "pink");
+loadLayer("Wells.geojson", "Wells", "aqua");
 
 </script>
 
