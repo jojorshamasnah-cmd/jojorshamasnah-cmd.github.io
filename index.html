@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ramallah WebGIS</title>
 
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
@@ -20,119 +25,50 @@
 <div id="map"></div>
 
 <script>
+    // Create the map
+    var map = L.map("map").setView([31.903, 35.203], 11);
 
-// Initialize map
-var map = L.map("map").setView([31.9, 35.2], 11);
+    // Base map
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19
+    }).addTo(map);
 
-// Base map
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+    // Layers dictionary
+    var layers = {};
 
-// Icons
-var schoolIcon = L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/167/167707.png",
-    iconSize: [20, 20]
-});
-
-var wellIcon = L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/427/427735.png",
-    iconSize: [22, 22]
-});
-
-var quarryIcon = L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/703/703031.png",
-    iconSize: [26, 26]
-});
-
-// Storage
-var layers = {};
-
-function loadLayer(url, type, styleFunction, pointToLayer) {
-    $.getJSON(url, function(data) {
-        var layer = L.geoJson(data, {
-            style: styleFunction,
-            pointToLayer: pointToLayer,
-            onEachFeature: function(feature, layer) {
-                if (feature.properties) {
-                    layer.bindPopup(JSON.stringify(feature.properties, null, 2));
+    // Function to load a GeoJSON layer
+    function loadLayer(filename, layerName, color="blue") {
+        $.getJSON(filename, function(data) {
+            var layer = L.geoJson(data, {
+                style: {
+                    color: color,
+                    weight: 1,
+                    fillOpacity: 0.3
                 }
-            }
+            });
+            layers[layerName] = layer;
+            layer.addTo(map);
+            control.addOverlay(layer, layerName);
         });
-
-        layer.addTo(map);
-        layers[url] = layer;
-        updateLayerControl();
-    });
-}
-
-// Load layers (USING RELATIVE PATHS)
-loadLayer("layers/Agricultural_Land.geojson", "polygon",
-    () => ({ color: "#0d7c0d", weight: 1, fillColor: "#79ff79", fillOpacity: 0.5 })
-);
-
-loadLayer("layers/Annexation_Wall.geojson", "line",
-    () => ({ color: "#000000", weight: 3, dashArray: "6,4" })
-);
-
-loadLayer("layers/Approved_Urban_Master_Plans.geojson", "polygon",
-    () => ({ color: "#0049b8", weight: 1, fillColor: "#7ab2ff", fillOpacity: 0.4 })
-);
-
-loadLayer("layers/Areas_totally_closed_by_the_wall.geojson", "polygon",
-    () => ({ color: "#333333", weight: 1, fillColor: "#555555", fillOpacity: 0.5 })
-);
-
-loadLayer("layers/Built_up.geojson", "polygon",
-    () => ({ color: "#c2a000", weight: 1, fillColor: "#fff587", fillOpacity: 0.6 })
-);
-
-loadLayer("layers/Quarries.geojson", "point",
-    null,
-    (feature, latlng) => L.marker(latlng, { icon: quarryIcon })
-);
-
-loadLayer("layers/Ramallah.geojson", "polygon",
-    () => ({ color: "#000000", weight: 2, fillOpacity: 0 })
-);
-
-loadLayer("layers/Roads.geojson", "line",
-    () => ({ color: "#808080", weight: 2 })
-);
-
-loadLayer("layers/Schools.geojson", "point",
-    null,
-    (feature, latlng) => L.marker(latlng, { icon: schoolIcon })
-);
-
-loadLayer("layers/Settlements.geojson", "polygon",
-    () => ({ color: "#8a0000", weight: 1, fillColor: "#ff4d4d", fillOpacity: 0.5 })
-);
-
-loadLayer("layers/Streams.geojson", "line",
-    () => ({ color: "#009dff", weight: 2 })
-);
-
-loadLayer("layers/Temperature.geojson", "polygon",
-    () => ({ color: "#b30000", weight: 1, fillColor: "#ff9999", fillOpacity: 0.3 })
-);
-
-loadLayer("layers/Wells.geojson", "point",
-    null,
-    (feature, latlng) => L.marker(latlng, { icon: wellIcon })
-);
-
-// Layer control
-var layerControl = L.control.layers({}, {}, { collapsed: false }).addTo(map);
-
-function updateLayerControl() {
-    layerControl.remove();
-
-    var overlayLayers = {};
-    for (let key in layers) {
-        overlayLayers[key.replace("layers/", "").replace(".geojson", "")] = layers[key];
     }
 
-    layerControl = L.control.layers({}, overlayLayers, { collapsed: false }).addTo(map);
-}
+    // Create Layer Control (empty at start)
+    var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
+
+    // Load all layers
+    loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
+    loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
+    loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
+    loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "orange");
+    loadLayer("Built_up.geojson", "Built-up Areas", "brown");
+    loadLayer("Quarries.geojson", "Quarries", "gray");
+    loadLayer("Ramallah.geojson", "Ramallah Boundary", "red");
+    loadLayer("Roads.geojson", "Roads", "yellow");
+    loadLayer("Schools.geojson", "Schools", "blue");
+    loadLayer("Settlements.geojson", "Settlements", "darkred");
+    loadLayer("Streams.geojson", "Streams", "cyan");
+    loadLayer("Temperature.geojson", "Temperature", "pink");
+    loadLayer("Wells.geojson", "Wells", "aqua");
 
 </script>
 
