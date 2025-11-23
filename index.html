@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ramallah WebGIS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; }
+        #map { height: 100vh; width: 100%; }
+    </style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script>
+
+// Initialize map
+var map = L.map("map").setView([31.9, 35.2], 11);
+
+// Base map
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19
+}).addTo(map);
+
+// Storage for layers
+var layers = {};
+
+function loadLayer(url, type, styleFunction, pointToLayer) {
+    $.getJSON(url)
+        .done(function(data) {
+            var layer = L.geoJson(data, {
+                style: styleFunction,
+                pointToLayer: pointToLayer,
+                onEachFeature: function(feature, layer) {
+                    if (feature.properties) {
+                        layer.bindPopup(JSON.stringify(feature.properties, null, 2));
+                    }
+                }
+            });
+
+            layer.addTo(map);
+            layers[url] = layer;
+            updateLayerControl();
+        })
+        .fail(function() {
+            console.error("❌ ERROR loading:", url);
+        });
+}
+
+// -----------------------------
+//   Load ALL Layers (relative path for GitHub)
+// -----------------------------
+
+loadLayer("layers/Agricultural_Land.geojson", "polygon",
+    () => ({ color: "#0d7c0d", weight: 1, fillColor: "#79ff79", fillOpacity: 0.5 })
+);
+
+loadLayer("layers/Annexation_Wall.geojson", "line",
+    () => ({ color: "#000000", weight: 3, dashArray: "6,4" })
+);
+
+loadLayer("layers/Approved_Urban_Master_Plans.geojson", "polygon",
+    () => ({ color: "#0049b8", weight: 1, fillColor: "#7ab2ff", fillOpacity: 0.4 })
+);
+
+loadLayer("layers/Areas_totally_closed_by_the_wall.geojson", "polygon",
+    () => ({ color: "#333333", weight: 1, fillColor: "#555555", fillOpacity: 0.5 })
+);
+
+loadLayer("layers/Built_up.geojson", "polygon",
+    () => ({ color: "#c2a000", weight: 1, fillColor: "#fff587", fillOpacity: 0.6 })
+);
+
+loadLayer("layers/Quarries.geojson", "point",
+    null,
+    (feature, latlng) => L.circleMarker(latlng, { radius: 6, color: "#555", fillColor: "#aaa", fillOpacity: 0.8 })
+);
+
+loadLayer("layers/Ramallah.geojson", "polygon",
+    () => ({ color: "#000000", weight: 2, fillOpacity: 0 })
+);
+
+loadLayer("layers/Roads.geojson", "line",
+    () => ({ color: "#808080", weight: 2 })
+);
+
+loadLayer("layers/Schools.geojson", "point",
+    null,
+    (feature, latlng) => L.circleMarker(latlng, { radius: 7, fillColor: "#0049b8", color: "#002d73", weight: 1, fillOpacity: 0.9 })
+);
+
+loadLayer("layers/Settlements.geojson", "polygon",
+    () => ({ color: "#8a0000", weight: 1, fillColor: "#ff4d4d", fillOpacity: 0.5 })
+);
+
+loadLayer("layers/Streams.geojson", "line",
+    () => ({ color: "#009dff", weight: 2 })
+);
+
+loadLayer("layers/Temperature.geojson", "polygon",
+    () => ({ color: "#b30000", weight: 1, fillColor: "#ff9999", fillOpacity: 0.3 })
+);
+
+loadLayer("layers/Wells.geojson", "point",
+    null,
+    (feature, latlng) => L.circleMarker(latlng, { radius: 6, fillColor: "#1a75ff", color: "#0047b3", weight: 1, fillOpacity: 0.9 })
+);
+
+// -----------------------------
+//   Layer control
+// -----------------------------
+var layerControl = L.control.layers({}, {}, { collapsed: false }).addTo(map);
+
+function updateLayerControl() {
+    layerControl.remove();
+
+    var overlayLayers = {};
+    for (let key in layers) {
+        overlayLayers[key.replace("layers/", "").replace(".geojson", "")] = layers[key];
+    }
+
+    layerControl = L.control.layers({}, overlayLayers, { collapsed: false }).addTo(map);
+}
+
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
