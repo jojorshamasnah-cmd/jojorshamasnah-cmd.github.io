@@ -47,11 +47,11 @@
     .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
     .symbol-poly { width: 20px; height: 12px; background: gray; border: 1px solid #00000080; margin-right: 6px; }
 
-    /* ----------- OPACITY BOX (NOW RIGHT SIDE) ----------- */
+    /* ----------- OPACITY BOX ----------- */
     #opacity-box {
         position: absolute;
-        bottom: 45px;      /* تحت */
-        right: 10px;       /* يمين */
+        bottom: 40px;   /* يمين تحت */
+        right: 10px;
         background: white;
         padding: 12px;
         border-radius: 10px;
@@ -135,17 +135,61 @@ L.control.scale({ imperial: false }).addTo(map);
 var layers = {};
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
+/* ------- ICONS FOR POINT LAYERS ------- */
+var schoolIcon = L.icon({
+    iconUrl: "school.png",  /* عدل المسار */
+    iconSize: [28, 28]
+});
+var wellIcon = L.icon({
+    iconUrl: "well.png",
+    iconSize: [28, 28]
+});
+var quarryIcon = L.icon({
+    iconUrl: "quarry.png",
+    iconSize: [28, 28]
+});
 
 /* ----------- LOAD LAYERS ----------- */
-function loadLayer(file, name, color="blue") {
+function loadLayer(file, name, type, color="blue") {
     $.getJSON(file, function(data) {
 
-        var layer = L.geoJson(data, {
-            style: { color: color, weight: 1, fillOpacity: 0.7, opacity: 1 }
-        }).addTo(map);
+        let layer;
+
+        if (type === "point") {
+
+            let iconUsed =
+                name === "Schools" ? schoolIcon :
+                name === "Wells" ? wellIcon :
+                quarryIcon;
+
+            layer = L.geoJson(data, {
+                pointToLayer: function(f, latlng) {
+                    return L.marker(latlng, { icon: iconUsed });
+                }
+            }).addTo(map);
+
+        } else if (type === "line") {
+
+            layer = L.geoJson(data, {
+                style: {
+                    color: color,
+                    weight: 2,
+                    opacity: 1
+                }
+            }).addTo(map);
+
+        } else {  /* polygon */
+
+            layer = L.geoJson(data, {
+                style: {
+                    color: color,
+                    fillOpacity: 0.6,
+                    weight: 1
+                }
+            }).addTo(map);
+        }
 
         layers[name] = layer;
-
         control.addOverlay(layer, name);
 
         document.getElementById("opacity-select").innerHTML +=
@@ -153,18 +197,15 @@ function loadLayer(file, name, color="blue") {
     });
 }
 
-
-/* ----------- APPLY OPACITY ----------- */
+/* ----------- OPACITY ----------- */
 document.getElementById("opacity-slider").oninput = function() {
     let selected = document.getElementById("opacity-select").value;
     if (selected && layers[selected]) {
-        layers[selected].setStyle({
-            opacity: this.value,
-            fillOpacity: this.value
-        });
+        layers[selected].setStyle
+            ? layers[selected].setStyle({ opacity: this.value, fillOpacity: this.value })
+            : null;
     }
 };
-
 
 /* ----------- LEGEND TOGGLE ----------- */
 document.getElementById("legend-title").onclick = function () {
@@ -174,28 +215,28 @@ document.getElementById("legend-title").onclick = function () {
     if (c.style.display === "none") {
         c.style.display = "block";
         this.innerHTML = "Legend ▲";
-
     } else {
         c.style.display = "none";
         this.innerHTML = "Legend ▼";
     }
 };
 
+/* ---------------- LOAD ALL LAYERS ---------------- */
+loadLayer("Schools.geojson", "Schools", "point");
+loadLayer("Wells.geojson", "Wells", "point");
+loadLayer("Quarries.geojson", "Quarries", "point");
 
-/* ----------- LOAD ALL LAYERS ----------- */
-loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
-loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
-loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "orange");
-loadLayer("Built_up.geojson", "Built-up Areas", "brown");
-loadLayer("Quarries.geojson", "Quarries", "gray");
-loadLayer("Ramallah.geojson", "Ramallah Boundary", "red");
-loadLayer("Roads.geojson", "Roads", "yellow");
-loadLayer("Schools.geojson", "Schools", "blue");
-loadLayer("Settlements.geojson", "Settlements", "darkred");
-loadLayer("Streams.geojson", "Streams", "cyan");
-loadLayer("Temperature.geojson", "Temperature Zones", "pink");
-loadLayer("Wells.geojson", "Wells", "aqua");
+loadLayer("Roads.geojson", "Roads", "line", "yellow");
+loadLayer("Streams.geojson", "Streams", "line", "cyan");
+loadLayer("Annexation_Wall.geojson", "Annexation Wall", "line", "black");
+
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", "green");
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", "orange");
+loadLayer("Built_up.geojson", "Built-up Areas", "poly", "brown");
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", "purple");
+loadLayer("Settlements.geojson", "Settlements", "poly", "red");
+loadLayer("Temperature.geojson", "Temperature Zones", "poly", "pink");
+loadLayer("Ramallah.geojson", "Ramallah Boundary", "poly", "red");
 
 </script>
 
