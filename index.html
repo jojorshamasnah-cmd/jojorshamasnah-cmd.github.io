@@ -25,39 +25,46 @@
 var map = L.map("map").setView([31.9, 35.2], 11);
 
 // Base map
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19
-}).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
-// Storage for layers
+// Icons
+var schoolIcon = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/167/167707.png",
+    iconSize: [20, 20]
+});
+
+var wellIcon = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/427/427735.png",
+    iconSize: [22, 22]
+});
+
+var quarryIcon = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/703/703031.png",
+    iconSize: [26, 26]
+});
+
+// Storage
 var layers = {};
 
 function loadLayer(url, type, styleFunction, pointToLayer) {
-    $.getJSON(url)
-        .done(function(data) {
-            var layer = L.geoJson(data, {
-                style: styleFunction,
-                pointToLayer: pointToLayer,
-                onEachFeature: function(feature, layer) {
-                    if (feature.properties) {
-                        layer.bindPopup(JSON.stringify(feature.properties, null, 2));
-                    }
+    $.getJSON(url, function(data) {
+        var layer = L.geoJson(data, {
+            style: styleFunction,
+            pointToLayer: pointToLayer,
+            onEachFeature: function(feature, layer) {
+                if (feature.properties) {
+                    layer.bindPopup(JSON.stringify(feature.properties, null, 2));
                 }
-            });
-
-            layer.addTo(map);
-            layers[url] = layer;
-            updateLayerControl();
-        })
-        .fail(function() {
-            console.error("❌ ERROR loading:", url);
+            }
         });
+
+        layer.addTo(map);
+        layers[url] = layer;
+        updateLayerControl();
+    });
 }
 
-// -----------------------------
-//   Load ALL Layers (relative path for GitHub)
-// -----------------------------
-
+// Load layers (USING RELATIVE PATHS)
 loadLayer("layers/Agricultural_Land.geojson", "polygon",
     () => ({ color: "#0d7c0d", weight: 1, fillColor: "#79ff79", fillOpacity: 0.5 })
 );
@@ -80,7 +87,7 @@ loadLayer("layers/Built_up.geojson", "polygon",
 
 loadLayer("layers/Quarries.geojson", "point",
     null,
-    (feature, latlng) => L.circleMarker(latlng, { radius: 6, color: "#555", fillColor: "#aaa", fillOpacity: 0.8 })
+    (feature, latlng) => L.marker(latlng, { icon: quarryIcon })
 );
 
 loadLayer("layers/Ramallah.geojson", "polygon",
@@ -93,7 +100,7 @@ loadLayer("layers/Roads.geojson", "line",
 
 loadLayer("layers/Schools.geojson", "point",
     null,
-    (feature, latlng) => L.circleMarker(latlng, { radius: 7, fillColor: "#0049b8", color: "#002d73", weight: 1, fillOpacity: 0.9 })
+    (feature, latlng) => L.marker(latlng, { icon: schoolIcon })
 );
 
 loadLayer("layers/Settlements.geojson", "polygon",
@@ -110,12 +117,10 @@ loadLayer("layers/Temperature.geojson", "polygon",
 
 loadLayer("layers/Wells.geojson", "point",
     null,
-    (feature, latlng) => L.circleMarker(latlng, { radius: 6, fillColor: "#1a75ff", color: "#0047b3", weight: 1, fillOpacity: 0.9 })
+    (feature, latlng) => L.marker(latlng, { icon: wellIcon })
 );
 
-// -----------------------------
-//   Layer control
-// -----------------------------
+// Layer control
 var layerControl = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 function updateLayerControl() {
