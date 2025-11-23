@@ -18,35 +18,46 @@
         body, html { margin: 0; padding: 0; height: 100%; }
         #map { height: 100vh; width: 100%; }
 
-        /* Center scale */
+        /* توسيط السكيل */
         .leaflet-control-scale {
             margin: 0 auto !important;
             left: 50% !important;
             transform: translateX(-50%);
         }
 
-        /* Opacity box */
-        #opacityControl {
-            position: absolute; 
-            top: 10px; 
-            right: 10px; 
+        /* صندوق الشفافية */
+        #opacityBox {
+            position: absolute;
+            top: 20px;
+            right: 20px;
             background: white;
             padding: 10px;
             border-radius: 6px;
             z-index: 9999;
-            max-height: 90vh;
-            overflow-y: auto;
-            width: 200px;
+            width: 160px;
         }
 
+        /* الليجند */
         #legend {
-            position:absolute; 
-            bottom:20px; 
-            right:20px;
-            background:white; 
-            padding:10px; 
-            border-radius:6px; 
-            z-index:9999;
+            position: absolute;
+            bottom: 60px;
+            left: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            z-index: 9999;
+            width: 180px;
+        }
+
+        #legend div {
+            margin-bottom: 6px;
+        }
+
+        .legend-color-box {
+            width: 14px;
+            height: 14px;
+            display: inline-block;
+            margin-right: 5px;
         }
     </style>
 </head>
@@ -55,12 +66,14 @@
 
 <div id="map"></div>
 
-<!-- Opacity Control -->
-<div id="opacityControl">
-    <h4 style="margin: 0 0 10px 0;">Layer Opacity</h4>
+<!-- صندوق التحكم بالشفافية -->
+<div id="opacityBox">
+    <h4>Layer Opacity</h4>
+    <select id="opacityLayer"></select>
+    <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="1">
 </div>
 
-<!-- Legend -->
+<!-- الليجند -->
 <div id="legend">
     <h4>Legend</h4>
     <div id="legendItems"></div>
@@ -74,84 +87,79 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19
 }).addTo(map);
 
-// Centered scale
+// مركز السكيل
 L.control.scale({
     imperial: false,
     position: "bottomleft"
 }).addTo(map);
 
-// Layers dictionary
+// ------------- طبقات -------------
 var layers = {};
+var layerColors = {
+    "Agricultural Land": "green",
+    "Annexation Wall": "black",
+    "Master Plans": "purple",
+    "Closed Areas": "orange",
+    "Built-up Areas": "brown",
+    "Quarries": "gray",
+    "Ramallah Boundary": "red",
+    "Roads": "yellow",
+    "Schools": "blue",
+    "Settlements": "darkred",
+    "Streams": "cyan",
+    "Temperature": "pink",
+    "Wells": "aqua"
+};
 
-// Legend Function
-function addLegendItem(name, color){
-    var div = document.getElementById("legendItems");
-    div.innerHTML += `
-        <div style="margin-bottom:5px;">
-            <span style="display:inline-block; width:15px; height:15px; 
-                         background:${color}; margin-right:5px;
-                         border:1px solid #000;"></span> ${name}
-        </div>
-    `;
-}
+var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-// Add Opacity Slider
-function addOpacitySlider(name, layer) {
-    var container = document.getElementById("opacityControl");
-
-    var div = document.createElement("div");
-    div.style.marginBottom = "10px";
-
-    div.innerHTML = `
-        <label style="font-size:14px;"><b>${name}</b></label><br>
-        <input type="range" min="0" max="1" step="0.1" value="0.6"
-               oninput="layers['${name}'].setStyle({fillOpacity: this.value, opacity: this.value});">
-    `;
-
-    container.appendChild(div);
-}
-
-// Load Layer Function
-function loadLayer(filename, layerName, color="blue") {
+// تحميل طبقة GeoJSON
+function loadLayer(filename, layerName) {
     $.getJSON(filename, function(data) {
-        
         var layer = L.geoJson(data, {
-            style: { color: color, weight: 1, fillOpacity: 0.6 }
+            style: { color: layerColors[layerName], weight: 1, fillOpacity: 0.3 }
         });
 
         layers[layerName] = layer;
         layer.addTo(map);
+
         control.addOverlay(layer, layerName);
 
-        // Add sliders + legend
-        addOpacitySlider(layerName, layer);
-        addLegendItem(layerName, color);
+        // إضافة إلى قائمة الشفافية
+        $("#opacityLayer").append(`<option value="${layerName}">${layerName}</option>`);
+
+        // إضافة إلى الليجند
+        $("#legendItems").append(`
+            <div>
+                <span class="legend-color-box" style="background:${layerColors[layerName]}"></span>
+                ${layerName}
+            </div>
+        `);
     });
 }
 
-// Layer Control
-var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
+// تحميل كل الطبقات
+loadLayer("Agricultural_Land.geojson", "Agricultural Land");
+loadLayer("Annexation_Wall.geojson", "Annexation Wall");
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans");
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas");
+loadLayer("Built_up.geojson", "Built-up Areas");
+loadLayer("Quarries.geojson", "Quarries");
+loadLayer("Ramallah.geojson", "Ramallah Boundary");
+loadLayer("Roads.geojson", "Roads");
+loadLayer("Schools.geojson", "Schools");
+loadLayer("Settlements.geojson", "Settlements");
+loadLayer("Streams.geojson", "Streams");
+loadLayer("Temperature.geojson", "Temperature");
+loadLayer("Wells.geojson", "Wells");
 
-// Bring layer to front when activated
-map.on("overlayadd", function(e){
-    e.layer.bringToFront();
+// ----------- التحكم بالشفافية -----------
+$("#opacitySlider").on("input", function() {
+    var selected = $("#opacityLayer").val();
+    if (layers[selected]) {
+        layers[selected].setStyle({ fillOpacity: this.value, opacity: this.value });
+    }
 });
-
-
-// Load all layers
-loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
-loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
-loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "orange");
-loadLayer("Built_up.geojson", "Built-up Areas", "brown");
-loadLayer("Quarries.geojson", "Quarries", "gray");
-loadLayer("Ramallah.geojson", "Ramallah Boundary", "red");
-loadLayer("Roads.geojson", "Roads", "yellow");
-loadLayer("Schools.geojson", "Schools", "blue");
-loadLayer("Settlements.geojson", "Settlements", "darkred");
-loadLayer("Streams.geojson", "Streams", "cyan");
-loadLayer("Temperature.geojson", "Temperature", "pink");
-loadLayer("Wells.geojson", "Wells", "aqua");
 
 </script>
 
