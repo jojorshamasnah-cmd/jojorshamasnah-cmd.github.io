@@ -13,7 +13,7 @@
     body, html { margin: 0; padding: 0; height: 100%; }
     #map { height: 100vh; }
 
-    /* ----------- LEGEND (DROP DOWN) ----------- */
+    /* ---------- LEGEND ---------- */
     #legend-box {
         position: absolute;
         bottom: 45px;
@@ -26,7 +26,6 @@
         font-family: Arial;
         z-index: 9999;
     }
-
     #legend-title {
         font-weight: bold;
         text-align: center;
@@ -34,51 +33,31 @@
         cursor: pointer;
         user-select: none;
     }
-
-    #legend-content {
-        display: none;
-        margin-top: 8px;
-        font-size: 14px;
-    }
+    #legend-content { display: none; margin-top: 8px; font-size: 14px; }
 
     .legend-item {
         display: flex;
         align-items: center;
         margin-bottom: 4px;
     }
-
-    .emoji {
-        font-size: 18px;
-        width: 22px;
-        margin-right: 6px;
-    }
-
-    .symbol-line {
-        width: 26px;
-        height: 4px;
-        background: black;
-        margin-right: 6px;
-    }
-
+    .emoji { font-size: 18px; width: 22px; margin-right: 6px; }
+    .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
     .symbol-poly {
-        width: 20px;
-        height: 12px;
-        background: gray;
-        margin-right: 6px;
-        border: 1px solid #00000080;
+        width: 20px; height: 12px; background: gray;
+        border: 1px solid #00000080; margin-right: 6px;
     }
 
-    /* ---------- OPACITY PANEL (DROPDOWN) ---------- */
+    /* ---------- OPACITY CONTROL DROPDOWN ---------- */
     #opacity-box {
         position: absolute;
-        top: 170px;
+        top: 200px;
         right: 10px;
         background: white;
         padding: 12px;
         border-radius: 10px;
+        width: 230px;
         box-shadow: 0 0 10px rgba(0,0,0,0.3);
         font-family: Arial;
-        width: 220px;
         z-index: 9999;
     }
 
@@ -87,33 +66,19 @@
         text-align: center;
         margin-bottom: 10px;
         font-size: 15px;
-        cursor: pointer;
-        user-select: none;
     }
 
-    #opacity-content {
-        display: none;
+    #opacity-select {
+        width: 100%;
+        padding: 5px;
+        font-size: 14px;
+        margin-bottom: 10px;
     }
 
-    .opacity-item {
-        margin-bottom: 12px;
-    }
-
-    .opacity-item label {
-        font-size: 13px;
-        display: block;
-        margin-bottom: 4px;
-    }
-
-    input[type=range] {
+    #opacity-slider {
         width: 100%;
     }
 
-    .leaflet-control-scale {
-        margin: 0 auto !important;
-        left: 50% !important;
-        transform: translateX(-50%);
-    }
 </style>
 
 </head>
@@ -125,22 +90,16 @@
 <div id="legend-box">
     <div id="legend-title">Legend ▼</div>
     <div id="legend-content">
-
-        <!-- POINT -->
         <div class="legend-item"><span class="emoji">🏫</span> Schools (Point)</div>
         <div class="legend-item"><span class="emoji">💧</span> Wells (Point)</div>
         <div class="legend-item"><span class="emoji">⛏️</span> Quarries (Point)</div>
-
         <hr>
 
-        <!-- LINE -->
         <div class="legend-item"><span class="symbol-line"></span> Roads</div>
         <div class="legend-item"><span class="symbol-line"></span> Streams</div>
         <div class="legend-item"><span class="symbol-line"></span> Annexation Wall</div>
-
         <hr>
 
-        <!-- POLYGON -->
         <div class="legend-item"><span class="symbol-poly"></span> Agricultural Land</div>
         <div class="legend-item"><span class="symbol-poly"></span> Closed Areas</div>
         <div class="legend-item"><span class="symbol-poly"></span> Built-up Areas</div>
@@ -148,23 +107,24 @@
         <div class="legend-item"><span class="symbol-poly"></span> Settlements</div>
         <div class="legend-item"><span class="symbol-poly"></span> Temperature Zones</div>
         <div class="legend-item"><span class="symbol-poly"></span> Ramallah Boundary</div>
-
     </div>
 </div>
 
-<!-- OPACITY DROPDOWN -->
+<!-- OPACITY CONTROL BOX (NEW) -->
 <div id="opacity-box">
-    <div id="opacity-title">Layer Opacity ▼</div>
-    <div id="opacity-content">
-        <div id="opacity-controls"></div>
-    </div>
+    <div id="opacity-title">Layer Opacity</div>
+
+    <select id="opacity-select">
+        <option value="">Select Layer</option>
+    </select>
+
+    <input type="range" id="opacity-slider" min="0" max="1" step="0.1" value="1">
 </div>
 
 
 <script>
-/* ---------------- MAP ---------------- */
+/* ---------- MAP ----------- */
 var map = L.map("map").setView([31.903, 35.203], 11);
-
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 L.control.scale({ imperial: false }).addTo(map);
 
@@ -172,41 +132,44 @@ var layers = {};
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 
-/* ----------- LOAD LAYERS ------------ */
+/* ---------- LOAD LAYERS ---------- */
 function loadLayer(file, name, color = "blue") {
+
     $.getJSON(file, function(data) {
 
-        var layer = L.geoJson(data, {
+        let layer = L.geoJson(data, {
             style: function () {
-                return { color: color, weight: 1, fillOpacity: 0.5 };
+                return { color: color, weight: 1, fillOpacity: 0.6, opacity: 0.9 };
             }
-        });
-
-        layer.addTo(map);
+        }).addTo(map);
 
         layers[name] = layer;
         control.addOverlay(layer, name);
 
-        addOpacitySlider(name, layer);
+        // ADD TO DROPDOWN
+        let opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        document.getElementById("opacity-select").appendChild(opt);
     });
 }
 
 
-/* ----------- OPACITY SLIDERS ----------- */
-function addOpacitySlider(layerName, layerObject) {
-    let container = document.getElementById("opacity-controls");
+/* ---------- APPLY OPACITY WHEN SLIDER CHANGES ---------- */
+document.getElementById("opacity-slider").oninput = function () {
+    let selected = document.getElementById("opacity-select").value;
+    if (!selected) return;
 
-    container.innerHTML += `
-        <div class="opacity-item">
-            <label>${layerName}</label>
-            <input type="range" min="0" max="1" step="0.1" value="0.5"
-            onchange="layers['${layerName}'].setStyle({fillOpacity: this.value, opacity: this.value})">
-        </div>
-    `;
-}
+    let value = this.value;
+
+    layers[selected].setStyle({
+        opacity: value,
+        fillOpacity: value
+    });
+};
 
 
-/* ----------- LOAD ALL LAYERS ----------- */
+/* ---------- LAYERS LIST ---------- */
 loadLayer("Agricultural_Land.geojson", "Agricultural Land", "green");
 loadLayer("Annexation_Wall.geojson", "Annexation Wall", "black");
 loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "purple");
@@ -222,30 +185,15 @@ loadLayer("Temperature.geojson", "Temperature Zones", "pink");
 loadLayer("Wells.geojson", "Wells", "aqua");
 
 
-/* ----------- LEGEND TOGGLE ----------- */
+/* ---------- LEGEND TOGGLE ---------- */
 document.getElementById("legend-title").onclick = function () {
     let c = document.getElementById("legend-content");
-
     if (c.style.display === "none") {
         c.style.display = "block";
         this.innerHTML = "Legend ▲";
     } else {
         c.style.display = "none";
         this.innerHTML = "Legend ▼";
-    }
-};
-
-
-/* ----------- OPACITY DROPDOWN TOGGLE ----------- */
-document.getElementById("opacity-title").onclick = function () {
-    let box = document.getElementById("opacity-content");
-
-    if (box.style.display === "none") {
-        box.style.display = "block";
-        this.innerHTML = "Layer Opacity ▲";
-    } else {
-        box.style.display = "none";
-        this.innerHTML = "Layer Opacity ▼";
     }
 };
 </script>
