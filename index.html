@@ -42,17 +42,16 @@
         font-size: 14px;
     }
 
-    /* Symbols */
     .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
     .emoji { font-size: 18px; width: 22px; margin-right: 6px; }
     .symbol-line { width: 26px; height: 4px; background: black; margin-right: 6px; }
     .symbol-poly { width: 20px; height: 12px; background: gray; border: 1px solid #00000080; margin-right: 6px; }
 
-    /* ----------- OPACITY BOX ----------- */
+    /* ----------- OPACITY BOX (NOW RIGHT SIDE) ----------- */
     #opacity-box {
         position: absolute;
-        bottom: 180px; /* مكانه الطبيعي */
-        left: 10px;
+        bottom: 45px;      /* تحت */
+        right: 10px;       /* يمين */
         background: white;
         padding: 12px;
         border-radius: 10px;
@@ -167,27 +166,18 @@ document.getElementById("opacity-slider").oninput = function() {
 };
 
 
-/* ----------- LEGEND TOGGLE WITH EXTRA LIFT ----------- */
+/* ----------- LEGEND TOGGLE ----------- */
 document.getElementById("legend-title").onclick = function () {
 
     let c = document.getElementById("legend-content");
-    let opacityBox = document.getElementById("opacity-box");
 
     if (c.style.display === "none") {
-
         c.style.display = "block";
         this.innerHTML = "Legend ▲";
 
-        /* يرتفع أكثر (380px) */
-        opacityBox.style.bottom = "380px";
-
     } else {
-
         c.style.display = "none";
         this.innerHTML = "Legend ▼";
-
-        /* يرجع مكانه الطبيعي */
-        opacityBox.style.bottom = "180px";
     }
 };
 
