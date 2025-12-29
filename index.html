@@ -9,12 +9,13 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
 <style>
     body, html { margin: 0; padding: 0; height: 100%; }
     #map { height: 100vh; }
 
-    /* ----------- LEGEND ----------- */
+    /* LEGEND */
     #legend-box {
         position: absolute;
         bottom: 45px;
@@ -27,60 +28,33 @@
         font-family: Arial;
         z-index: 9998;
     }
+    #legend-title { font-weight:bold; text-align:center; font-size:16px; cursor:pointer; user-select:none; }
+    #legend-content { display:none; margin-top:8px; font-size:14px; }
+    .legend-item { display:flex; align-items:center; margin-bottom:5px; }
+    .emoji { font-size:20px; width:25px; margin-right:6px; }
+    .symbol-line { width:30px; height:4px; margin-right:6px; }
+    .symbol-poly { width:22px; height:12px; border:1px solid #000; margin-right:6px; }
 
-    #legend-title {
-        font-weight: bold;
-        text-align: center;
-        font-size: 16px;
-        cursor: pointer;
-        user-select: none;
-    }
-
-    #legend-content {
-        display: none;
-        margin-top: 8px;
-        font-size: 14px;
-    }
-
-    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
-    .emoji { font-size: 20px; width: 25px; margin-right: 6px; }
-
-    .symbol-line { width: 30px; height: 4px; margin-right: 6px; }
-    .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
-
-    /* ----------- OPACITY BOX ----------- */
+    /* OPACITY BOX */
     #opacity-box {
-        position: absolute;
-        right: 10px;
-        bottom: 45px;
-        background: white;
-        padding: 12px;
-        border-radius: 10px;
-        width: 220px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.3);
-        font-family: Arial;
-        z-index: 9999;
+        position:absolute;
+        right:10px;
+        bottom:45px;
+        background:white;
+        padding:12px;
+        border-radius:10px;
+        width:220px;
+        box-shadow:0 0 10px rgba(0,0,0,0.3);
+        font-family:Arial;
+        z-index:9999;
     }
+    #opacity-title { font-weight:bold; text-align:center; font-size:15px; margin-bottom:8px; }
+    select, input[type=range] { width:100%; margin-top:6px; }
 
-    #opacity-title {
-        font-weight: bold;
-        text-align: center;
-        font-size: 15px;
-        margin-bottom: 8px;
-    }
+    /* SCALE CENTER */
+    .leaflet-control-scale { left:50% !important; transform:translateX(-50%); bottom:5px !important; }
 
-    select, input[type=range] {
-        width: 100%;
-        margin-top: 6px;
-    }
-
-    .leaflet-control-scale {
-        left: 50% !important;
-        transform: translateX(-50%);
-        bottom: 5px !important;
-    }
-
-    /* ----------- INVESTMENT BUTTON ----------- */
+    /* INVESTMENT BUTTON */
     #investment-btn {
         position:absolute;
         top:10px;
@@ -135,10 +109,8 @@
 
 <!-- INVESTMENT ADVISOR BUTTON -->
 <div id="investment-btn">
-    <button onclick="runInvestmentAdvisor()">📊 Smart Investment Advisor</button>
+    <button id="advisor-toggle">📊 Smart Investment Advisor</button>
 </div>
-
-<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
 <script>
 var map = L.map("map").setView([31.903, 35.203], 11);
@@ -149,31 +121,30 @@ L.control.scale({ imperial: false }).addTo(map);
 var layers = { points:{}, lines:{}, polys:{} };
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-/*** POINT SYMBOLS ***/
+/*** POINT ICONS ***/
 function getPointIcon(type){
     return L.divIcon({
-        html: type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",
+        html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",
         className:"",
         iconSize:[25,25],
         iconAnchor:[12,12]
     });
 }
 
-/*** LOAD LAYER FUNCTION ***/
+/*** LOAD LAYERS ***/
 function loadLayer(file,name,group,styleObj){
     $.getJSON(file,function(data){
         var layer;
         if(group==="points"){
             layer=L.geoJson(data,{ pointToLayer:(f,ll)=>L.marker(ll,{icon:getPointIcon(name)}) }).addTo(map);
         } else { layer=L.geoJson(data,{style:styleObj}).addTo(map); }
-
         layers[group][name]=layer;
         control.addOverlay(layer,name);
         document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
     });
 }
 
-/*** APPLY OPACITY ***/
+/*** OPACITY ***/
 document.getElementById("opacity-slider").oninput=function(){
     let selected=document.getElementById("opacity-select").value;
     for(let g in layers){ if(layers[g][selected]) layers[g][selected].setStyle({opacity:this.value,fillOpacity:this.value}); }
@@ -186,7 +157,7 @@ document.getElementById("legend-title").onclick=function(){
     this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
-/*** LOAD ALL LAYERS (ORDERED) ***/
+/*** LOAD ALL LAYERS ***/
 loadLayer("Schools.geojson","Schools","points");
 loadLayer("Wells.geojson","Wells","points");
 loadLayer("Quarries.geojson","Quarries","points");
@@ -203,23 +174,30 @@ loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#f
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
-/*** SMART INVESTMENT ADVISOR ***/
+/*** SMART INVESTMENT ADVISOR TOGGLE ***/
 var investmentLayer;
-function runInvestmentAdvisor(){
+var advisorActive = false;
+
+document.getElementById("advisor-toggle").onclick = function() {
+    if(advisorActive){
+        if(investmentLayer) map.removeLayer(investmentLayer);
+        advisorActive=false;
+        this.innerText="📊 Smart Investment Advisor";
+        return;
+    }
     if(!layers.polys["Agricultural Land"] || !layers.lines["Roads"] || !layers.polys["Built-up Areas"]){
         alert("Please wait until all layers are loaded!");
         return;
     }
-    if(investmentLayer) map.removeLayer(investmentLayer);
 
-    let agri=layers.polys["Agricultural Land"].toGeoJSON();
-    let temp=layers.polys["Temperature Zones"].toGeoJSON();
-    let roads=layers.lines["Roads"].toGeoJSON();
-    let built=layers.polys["Built-up Areas"].toGeoJSON();
+    let agri = layers.polys["Agricultural Land"].toGeoJSON();
+    let temp = layers.polys["Temperature Zones"].toGeoJSON();
+    let roads = layers.lines["Roads"].toGeoJSON();
+    let built = layers.polys["Built-up Areas"].toGeoJSON();
 
-    let roadBuffer=turf.buffer(roads,0.2,{units:"kilometers"});
-    let builtBuffer=turf.buffer(built,0.3,{units:"kilometers"});
-    let tempUnion=temp.features.length>0?turf.union(...temp.features):null;
+    let roadBuffer = turf.buffer(roads,0.2,{units:"kilometers"});
+    let builtBuffer = turf.buffer(built,0.3,{units:"kilometers"});
+    let tempUnion = temp.features.length>0?turf.union(...temp.features):null;
 
     agri.features.forEach(f=>{
         let score=1;
@@ -238,7 +216,9 @@ function runInvestmentAdvisor(){
     }).addTo(map);
 
     control.addOverlay(investmentLayer,"Investment Suitability");
-}
+    advisorActive=true;
+    this.innerText="⏹ Stop Investment Advisor";
+};
 </script>
 
 </body>
