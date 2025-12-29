@@ -105,7 +105,7 @@ Promise.all([
     loadLayerAsync("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6}),
     loadLayerAsync("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0})
 ]).then(function(){
-    // بعد تحميل كل الطبقات، انشئ طبقة المستشار الذكي
+    // حساب الاستثمار واظهار طبقة ضمن Layer Control فقط
     let agri=layers.polys["Agricultural Land"].toGeoJSON();
     let temp=layers.polys["Temperature Zones"].toGeoJSON();
     let roads=layers.lines["Roads"].toGeoJSON();
@@ -125,11 +125,12 @@ Promise.all([
         else f.properties.level="Low";
     });
     
-    // إنشاء طبقة الاستثمار وإضافتها إلى Layer Control فقط
     let investmentLayer=L.geoJson(agri,{
         style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
         onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
     });
+    
+    // أضف فقط إلى Layer Control (لن تظهر على الخريطة إلا إذا شغلتها)
     control.addOverlay(investmentLayer,"Investment Suitability");
 });
 </script>
