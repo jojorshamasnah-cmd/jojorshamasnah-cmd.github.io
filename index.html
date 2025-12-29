@@ -66,11 +66,11 @@ function getPointIcon(type){
     return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]});
 }
 
-function loadLayerAsync(file,name,group,styleObj){
+function loadLayer(file,name,group,styleObj){
     return $.getJSON(file).then(function(data){
         var layer;
-        if(group==="points"){layer=L.geoJson(data,{pointToLayer:(f,ll)=>L.marker(ll,{icon:getPointIcon(name)})}).addTo(map);}
-        else{layer=L.geoJson(data,{style:styleObj}).addTo(map);}
+        if(group==="points") layer=L.geoJson(data,{pointToLayer:(f,ll)=>L.marker(ll,{icon:getPointIcon(name)})}).addTo(map);
+        else layer=L.geoJson(data,{style:styleObj}).addTo(map);
         layers[group][name]=layer;
         control.addOverlay(layer,name);
         document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
@@ -89,41 +89,38 @@ document.getElementById("legend-title").onclick=function(){
     this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
-/* LOAD ALL LAYERS */
+/* تحميل كل الطبقات */
 Promise.all([
-    loadLayerAsync("Schools.geojson","Schools","points"),
-    loadLayerAsync("Wells.geojson","Wells","points"),
-    loadLayerAsync("Quarries.geojson","Quarries","points"),
-    loadLayerAsync("Roads.geojson","Roads","lines",{color:"black",weight:2}),
-    loadLayerAsync("Streams.geojson","Streams","lines",{color:"#0077ff",weight:2}),
-    loadLayerAsync("Annexation_Wall.geojson","Annexation Wall","lines",{color:"#555",weight:3}),
-    loadLayerAsync("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillColor:"#8fd19e",fillOpacity:0.6}),
-    loadLayerAsync("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{color:"orange",fillColor:"#ffb347",fillOpacity:0.6}),
-    loadLayerAsync("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillColor:"#c49a6c",fillOpacity:0.6}),
-    loadLayerAsync("Approved_Urban_Master_Plans_super_simplified.geojson","Master Plans","polys",{color:"purple",fillColor:"#af7ac5",fillOpacity:0.6}),
-    loadLayerAsync("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#ff6666",fillOpacity:0.6}),
-    loadLayerAsync("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6}),
-    loadLayerAsync("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0})
+    loadLayer("Schools.geojson","Schools","points"),
+    loadLayer("Wells.geojson","Wells","points"),
+    loadLayer("Quarries.geojson","Quarries","points"),
+    loadLayer("Roads.geojson","Roads","lines",{color:"black",weight:2}),
+    loadLayer("Streams.geojson","Streams","lines",{color:"#0077ff",weight:2}),
+    loadLayer("Annexation_Wall.geojson","Annexation Wall","lines",{color:"#555",weight:3}),
+    loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillColor:"#8fd19e",fillOpacity:0.6}),
+    loadLayer("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{color:"orange",fillColor:"#ffb347",fillOpacity:0.6}),
+    loadLayer("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillColor:"#c49a6c",fillOpacity:0.6}),
+    loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson","Master Plans","polys",{color:"purple",fillColor:"#af7ac5",fillOpacity:0.6}),
+    loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#ff6666",fillOpacity:0.6}),
+    loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6}),
+    loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0})
 ]).then(function(){
-    // إنشاء طبقة فارغة للمستشار الذكي
-    let investmentLayer = L.layerGroup();
+    let investmentLayer=L.layerGroup(); // الطبقة الفارغة
 
-    // أضفها للـ Layer Control
-    control.addOverlay(investmentLayer,"Investment Advisor");
+    control.addOverlay(investmentLayer,"Investment Advisor"); // أضف كطبقة مستقلة
 
-    // حدث تشغيل/إيقاف عند تفعيل checkbox
-    map.on('overlayadd overlayremove', function(e){
+    map.on('overlayadd overlayremove',function(e){
         if(e.name==="Investment Advisor"){
             if(map.hasLayer(investmentLayer)){
-                investmentLayer.clearLayers(); // إزالة قديمة قبل إعادة الحساب
-                let agri = layers.polys["Agricultural Land"].toGeoJSON();
-                let temp = layers.polys["Temperature Zones"].toGeoJSON();
-                let roads = layers.lines["Roads"].toGeoJSON();
-                let built = layers.polys["Built-up Areas"].toGeoJSON();
+                investmentLayer.clearLayers();
+                let agri=layers.polys["Agricultural Land"].toGeoJSON();
+                let temp=layers.polys["Temperature Zones"].toGeoJSON();
+                let roads=layers.lines["Roads"].toGeoJSON();
+                let built=layers.polys["Built-up Areas"].toGeoJSON();
 
-                let roadBuffer = turf.buffer(roads,0.2,{units:"kilometers"});
-                let builtBuffer = turf.buffer(built,0.3,{units:"kilometers"});
-                let tempUnion = temp.features.length>0?turf.union(...temp.features):null;
+                let roadBuffer=turf.buffer(roads,0.2,{units:"kilometers"});
+                let builtBuffer=turf.buffer(built,0.3,{units:"kilometers"});
+                let tempUnion=temp.features.length>0?turf.union(...temp.features):null;
 
                 agri.features.forEach(f=>{
                     let score=1;
@@ -139,9 +136,7 @@ Promise.all([
                     style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
                     onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
                 }).addTo(investmentLayer);
-            } else {
-                investmentLayer.clearLayers();
-            }
+            } else investmentLayer.clearLayers();
         }
     });
 });
