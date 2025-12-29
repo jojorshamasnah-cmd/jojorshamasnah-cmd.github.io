@@ -15,7 +15,6 @@
 body, html { margin: 0; padding: 0; height: 100%; }
 #map { height: 100vh; }
 
-/* ----------- LEGEND ----------- */
 #legend-box { position: absolute; bottom: 45px; left: 10px; background: white; padding: 10px 14px; border-radius: 10px; width: 220px; box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9998; }
 #legend-title { font-weight: bold; text-align: center; font-size: 16px; cursor: pointer; user-select: none; }
 #legend-content { display: none; margin-top: 8px; font-size: 14px; }
@@ -24,12 +23,10 @@ body, html { margin: 0; padding: 0; height: 100%; }
 .symbol-line { width: 30px; height: 4px; margin-right: 6px; }
 .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
 
-/* ----------- OPACITY BOX ----------- */
 #opacity-box { position: absolute; right: 10px; bottom: 45px; background: white; padding: 12px; border-radius: 10px; width: 220px; box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999; }
 #opacity-title { font-weight: bold; text-align: center; font-size: 15px; margin-bottom: 8px; }
 select, input[type=range] { width: 100%; margin-top: 6px; }
 
-/* ----------- SCALE CENTER ----------- */
 .leaflet-control-scale { left: 50% !important; transform: translateX(-50%); bottom: 5px !important; }
 </style>
 </head>
@@ -38,14 +35,12 @@ select, input[type=range] { width: 100%; margin-top: 6px; }
 
 <div id="map"></div>
 
-<!-- OPACITY BOX -->
 <div id="opacity-box">
 <div id="opacity-title">Layer Opacity</div>
 <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
 <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
-<!-- LEGEND -->
 <div id="legend-box">
 <div id="legend-title">Legend ▼</div>
 <div id="legend-content">
@@ -75,12 +70,10 @@ L.control.scale({ imperial: false }).addTo(map);
 var layers = { points:{}, lines:{}, polys:{} };
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-/*** POINT SYMBOLS ***/
 function getPointIcon(type){
     return L.divIcon({ html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•", className:"", iconSize:[25,25], iconAnchor:[12,12]});
 }
 
-/*** LOAD LAYER FUNCTION ***/
 function loadLayer(file,name,group,styleObj){
     return $.getJSON(file).then(function(data){
         var layer;
@@ -120,37 +113,43 @@ Promise.all([
     loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6}),
     loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0})
 ]).then(function(){
-    let investmentLayer=L.layerGroup(); // طبقة فارغة للاستثمار
-    control.addOverlay(investmentLayer,"Investment Advisor"); // أضف كطبقة مستقلة
+    var investmentLayer; // الطبقة ستكون مستقلة
+    control.addOverlay(L.layerGroup(), "Investment Advisor"); // طبقة فارغة أولاً
 
-    map.on('overlayadd overlayremove',function(e){
+    map.on('overlayadd', function(e){
         if(e.name==="Investment Advisor"){
-            if(map.hasLayer(investmentLayer)){
-                investmentLayer.clearLayers();
-                let agri=layers.polys["Agricultural Land"].toGeoJSON();
-                let temp=layers.polys["Temperature Zones"].toGeoJSON();
-                let roads=layers.lines["Roads"].toGeoJSON();
-                let built=layers.polys["Built-up Areas"].toGeoJSON();
+            if(investmentLayer) map.removeLayer(investmentLayer);
 
-                let roadBuffer=turf.buffer(roads,0.2,{units:"kilometers"});
-                let builtBuffer=turf.buffer(built,0.3,{units:"kilometers"});
-                let tempUnion=temp.features.length>0?turf.union(...temp.features):null;
+            investmentLayer = L.layerGroup().addTo(map);
+            let agri=layers.polys["Agricultural Land"].toGeoJSON();
+            let temp=layers.polys["Temperature Zones"].toGeoJSON();
+            let roads=layers.lines["Roads"].toGeoJSON();
+            let built=layers.polys["Built-up Areas"].toGeoJSON();
 
-                agri.features.forEach(f=>{
-                    let score=1;
-                    if(tempUnion && turf.booleanIntersects(f,tempUnion)) score+=2;
-                    if(turf.booleanIntersects(f,roadBuffer)) score+=1.5;
-                    if(turf.booleanIntersects(f,builtBuffer)) score+=1;
-                    if(score>=5) f.properties.level="High";
-                    else if(score>=3) f.properties.level="Medium";
-                    else f.properties.level="Low";
-                });
+            let roadBuffer=turf.buffer(roads,0.2,{units:"kilometers"});
+            let builtBuffer=turf.buffer(built,0.3,{units:"kilometers"});
+            let tempUnion=temp.features.length>0?turf.union(...temp.features):null;
 
-                L.geoJson(agri,{
-                    style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
-                    onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
-                }).addTo(investmentLayer);
-            } else investmentLayer.clearLayers();
+            agri.features.forEach(f=>{
+                let score=1;
+                if(tempUnion && turf.booleanIntersects(f,tempUnion)) score+=2;
+                if(turf.booleanIntersects(f,roadBuffer)) score+=1.5;
+                if(turf.booleanIntersects(f,builtBuffer)) score+=1;
+                if(score>=5) f.properties.level="High";
+                else if(score>=3) f.properties.level="Medium";
+                else f.properties.level="Low";
+            });
+
+            L.geoJson(agri,{
+                style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
+                onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
+            }).addTo(investmentLayer);
+        }
+    });
+
+    map.on('overlayremove', function(e){
+        if(e.name==="Investment Advisor" && investmentLayer){
+            map.removeLayer(investmentLayer);
         }
     });
 });
