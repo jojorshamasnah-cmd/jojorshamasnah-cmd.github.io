@@ -105,34 +105,52 @@ Promise.all([
     loadLayerAsync("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6}),
     loadLayerAsync("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0})
 ]).then(function(){
-    // حساب الاستثمار واظهار طبقة ضمن Layer Control فقط
-    let agri=layers.polys["Agricultural Land"].toGeoJSON();
-    let temp=layers.polys["Temperature Zones"].toGeoJSON();
-    let roads=layers.lines["Roads"].toGeoJSON();
-    let built=layers.polys["Built-up Areas"].toGeoJSON();
+    // إنشاء طبقة فارغة كمستشار ذكي
+    let investmentLayer = L.layerGroup();
     
-    let roadBuffer=turf.buffer(roads,0.2,{units:"kilometers"});
-    let builtBuffer=turf.buffer(built,0.3,{units:"kilometers"});
-    let tempUnion=temp.features.length>0?turf.union(...temp.features):null;
+    // وظيفة لتفعيل/تعطيل المستشار
+    function toggleInvestment(e){
+        if(map.hasLayer(investmentLayer)){
+            map.removeLayer(investmentLayer);
+        } else {
+            investmentLayer.clearLayers();
+            let agri = layers.polys["Agricultural Land"].toGeoJSON();
+            let temp = layers.polys["Temperature Zones"].toGeoJSON();
+            let roads = layers.lines["Roads"].toGeoJSON();
+            let built = layers.polys["Built-up Areas"].toGeoJSON();
+
+            let roadBuffer = turf.buffer(roads,0.2,{units:"kilometers"});
+            let builtBuffer = turf.buffer(built,0.3,{units:"kilometers"});
+            let tempUnion=temp.features.length>0?turf.union(...temp.features):null;
+
+            agri.features.forEach(f=>{
+                let score=1;
+                if(tempUnion && turf.booleanIntersects(f,tempUnion)) score+=2;
+                if(turf.booleanIntersects(f,roadBuffer)) score+=1.5;
+                if(turf.booleanIntersects(f,builtBuffer)) score+=1;
+                if(score>=5) f.properties.level="High";
+                else if(score>=3) f.properties.level="Medium";
+                else f.properties.level="Low";
+            });
+
+            L.geoJson(agri,{
+                style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
+                onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
+            }).addTo(investmentLayer);
+            
+            investmentLayer.addTo(map);
+        }
+    }
+
+    // أضف كـ Layer مستقل للتحكم من Layer Control
+    control.addOverlay(investmentLayer,"Investment Advisor");
     
-    agri.features.forEach(f=>{
-        let score=1;
-        if(tempUnion && turf.booleanIntersects(f,tempUnion)) score+=2;
-        if(turf.booleanIntersects(f,roadBuffer)) score+=1.5;
-        if(turf.booleanIntersects(f,builtBuffer)) score+=1;
-        if(score>=5) f.properties.level="High";
-        else if(score>=3) f.properties.level="Medium";
-        else f.properties.level="Low";
+    // حدث تشغيل/إيقاف عند تفعيل checkbox
+    map.on('overlayadd overlayremove', function(e){
+        if(e.name==="Investment Advisor") toggleInvestment();
     });
-    
-    let investmentLayer=L.geoJson(agri,{
-        style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
-        onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
-    });
-    
-    // أضف فقط إلى Layer Control (لن تظهر على الخريطة إلا إذا شغلتها)
-    control.addOverlay(investmentLayer,"Investment Suitability");
 });
 </script>
 </body>
 </html>
+
