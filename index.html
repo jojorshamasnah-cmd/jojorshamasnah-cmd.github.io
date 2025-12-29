@@ -10,9 +10,6 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- ADD-ON LIBRARY (NO CHANGE TO ORIGINAL CODE) -->
-<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
-
 <style>
     body, html { margin: 0; padding: 0; height: 100%; }
     #map { height: 100vh; }
@@ -77,10 +74,24 @@
         margin-top: 6px;
     }
 
+    /* ----------- SCALE CENTER ----------- */
     .leaflet-control-scale {
         left: 50% !important;
         transform: translateX(-50%);
         bottom: 5px !important;
+    }
+
+    /* ----------- INVESTMENT BUTTON ----------- */
+    #investment-btn {
+        position:absolute;
+        top:10px;
+        left:10px;
+        background:white;
+        padding:10px;
+        border-radius:8px;
+        box-shadow:0 0 10px rgba(0,0,0,0.3);
+        z-index:9999;
+        font-family:Arial;
     }
 </style>
 </head>
@@ -89,108 +100,158 @@
 
 <div id="map"></div>
 
-<!-- ADD-ON BUTTON -->
-<div style="
-position:absolute;
-top:10px;
-left:10px;
-background:white;
-padding:10px;
-border-radius:8px;
-box-shadow:0 0 10px rgba(0,0,0,0.3);
-z-index:9999;
-font-family:Arial;">
-<button onclick="runInvestmentAdvisor()">📊 Smart Investment Advisor</button>
-</div>
-
 <!-- OPACITY BOX -->
 <div id="opacity-box">
     <div id="opacity-title">Layer Opacity</div>
+
     <select id="opacity-select">
         <option value="" disabled selected>Select Layer</option>
     </select>
+
     <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
 <!-- LEGEND -->
 <div id="legend-box">
     <div id="legend-title">Legend ▼</div>
+
     <div id="legend-content">
+
+        <!-- POINTS -->
         <div class="legend-item"><span class="emoji">🏫</span> Schools</div>
         <div class="legend-item"><span class="emoji">💧</span> Wells</div>
         <div class="legend-item"><span class="emoji">⛏️</span> Quarries</div>
+
         <hr>
+
+        <!-- LINES -->
         <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
         <div class="legend-item"><span class="symbol-line" style="background:#0077ff"></span> Streams</div>
         <div class="legend-item"><span class="symbol-line" style="background:#555"></span> Annexation Wall</div>
+
         <hr>
+
+        <!-- POLYGONS -->
         <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb"></span> Temperature Zones</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:none"></span> Ramallah Boundary</div>
+
     </div>
 </div>
 
-<script>
-/* ===== ORIGINAL CODE (UNCHANGED) ===== */
+<!-- INVESTMENT ADVISOR BUTTON -->
+<div id="investment-btn">
+    <button onclick="runInvestmentAdvisor()">📊 Smart Investment Advisor</button>
+</div>
 
+<script>
 var map = L.map("map").setView([31.903, 35.203], 11);
+
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 L.control.scale({ imperial: false }).addTo(map);
 
-var layers = { points:{}, lines:{}, polys:{} };
+/*** ORDERED LAYERS ***/
+var layers = {
+    points: {},
+    lines: {},
+    polys: {}
+};
+
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
+/*** POINT SYMBOLS (matching legend emojis) ***/
 function getPointIcon(type) {
     return L.divIcon({
         html: type === "Schools" ? "🏫" :
               type === "Wells" ? "💧" :
               type === "Quarries" ? "⛏️" : "•",
+        className: "",
         iconSize: [25, 25],
         iconAnchor: [12, 12]
     });
 }
 
+/*** LOAD LAYER FUNCTION ***/
 function loadLayer(file, name, group, styleObj) {
     $.getJSON(file, function (data) {
+
         var layer;
+
         if (group === "points") {
             layer = L.geoJson(data, {
-                pointToLayer: (f,ll)=>L.marker(ll,{icon:getPointIcon(name)})
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, { icon: getPointIcon(name) });
+                }
             }).addTo(map);
-        } else {
-            layer = L.geoJson(data, { style: styleObj }).addTo(map);
         }
+
+        else if (group === "lines") {
+            layer = L.geoJson(data, {
+                style: styleObj
+            }).addTo(map);
+        }
+
+        else {
+            layer = L.geoJson(data, {
+                style: styleObj
+            }).addTo(map);
+        }
+
         layers[group][name] = layer;
         control.addOverlay(layer, name);
-        $("#opacity-select").append(`<option>${name}</option>`);
+
+        document.getElementById("opacity-select").innerHTML +=
+            `<option value="${name}">${name}</option>`;
     });
 }
 
-$("#opacity-slider").on("input", function () {
-    let n = $("#opacity-select").val();
-    for (let g in layers)
-        if (layers[g][n]) layers[g][n].setStyle({ opacity:this.value, fillOpacity:this.value });
-});
+/*** APPLY OPACITY ***/
+document.getElementById("opacity-slider").oninput = function () {
+    let selected = document.getElementById("opacity-select").value;
 
-$("#legend-title").click(function(){
-    $("#legend-content").toggle();
-});
+    for (let group in layers) {
+        if (layers[group][selected]) {
+            layers[group][selected].setStyle({
+                opacity: this.value,
+                fillOpacity: this.value
+            });
+        }
+    }
+};
 
-/* LOAD DATA */
-loadLayer("Schools.geojson","Schools","points");
-loadLayer("Wells.geojson","Wells","points");
-loadLayer("Quarries.geojson","Quarries","points");
+/*** LEGEND TOGGLE ***/
+document.getElementById("legend-title").onclick = function () {
+    let c = document.getElementById("legend-content");
+    c.style.display = c.style.display === "none" ? "block" : "none";
+    this.innerHTML = c.style.display === "none" ? "Legend ▼" : "Legend ▲";
+};
 
-loadLayer("Roads.geojson","Roads","lines",{color:"black"});
-loadLayer("Streams.geojson","Streams","lines",{color:"#0077ff"});
-loadLayer("Annexation_Wall.geojson","Annexation Wall","lines",{color:"#555"});
+/*** LOAD ALL LAYERS (ORDERED) ***/
 
-loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillOpacity:0.6});
-loadLayer("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillOpacity:0.6});
-loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillOpacity:0.6});
+/* POINTS */
+loadLayer("Schools.geojson", "Schools", "points");
+loadLayer("Wells.geojson", "Wells", "points");
+loadLayer("Quarries.geojson", "Quarries", "points");
 
-/* ===== ADD-ON FEATURE 1 ===== */
+/* LINES */
+loadLayer("Roads.geojson", "Roads", "lines", { color:"black", weight:2 });
+loadLayer("Streams.geojson", "Streams", "lines", { color:"#0077ff", weight:2 });
+loadLayer("Annexation_Wall.geojson", "Annexation Wall", "lines", { color:"#555", weight:3 });
 
+/* POLYGONS */
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "polys", { color:"green", fillColor:"#8fd19e", fillOpacity:0.6 });
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "polys", { color:"orange", fillColor:"#ffb347", fillOpacity:0.6 });
+loadLayer("Built_up.geojson", "Built-up Areas", "polys", { color:"brown", fillColor:"#c49a6c", fillOpacity:0.6 });
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "polys", { color:"purple", fillColor:"#af7ac5", fillOpacity:0.6 });
+loadLayer("Settlements.geojson", "Settlements", "polys", { color:"red", fillColor:"#ff6666", fillOpacity:0.6 });
+loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color:"blue", fillColor:"#87ceeb", fillOpacity:0.6 });
+loadLayer("Ramallah.geojson", "Ramallah Boundary", "polys", { color:"black", fillOpacity:0 });
+
+/*** SMART INVESTMENT ADVISOR (REALISTIC) ***/
 var investmentLayer;
 function runInvestmentAdvisor() {
 
@@ -201,30 +262,37 @@ function runInvestmentAdvisor() {
     let roads = layers.lines["Roads"].toGeoJSON();
     let built = layers.polys["Built-up Areas"].toGeoJSON();
 
-    let roadBuffer = turf.buffer(roads, 0.5, { units: "kilometers" });
-    let builtBuffer = turf.buffer(built, 0.7, { units: "kilometers" });
+    // Smaller buffers for more realistic distribution
+    let roadBuffer = turf.buffer(roads, 0.2, { units: "kilometers" });
+    let builtBuffer = turf.buffer(built, 0.3, { units: "kilometers" });
 
     agri.features.forEach(f => {
-        let score = 3;
-        temp.features.forEach(t => { if (turf.booleanIntersects(f,t)) score+=2; });
-        if (turf.booleanIntersects(f,roadBuffer)) score+=2;
-        if (turf.booleanIntersects(f,builtBuffer)) score+=1;
-        f.properties.level = score>=6?"High":score>=4?"Medium":"Low";
+        let score = 1; // lower starting score
+        temp.features.forEach(t => { if (turf.booleanIntersects(f,t)) score += 2; });
+        if (turf.booleanIntersects(f, roadBuffer)) score += 1.5;
+        if (turf.booleanIntersects(f, builtBuffer)) score += 1;
+
+        if(score >= 5) f.properties.level = "High";
+        else if(score >= 3) f.properties.level = "Medium";
+        else f.properties.level = "Low";
     });
 
     investmentLayer = L.geoJson(agri,{
-        style:f=>({
+        style: f => ({
             fillOpacity:0.7,
             color:"#000",
-            fillColor: f.properties.level==="High"?"#2ecc71":
-                       f.properties.level==="Medium"?"#f1c40f":"#e74c3c"
+            fillColor: f.properties.level === "High" ? "#2ecc71" :
+                       f.properties.level === "Medium" ? "#f1c40f" : "#e74c3c"
         }),
-        onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
+        onEachFeature: (f,l) => l.bindPopup("Suitability: " + f.properties.level)
     }).addTo(map);
 
-    control.addOverlay(investmentLayer,"Investment Suitability");
+    control.addOverlay(investmentLayer, "Investment Suitability");
 }
 </script>
+
+<!-- Turf.js for spatial analysis -->
+<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
 </body>
 </html>
