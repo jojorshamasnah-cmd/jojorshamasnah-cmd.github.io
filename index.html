@@ -22,7 +22,6 @@ body, html{margin:0;padding:0;height:100%;}
 #opacity-title{font-weight:bold;text-align:center;font-size:15px;margin-bottom:8px;}
 select,input[type=range]{width:100%;margin-top:6px;}
 .leaflet-control-scale{left:50% !important;transform:translateX(-50%);bottom:5px !important;}
-#investment-btn{position:absolute;top:10px;left:10px;background:white;padding:10px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:9999;font-family:Arial;}
 </style>
 </head>
 <body>
@@ -55,10 +54,6 @@ select,input[type=range]{width:100%;margin-top:6px;}
 </div>
 </div>
 
-<div id="investment-btn">
-<button id="advisor-toggle">📊 Smart Investment Advisor</button>
-</div>
-
 <script>
 var map=L.map("map").setView([31.903,35.203],11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
@@ -67,7 +62,9 @@ L.control.scale({imperial:false}).addTo(map);
 var layers={points:{},lines:{},polys:{}};
 var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
 
-function getPointIcon(type){return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]});}
+function getPointIcon(type){
+    return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]});
+}
 
 function loadLayer(file,name,group,styleObj){
     $.getJSON(file,function(data){
@@ -106,17 +103,41 @@ loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#f
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
-/* SMART INVESTMENT ADVISOR TOGGLE */
-var investmentLayer; var advisorActive=false;
-document.getElementById("advisor-toggle").onclick=function(){
-    if(advisorActive){if(investmentLayer) map.removeLayer(investmentLayer);advisorActive=false;this.innerText="📊 Smart Investment Advisor"; return;}
+/* SMART INVESTMENT ADVISOR CONTROL BUTTON */
+var investmentLayer=null; var advisorActive=false;
+
+var InvestmentControl = L.Control.extend({
+    options:{position:'topleft'},
+    onAdd:function(map){
+        var container=L.DomUtil.create('div','leaflet-bar leaflet-control');
+        container.style.backgroundColor='white';
+        container.style.padding='5px';
+        container.style.cursor='pointer';
+        container.innerHTML='📊 Smart Investment';
+        container.onclick=function(){
+            if(advisorActive){
+                if(investmentLayer) map.removeLayer(investmentLayer);
+                advisorActive=false; container.innerHTML='📊 Smart Investment';
+            } else {
+                runInvestmentAdvisor();
+                advisorActive=true; container.innerHTML='⏹ Stop Investment';
+            }
+        };
+        return container;
+    }
+});
+map.addControl(new InvestmentControl());
+
+function runInvestmentAdvisor(){
     let agri=layers.polys["Agricultural Land"].toGeoJSON();
     let temp=layers.polys["Temperature Zones"].toGeoJSON();
     let roads=layers.lines["Roads"].toGeoJSON();
     let built=layers.polys["Built-up Areas"].toGeoJSON();
+    
     let roadBuffer=turf.buffer(roads,0.2,{units:"kilometers"});
     let builtBuffer=turf.buffer(built,0.3,{units:"kilometers"});
     let tempUnion=temp.features.length>0?turf.union(...temp.features):null;
+    
     agri.features.forEach(f=>{
         let score=1;
         if(tempUnion && turf.booleanIntersects(f,tempUnion)) score+=2;
@@ -126,13 +147,13 @@ document.getElementById("advisor-toggle").onclick=function(){
         else if(score>=3) f.properties.level="Medium";
         else f.properties.level="Low";
     });
+    
     investmentLayer=L.geoJson(agri,{
         style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
         onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
     }).addTo(map);
     control.addOverlay(investmentLayer,"Investment Suitability");
-    advisorActive=true; this.innerText="⏹ Stop Investment Advisor";
-};
+}
 </script>
 </body>
 </html>
