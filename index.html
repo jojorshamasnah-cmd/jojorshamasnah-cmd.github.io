@@ -89,7 +89,7 @@ document.getElementById("legend-title").onclick=function(){
     this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
-/* LOAD ALL LAYERS AND WAIT FOR THEM */
+/* LOAD ALL LAYERS */
 Promise.all([
     loadLayerAsync("Schools.geojson","Schools","points"),
     loadLayerAsync("Wells.geojson","Wells","points"),
@@ -105,38 +105,7 @@ Promise.all([
     loadLayerAsync("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6}),
     loadLayerAsync("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0})
 ]).then(function(){
-    console.log("All layers loaded, Smart Investment Advisor ready.");
-});
-
-/* SMART INVESTMENT ADVISOR */
-var investmentLayer=null; var advisorActive=false;
-var InvestmentControl = L.Control.extend({
-    options:{position:'topleft'},
-    onAdd:function(map){
-        var container=L.DomUtil.create('div','leaflet-bar leaflet-control');
-        container.style.backgroundColor='white';
-        container.style.padding='5px';
-        container.style.cursor='pointer';
-        container.innerHTML='📊 Smart Investment';
-        container.onclick=function(){
-            if(!layers.polys["Agricultural Land"] || !layers.polys["Temperature Zones"]){
-                alert("Layers not loaded yet!");
-                return;
-            }
-            if(advisorActive){
-                if(investmentLayer) map.removeLayer(investmentLayer);
-                advisorActive=false; container.innerHTML='📊 Smart Investment';
-            } else {
-                runInvestmentAdvisor();
-                advisorActive=true; container.innerHTML='⏹ Stop Investment';
-            }
-        };
-        return container;
-    }
-});
-map.addControl(new InvestmentControl());
-
-function runInvestmentAdvisor(){
+    // بعد تحميل كل الطبقات، انشئ طبقة المستشار الذكي
     let agri=layers.polys["Agricultural Land"].toGeoJSON();
     let temp=layers.polys["Temperature Zones"].toGeoJSON();
     let roads=layers.lines["Roads"].toGeoJSON();
@@ -156,12 +125,13 @@ function runInvestmentAdvisor(){
         else f.properties.level="Low";
     });
     
-    investmentLayer=L.geoJson(agri,{
+    // إنشاء طبقة الاستثمار وإضافتها إلى Layer Control فقط
+    let investmentLayer=L.geoJson(agri,{
         style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
         onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
-    }).addTo(map);
+    });
     control.addOverlay(investmentLayer,"Investment Suitability");
-}
+});
 </script>
 </body>
 </html>
