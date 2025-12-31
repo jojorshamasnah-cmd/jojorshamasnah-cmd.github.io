@@ -56,7 +56,7 @@ select, input[type=range] { width: 100%; margin-top: 6px; }
 /* ----------- INVESTMENT BUTTON ----------- */
 #investment-btn {
     position:absolute;
-    bottom:110px; /* فوق صندوق الشفافية */
+    bottom:150px; /* فوق صندوق الشفافية */
     right:10px;
     background:white;
     padding:8px;
@@ -65,7 +65,7 @@ select, input[type=range] { width: 100%; margin-top: 6px; }
     z-index:9999;
     font-family:Arial;
 }
-#investment-btn button { width:100%; cursor:pointer; }
+#investment-btn button{ width:100%; cursor:pointer; }
 </style>
 </head>
 
@@ -105,7 +105,7 @@ select, input[type=range] { width: 100%; margin-top: 6px; }
 
 <!-- INVESTMENT ADVISOR BUTTON -->
 <div id="investment-btn">
-    <button onclick="runInvestmentAdvisor()">📊 Smart Investment Advisor</button>
+    <button onclick="runSmartAdvisor()">📊 Smart Investment Advisor</button>
 </div>
 
 <script>
@@ -116,6 +116,7 @@ L.control.scale({ imperial: false }).addTo(map);
 var layers = { points:{}, lines:{}, polys:{} };
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
+// Point icons
 function getPointIcon(type){
     return L.divIcon({
         html: type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",
@@ -125,21 +126,23 @@ function getPointIcon(type){
     });
 }
 
+// Load layers
 function loadLayer(file, name, group, styleObj, callback){
-    $.getJSON(file, function(data){
+    $.getJSON(file,function(data){
         var layer;
         if(group==="points"){
-            layer = L.geoJson(data,{ pointToLayer:(f,latlng)=>L.marker(latlng,{icon:getPointIcon(name)}) }).addTo(map);
-        } else { layer = L.geoJson(data,{ style:styleObj }).addTo(map); }
+            layer=L.geoJson(data,{ pointToLayer:(f,latlng)=>L.marker(latlng,{icon:getPointIcon(name)}) }).addTo(map);
+        } else { layer=L.geoJson(data,{ style:styleObj }).addTo(map); }
         layers[group][name]=layer;
         control.addOverlay(layer,name);
-        document.getElementById("opacity-select").innerHTML += `<option value="${name}">${name}</option>`;
+        document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
         if(callback) callback();
     });
 }
 
-document.getElementById("opacity-slider").oninput = function(){
-    let selected = document.getElementById("opacity-select").value;
+// Opacity control
+document.getElementById("opacity-slider").oninput=function(){
+    let selected=document.getElementById("opacity-select").value;
     for(let group in layers){
         if(layers[group][selected]){
             layers[group][selected].setStyle({opacity:this.value,fillOpacity:this.value});
@@ -147,10 +150,11 @@ document.getElementById("opacity-slider").oninput = function(){
     }
 };
 
-document.getElementById("legend-title").onclick = function(){
-    let c = document.getElementById("legend-content");
-    c.style.display = c.style.display==="none"?"block":"none";
-    this.innerHTML = c.style.display==="none"?"Legend ▼":"Legend ▲";
+// Legend toggle
+document.getElementById("legend-title").onclick=function(){
+    let c=document.getElementById("legend-content");
+    c.style.display=c.style.display==="none"?"block":"none";
+    this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
 // Load all layers
@@ -168,38 +172,61 @@ loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#f
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6},()=>{ layersLoaded=true; });
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
+// Smart Investment Advisor
 var investmentLayer;
-var layersLoaded=false;
 
-function runInvestmentAdvisor(){
+function runSmartAdvisor(){
     if(!layersLoaded) return alert("Please wait until all layers are loaded!");
-    if(investmentLayer) { map.removeLayer(investmentLayer); control.removeLayer(investmentLayer); }
+    if(investmentLayer){
+        map.removeLayer(investmentLayer);
+        control.removeLayer(investmentLayer);
+    }
 
     let agri = layers.polys["Agricultural Land"].toGeoJSON();
     let temp = layers.polys["Temperature Zones"].toGeoJSON();
     let roads = layers.lines["Roads"].toGeoJSON();
     let built = layers.polys["Built-up Areas"].toGeoJSON();
 
-    let roadBuffer = turf.buffer(roads,0.2,{units:"kilometers"});
-    let builtBuffer = turf.buffer(built,0.3,{units:"kilometers"});
+    // 1️⃣ فلترة الحرارة (18–25)
+    let suitableTemp={ type:"FeatureCollection", features: temp.features.filter(f=>f.properties.MEAN_ANNUA>=18 && f.properties.MEAN_ANNUA<=25) };
 
-    agri.features.forEach(f=>{
-        let score = 1;
-        temp.features.forEach(t=>{ if(turf.booleanIntersects(f,t)) score+=2; });
-        if(turf.booleanIntersects(f,roadBuffer)) score+=1.5;
-        if(turf.booleanIntersects(f,builtBuffer)) score+=1;
+    // 2️⃣ Buffer الطرق (0.5 كم)
+    let roadBuffer=turf.buffer(roads,0.5,{units:"kilometers"});
 
-        if(score>=5) f.properties.level="High";
-        else if(score>=3) f.properties.level="Medium";
-        else f.properties.level="Low";
-    });
+    // 3️⃣ تقاطع الأراضي الزراعية مع الحرارة
+    let agriTemp=turf.intersect(agri,suitableTemp);
+    if(!agriTemp) return alert("No suitable areas found");
 
-    investmentLayer = L.geoJson(agri,{
-        style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
-        onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
+    // 4️⃣ قرب الطرق
+    let nearRoads=turf.intersect(agriTemp,roadBuffer);
+    if(!nearRoads) return alert("No areas near roads");
+
+    // 5️⃣ استبعاد المباني
+    let finalZones=turf.difference(nearRoads,built);
+    if(!finalZones) return alert("All areas intersect built-up zones");
+
+    // 6️⃣ تعيين اللون High/Medium/Low
+    agri.features.forEach(f=>f.properties.level="Low");
+    finalZones.features.forEach(f=>f.properties.level="High");
+
+    investmentLayer=L.geoJson(agri,{
+        style:f=>({ fillOpacity:0.7, color:"#000",
+            fillColor:f.properties.level==="High"?"#2ecc71":
+                      f.properties.level==="Medium"?"#f1c40f":"#e74c3c"
+        }),
+        onEachFeature:(f,l)=>{
+            l.bindPopup(`
+                <b>Smart Investment Zone</b><br>
+                Level: ${f.properties.level}<br>
+                ✔ Agricultural Land<br>
+                ✔ Temp: ${f.properties.MEAN_ANNUA ?? "OK"} °C<br>
+                ✔ Within 500m of Roads<br>
+                ✖ Outside built-up Areas
+            `);
+        }
     }).addTo(map);
 
-    control.addOverlay(investmentLayer,"Investment Suitability");
+    control.addOverlay(investmentLayer,"Smart Investment Zones");
 }
 </script>
 </body>
