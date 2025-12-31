@@ -15,19 +15,26 @@
 <style>
 body, html { margin:0; padding:0; height:100%; }
 #map{height:100vh;}
-#legend-box{position:absolute;bottom:45px;left:10px;background:white;padding:10px 14px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9998;}
-#legend-title{font-weight:bold;text-align:center;font-size:16px;cursor:pointer;user-select:none;}
-#legend-content{display:none;margin-top:8px;font-size:14px;}
-.legend-item{display:flex;align-items:center;margin-bottom:5px;}
-.emoji{font-size:20px;width:25px;margin-right:6px;}
-.symbol-line{width:30px;height:4px;margin-right:6px;}
-.symbol-poly{width:22px;height:12px;border:1px solid #000;margin-right:6px;}
-#opacity-box{position:absolute;right:10px;bottom:45px;background:white;padding:12px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9999;}
-#opacity-title{font-weight:bold;text-align:center;font-size:15px;margin-bottom:8px;}
-select,input[type=range]{width:100%;margin-top:6px;}
-.leaflet-control-scale{left:50% !important;transform:translateX(-50%);bottom:5px !important;}
-#advisor-box{position:absolute;right:10px;bottom:220px;background:white;padding:8px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:9999;font-family:Arial;width:220px;}
-#advisor-box button{width:100%; margin-top:5px; cursor:pointer;}
+
+#legend-box, #opacity-box, #advisor-box{
+    position:absolute;
+    background:white;
+    padding:10px;
+    border-radius:8px;
+    box-shadow:0 0 10px rgba(0,0,0,0.3);
+    z-index:9999;
+    font-family:Arial;
+}
+#legend-box{bottom:45px;left:10px;width:220px;}
+#opacity-box{bottom:45px;right:10px;width:220px;}
+#advisor-box{bottom:220px;right:10px;width:220px;}
+#advisor-box button{width:100%;margin-top:5px;cursor:pointer;}
+
+.leaflet-control-scale{
+    left:50% !important;
+    transform:translateX(-50%);
+    bottom:5px !important;
+}
 </style>
 </head>
 
@@ -35,18 +42,14 @@ select,input[type=range]{width:100%;margin-top:6px;}
 <div id="map"></div>
 
 <div id="opacity-box">
-    <div id="opacity-title">Layer Opacity</div>
-    <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
+    <b>Layer Opacity</b>
+    <select id="opacity-select"></select>
     <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
 <div id="legend-box">
-    <div id="legend-title">Legend ▼</div>
-    <div id="legend-content">
-        <div class="legend-item"><span class="emoji">🏫</span> Schools</div>
-        <div class="legend-item"><span class="emoji">💧</span> Wells</div>
-        <div class="legend-item"><span class="emoji">⛏️</span> Quarries</div>
-    </div>
+    <b>Legend</b><br>
+    🟩 High – 🟨 Medium – 🟥 Low
 </div>
 
 <div id="advisor-box">
@@ -55,53 +58,30 @@ select,input[type=range]{width:100%;margin-top:6px;}
 </div>
 
 <script>
-var map=L.map("map").setView([31.903,35.203],11);
+var map = L.map("map").setView([31.903,35.203],11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 L.control.scale({imperial:false}).addTo(map);
 
 var layers={points:{},lines:{},polys:{}};
 var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
 
-function getPointIcon(type){
-    return L.divIcon({
-        html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",
-        className:"",
-        iconSize:[25,25],
-        iconAnchor:[12,12]
-    });
-}
-
-function loadLayer(file,name,group,styleObj){
+function loadLayer(file,name,group,style){
     $.getJSON(file,function(data){
-        var layer;
-        if(group==="points"){
-            layer=L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:getPointIcon(name)})}).addTo(map);
-        } else {
-            layer=L.geoJson(data,{style:styleObj}).addTo(map);
-        }
+        var layer=L.geoJson(data,{style:style}).addTo(map);
         layers[group][name]=layer;
         control.addOverlay(layer,name);
         document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
     });
 }
 
-// layers
-loadLayer("Schools.geojson","Schools","points");
-loadLayer("Wells.geojson","Wells","points");
-loadLayer("Quarries.geojson","Quarries","points");
-loadLayer("Roads.geojson","Roads","lines",{color:"black",weight:2});
-loadLayer("Streams.geojson","Streams","lines",{color:"#0077ff",weight:2});
-loadLayer("Annexation_Wall.geojson","Annexation Wall","lines",{color:"#555",weight:3});
-loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillColor:"#8fd19e",fillOpacity:0.6});
-loadLayer("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{color:"orange",fillColor:"#ffb347",fillOpacity:0.6});
-loadLayer("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillColor:"#c49a6c",fillOpacity:0.6});
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson","Master Plans","polys",{color:"purple",fillColor:"#af7ac5",fillOpacity:0.6});
-loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#ff6666",fillOpacity:0.6});
-loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
+loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillOpacity:0.4});
+loadLayer("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillOpacity:0.4});
+loadLayer("Roads.geojson","Roads","lines",{color:"black"});
+loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillOpacity:0.3});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
-// Smart Advisor
 var investmentLayer;
+
 function runSmartAdvisor(){
     let agri=layers.polys["Agricultural Land"].toGeoJSON();
     let temp=layers.polys["Temperature Zones"].toGeoJSON();
@@ -113,49 +93,56 @@ function runSmartAdvisor(){
 
     agri.features.forEach(f=>{
         let score=1;
-        temp.features.forEach(t=>{ if(turf.booleanIntersects(f,t)) score+=2; });
+        temp.features.forEach(t=>{if(turf.booleanIntersects(f,t)) score+=2;});
         if(turf.booleanIntersects(f,roadBuffer)) score+=1.5;
         if(turf.booleanIntersects(f,builtBuffer)) score-=1;
         f.properties.level=score>=5?"High":score>=3?"Medium":"Low";
     });
 
-    if(investmentLayer){ map.removeLayer(investmentLayer); control.removeLayer(investmentLayer); }
+    if(investmentLayer) map.removeLayer(investmentLayer);
 
     investmentLayer=L.geoJson(agri,{
-        style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"})
+        style:f=>({
+            color:"#000",
+            fillOpacity:0.7,
+            fillColor:f.properties.level==="High"?"#2ecc71":
+                     f.properties.level==="Medium"?"#f1c40f":"#e74c3c"
+        })
     }).addTo(map);
 
     control.addOverlay(investmentLayer,"Smart Investment Zones");
 }
 
-// PDF
+// ✅ PDF CLEAN EXPORT
 function generatePDF(){
     if(!investmentLayer) return alert("Run Smart Advisor first!");
+
     let originalBounds = map.getBounds();
 
+    document.querySelector(".leaflet-control-layers").style.display="none";
+    document.getElementById("legend-box").style.display="none";
+    document.getElementById("opacity-box").style.display="none";
+    document.getElementById("advisor-box").style.display="none";
+
     map.fitBounds(layers.polys["Ramallah Boundary"].getBounds());
+    map.invalidateSize();
 
-    for(let g in layers){
-        for(let l in layers[g]){
-            map.removeLayer(layers[g][l]);
-        }
-    }
+    setTimeout(()=>{
+        html2canvas(document.getElementById("map"),{scale:2}).then(canvas=>{
+            const {jsPDF}=window.jspdf;
+            const doc=new jsPDF("landscape","px",[canvas.width,canvas.height+100]);
+            doc.text("Smart Investment Report",20,30);
+            doc.addImage(canvas.toDataURL("image/png"),"PNG",0,50,canvas.width,canvas.height);
+            doc.save("Investment_Report.pdf");
 
-    html2canvas(document.getElementById("map"), {scale:2}).then(canvas=>{
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({orientation:'landscape',unit:'px',format:[canvas.width,canvas.height+150]});
-        doc.text("Smart Investment Report",20,30);
-        doc.addImage(imgData,'PNG',0,50,canvas.width,canvas.height);
-        doc.save("Investment_Report.pdf");
-
-        for(let g in layers){
-            for(let l in layers[g]){
-                map.addLayer(layers[g][l]);
-            }
-        }
-        map.fitBounds(originalBounds);
-    });
+            document.querySelector(".leaflet-control-layers").style.display="";
+            document.getElementById("legend-box").style.display="";
+            document.getElementById("opacity-box").style.display="";
+            document.getElementById("advisor-box").style.display="";
+            map.fitBounds(originalBounds);
+            map.invalidateSize();
+        });
+    },500);
 }
 </script>
 </body>
