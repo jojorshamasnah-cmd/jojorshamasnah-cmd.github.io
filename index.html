@@ -183,14 +183,20 @@ Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
 function generatePDF(){
     if(!investmentLayer) return alert("Run Smart Advisor first!");
 
-    // إخفاء كل الطبقات إلا المستشار
+    // حفظ extent الأصلي
+    let originalBounds = map.getBounds();
+
+    // عرض كل المناطق
+    map.fitBounds(investmentLayer.getBounds());
+
+    // إخفاء باقي الطبقات
     for(let g in layers){
         for(let l in layers[g]){
             map.removeLayer(layers[g][l]);
         }
     }
 
-    html2canvas(document.getElementById("map"), {scale: 1.5}).then(canvas=>{
+    html2canvas(document.getElementById("map"), {scale:2}).then(canvas=>{
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({
@@ -219,12 +225,13 @@ function generatePDF(){
 
         doc.save("Investment_Report.pdf");
 
-        // إعادة جميع الطبقات للخريطة
+        // إعادة جميع الطبقات والخريطة
         for(let g in layers){
             for(let l in layers[g]){
                 map.addLayer(layers[g][l]);
             }
         }
+        map.fitBounds(originalBounds);
     });
 }
 </script>
