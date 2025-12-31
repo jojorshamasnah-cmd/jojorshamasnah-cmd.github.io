@@ -132,20 +132,21 @@
     </div>
 </div>
 
-<!-- SMART ADVISOR BUTTON -->
+<!-- SMART ADVISOR BUTTON (BOTTOM-RIGHT, SMALLER) -->
 <div id="advisor-box" style="
 position:absolute;
-top:10px;
+bottom:160px;       /* فوق Opacity Box */
 right:10px;
 background:white;
-padding:10px;
-border-radius:10px;
-box-shadow:0 0 10px rgba(0,0,0,0.3);
+padding:6px 8px;
+border-radius:8px;
+box-shadow:0 0 8px rgba(0,0,0,0.3);
 font-family:Arial;
-z-index:9999;
+font-size:13px;
+z-index:9997;       /* تحت Opacity Box ولكن فوق الخريطة */
 ">
   <b>Smart Investment Advisor</b><br><br>
-  <button onclick="runSmartAdvisor()" style="width:100%">
+  <button onclick="runSmartAdvisor()" style="width:100%; font-size:12px; padding:4px 0;">
     Run Analysis
   </button>
 </div>
@@ -223,7 +224,7 @@ document.getElementById("opacity-slider").oninput = function () {
             });
         }
     }
-} ;
+};
 
 /*** LEGEND TOGGLE ***/
 document.getElementById("legend-title").onclick = function () {
