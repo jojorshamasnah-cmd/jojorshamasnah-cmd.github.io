@@ -125,7 +125,7 @@ loadLayer("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{colo
 loadLayer("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillColor:"#c49a6c",fillOpacity:0.6});
 loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson","Master Plans","polys",{color:"purple",fillColor:"#af7ac5",fillOpacity:0.6});
 loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#ff6666",fillOpacity:0.6});
-loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6},()=>{layersLoaded=true;});
+loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
 var investmentLayer;
@@ -157,12 +157,14 @@ function runSmartAdvisor(){
     investmentLayer=L.geoJson(agri,{
         style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
         onEachFeature:(f,l)=>{
-            l.bindPopup(`<b>Smart Investment Zone</b><br>
-                Level: ${f.properties.level}<br>
-                ✔ Agricultural Land<br>
-                ✔ Temp: ${f.properties.MEAN_ANNUA ?? "OK"} °C<br>
-                ✔ Within 500m of Roads<br>
-                ✖ Outside built-up Areas`);
+            l.bindPopup(`
+<b>Smart Investment Zone</b><br>
+Level: ${f.properties.level}<br>
+Agricultural: ${f.properties.level!=="Low"?"✔":"✖"}<br>
+Mean Temp: ${f.properties.MEAN_ANNUA ?? "Unknown"} °C<br>
+Near Roads: ${turf.booleanIntersects(f, roadBuffer)?"✔":"✖"}<br>
+Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
+`);
         }
     }).addTo(map);
 
