@@ -190,7 +190,7 @@ function generatePDF(){
         }
     }
 
-    html2canvas(document.getElementById("map")).then(canvas=>{
+    html2canvas(document.getElementById("map"), {scale: 1.5}).then(canvas=>{
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({
