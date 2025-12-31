@@ -33,11 +33,11 @@ select,input[type=range]{width:100%;margin-top:6px;}
 /* Scale */
 .leaflet-control-scale{left:50% !important;transform:translateX(-50%);bottom:5px !important;}
 
-/* Advisor + PDF box (مرفوع أكثر) */
+/* Advisor + PDF box */
 #advisor-box{
     position:absolute;
     right:10px;
-    bottom:180px; /* رفعتو أكثر */
+    bottom:200px; /* رفع أكثر */
     background:white;
     padding:8px;
     border-radius:8px;
@@ -179,35 +179,67 @@ Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
     control.addOverlay(investmentLayer,"Smart Investment Zones");
 }
 
-// Generate PDF with map image
+// Generate PDF with only Smart Advisor layer
 function generatePDF(){
     if(!investmentLayer) return alert("Run Smart Advisor first!");
 
-    html2canvas(document.getElementById('map')).then(canvas=>{
+    // Hide all other layers temporarily
+    for(let g in layers){
+        for(let l in layers[g]){
+            if(l !== "Smart Investment Zones") map.removeLayer(layers[g][l]);
+        }
+    }
+
+    // Resize map for clear image
+    let mapContainer = document.getElementById("map");
+    let origWidth = mapContainer.offsetWidth;
+    let origHeight = mapContainer.offsetHeight;
+    mapContainer.style.width = "1200px";
+    mapContainer.style.height = "800px";
+    map.invalidateSize();
+
+    html2canvas(mapContainer).then(canvas=>{
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFontSize(16);
-        doc.text("Smart Investment Report", 20, 20);
+        const doc = new jsPDF({
+            orientation: 'landscape',
+            unit: 'px',
+            format: [1200, 850]
+        });
 
-        // Insert map image
-        doc.addImage(imgData, 'PNG', 15, 40, 180, 100);
+        doc.setFontSize(20);
+        doc.text("Smart Investment Report", 20, 30);
+
+        // Add map image
+        doc.addImage(imgData, 'PNG', 0, 50, 1200, 700);
 
         // Calculate areas in m²
         let high=0, medium=0, low=0;
         investmentLayer.eachLayer(layer=>{
-            let area=turf.area(layer.toGeoJSON()); // متر مربع
+            let area=turf.area(layer.toGeoJSON());
             if(layer.feature.properties.level==="High") high+=area;
             else if(layer.feature.properties.level==="Medium") medium+=area;
             else low+=area;
         });
 
-        doc.setFontSize(12);
-        doc.text(`High suitability (green): ${high.toFixed(2)} m²`, 20, 150);
-        doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`, 20, 160);
-        doc.text(`Low suitability (red): ${low.toFixed(2)} m²`, 20, 170);
+        doc.setFontSize(16);
+        doc.text(`High suitability (green): ${high.toFixed(2)} m²`, 20, 770);
+        doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`, 20, 790);
+        doc.text(`Low suitability (red): ${low.toFixed(2)} m²`, 20, 810);
 
         doc.save("Investment_Report.pdf");
+
+        // Restore map size
+        mapContainer.style.width = origWidth + "px";
+        mapContainer.style.height = origHeight + "px";
+        map.invalidateSize();
+
+        // Re-add all layers
+        for(let g in layers){
+            for(let l in layers[g]){
+                map.addLayer(layers[g][l]);
+            }
+        }
     });
 }
 </script>
