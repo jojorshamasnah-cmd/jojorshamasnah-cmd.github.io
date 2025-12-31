@@ -30,9 +30,6 @@ body, html { margin:0; padding:0; height:100%; }
 #opacity-title{font-weight:bold;text-align:center;font-size:15px;margin-bottom:8px;}
 select,input[type=range]{width:100%;margin-top:6px;}
 
-/* Scale */
-.leaflet-control-scale{left:50% !important;transform:translateX(-50%);bottom:5px !important;}
-
 /* Advisor + PDF box */
 #advisor-box{
     position:absolute;
@@ -88,43 +85,53 @@ select,input[type=range]{width:100%;margin-top:6px;}
 </div>
 
 <script>
-var map = L.map("map").setView([31.903,35.203], 6); // Zoom level مبدئي 6
+var map = L.map("map").setView([31.903,35.203],11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-L.control.scale({imperial:false}).addTo(map);
 
-var layers={points:{},lines:{},polys:{}};
-var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
+// Scale bar ~ يظهر تقريباً 6 كم عند فتح الصفحة
+L.control.scale({
+    imperial: false,
+    maxWidth: 220 // كل ما زاد صار المقياس أطول ويغطي حوالي 6 كم
+}).addTo(map);
 
-function getPointIcon(type){ return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]}); }
+var layers = {points:{}, lines:{}, polys:{}};
+var control = L.control.layers({}, {}, {collapsed:false}).addTo(map);
+
+function getPointIcon(type){ 
+    return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]}); 
+}
 
 function loadLayer(file,name,group,styleObj,callback){
     $.getJSON(file,function(data){
         var layer;
-        if(group==="points"){ layer=L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:getPointIcon(name)})}).addTo(map);}
-        else{layer=L.geoJson(data,{style:styleObj}).addTo(map);}
-        layers[group][name]=layer;
+        if(group==="points"){ 
+            layer = L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:getPointIcon(name)})}).addTo(map);
+        } else {
+            layer = L.geoJson(data,{style:styleObj}).addTo(map);
+        }
+        layers[group][name] = layer;
         control.addOverlay(layer,name);
-        document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
+        document.getElementById("opacity-select").innerHTML += `<option value="${name}">${name}</option>`;
         if(callback) callback();
     });
 }
 
-// Opacity
-document.getElementById("opacity-slider").oninput=function(){
-    let selected=document.getElementById("opacity-select").value;
+// Opacity control
+document.getElementById("opacity-slider").oninput = function(){
+    let selected = document.getElementById("opacity-select").value;
     for(let group in layers){
-        if(layers[group][selected]) layers[group][selected].setStyle({opacity:this.value,fillOpacity:this.value});
+        if(layers[group][selected]) layers[group][selected].setStyle({opacity:this.value, fillOpacity:this.value});
     }
 };
 
 // Legend toggle
-document.getElementById("legend-title").onclick=function(){
-    let c=document.getElementById("legend-content");
-    c.style.display=c.style.display==="none"?"block":"none";
-    this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
+document.getElementById("legend-title").onclick = function(){
+    let c = document.getElementById("legend-content");
+    c.style.display = c.style.display==="none"?"block":"none";
+    this.innerHTML = c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
-// Load layers
+// Load all layers
 loadLayer("Schools.geojson","Schools","points");
 loadLayer("Wells.geojson","Wells","points");
 loadLayer("Quarries.geojson","Quarries","points");
@@ -142,13 +149,13 @@ loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpac
 // Smart Advisor
 var investmentLayer;
 function runSmartAdvisor(){
-    let agri=layers.polys["Agricultural Land"].toGeoJSON();
-    let temp=layers.polys["Temperature Zones"].toGeoJSON();
-    let roads=layers.lines["Roads"].toGeoJSON();
-    let built=layers.polys["Built-up Areas"].toGeoJSON();
+    let agri = layers.polys["Agricultural Land"].toGeoJSON();
+    let temp = layers.polys["Temperature Zones"].toGeoJSON();
+    let roads = layers.lines["Roads"].toGeoJSON();
+    let built = layers.polys["Built-up Areas"].toGeoJSON();
 
-    let roadBuffer=turf.buffer(roads,0.5,{units:"kilometers"});
-    let builtBuffer=turf.buffer(built,0.3,{units:"kilometers"});
+    let roadBuffer = turf.buffer(roads,0.5,{units:"kilometers"});
+    let builtBuffer = turf.buffer(built,0.3,{units:"kilometers"});
 
     agri.features.forEach(f=>{
         let score=1;
@@ -162,7 +169,7 @@ function runSmartAdvisor(){
 
     if(investmentLayer){ map.removeLayer(investmentLayer); control.removeLayer(investmentLayer); }
 
-    investmentLayer=L.geoJson(agri,{
+    investmentLayer = L.geoJson(agri,{
         style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
         onEachFeature:(f,l)=>{
             l.bindPopup(`
@@ -179,7 +186,7 @@ Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
     control.addOverlay(investmentLayer,"Smart Investment Zones");
 }
 
-// Generate PDF (full map)
+// PDF generation (full map)
 function generatePDF(){
     if(!investmentLayer) return alert("Run Smart Advisor first!");
 
@@ -190,7 +197,7 @@ function generatePDF(){
         }
     }
 
-    html2canvas(document.getElementById("map"), {scale:1}).then(canvas=>{
+    html2canvas(document.getElementById("map")).then(canvas=>{
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({
@@ -203,10 +210,9 @@ function generatePDF(){
         doc.text("Smart Investment Report", 20, 30);
         doc.addImage(imgData, 'PNG', 0, 50, canvas.width, canvas.height);
 
-        // المساحات
         let high=0, medium=0, low=0;
         investmentLayer.eachLayer(layer=>{
-            let area=turf.area(layer.toGeoJSON());
+            let area = turf.area(layer.toGeoJSON());
             if(layer.feature.properties.level==="High") high+=area;
             else if(layer.feature.properties.level==="Medium") medium+=area;
             else low+=area;
