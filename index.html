@@ -9,49 +9,79 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body, html { margin:0; padding:0; height:100%; }
-#map{height:100vh;}
+body, html { margin: 0; padding: 0; height: 100%; }
+#map { height: 100vh; }
 
-/* Legend */
-#legend-box{position:absolute;bottom:45px;left:10px;background:white;padding:10px 14px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9998;}
-#legend-title{font-weight:bold;text-align:center;font-size:16px;cursor:pointer;user-select:none;}
-#legend-content{display:none;margin-top:8px;font-size:14px;}
-.legend-item{display:flex;align-items:center;margin-bottom:5px;}
-.emoji{font-size:20px;width:25px;margin-right:6px;}
-.symbol-line{width:30px;height:4px;margin-right:6px;}
-.symbol-poly{width:22px;height:12px;border:1px solid #000;margin-right:6px;}
+/* ----------- LEGEND ----------- */
+#legend-box {
+    position: absolute;
+    bottom: 45px;
+    left: 10px;
+    background: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    width: 220px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    font-family: Arial;
+    z-index: 9998;
+}
+#legend-title { font-weight: bold; text-align: center; font-size: 16px; cursor: pointer; user-select: none; }
+#legend-content { display: none; margin-top: 8px; font-size: 14px; }
+.legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+.emoji { font-size: 20px; width: 25px; margin-right: 6px; }
+.symbol-line { width: 30px; height: 4px; margin-right: 6px; }
+.symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
 
-/* Opacity box */
-#opacity-box{position:absolute;right:10px;bottom:45px;background:white;padding:12px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9999;}
-#opacity-title{font-weight:bold;text-align:center;font-size:15px;margin-bottom:8px;}
-select,input[type=range]{width:100%;margin-top:6px;}
+/* ----------- OPACITY BOX ----------- */
+#opacity-box {
+    position: absolute;
+    right: 10px;
+    bottom: 45px;
+    background: white;
+    padding: 12px;
+    border-radius: 10px;
+    width: 220px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    font-family: Arial;
+    z-index: 9999;
+}
+#opacity-title { font-weight: bold; text-align: center; font-size: 15px; margin-bottom: 8px; }
+select, input[type=range] { width: 100%; margin-top: 6px; }
 
-/* Scale */
-.leaflet-control-scale{left:50% !important;transform:translateX(-50%);bottom:5px !important;}
+/* ----------- SCALE CENTER ----------- */
+.leaflet-control-scale { left: 50% !important; transform: translateX(-50%); bottom: 5px !important; }
 
-/* Investment button */
-#investment-btn{position:absolute;bottom:150px;right:10px;background:white;padding:8px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:9999;font-family:Arial;}
-#investment-btn button{width:100%;cursor:pointer;}
-
-/* PDF button */
-#pdf-btn{position:absolute;bottom:110px;right:10px;background:white;padding:8px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:9999;font-family:Arial;}
-#pdf-btn button{width:100%;cursor:pointer;}
+/* ----------- INVESTMENT BUTTON ----------- */
+#investment-btn {
+    position:absolute;
+    top:10px;
+    right:10px;
+    background:white;
+    padding:10px;
+    border-radius:8px;
+    box-shadow:0 0 10px rgba(0,0,0,0.3);
+    z-index:9999;
+    font-family:Arial;
+}
+#investment-btn button { width:100%; margin-top:5px; }
 </style>
 </head>
 <body>
+
 <div id="map"></div>
 
-<!-- Opacity box -->
+<!-- OPACITY BOX -->
 <div id="opacity-box">
     <div id="opacity-title">Layer Opacity</div>
     <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
     <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
-<!-- Legend -->
+<!-- LEGEND -->
 <div id="legend-box">
     <div id="legend-title">Legend ▼</div>
     <div id="legend-content">
@@ -73,56 +103,47 @@ select,input[type=range]{width:100%;margin-top:6px;}
     </div>
 </div>
 
-<!-- Investment button -->
+<!-- INVESTMENT ADVISOR BUTTON -->
 <div id="investment-btn">
     <button onclick="runSmartAdvisor()">📊 Smart Investment Advisor</button>
-</div>
-
-<!-- PDF button -->
-<div id="pdf-btn">
     <button onclick="generatePDF()">📄 Export PDF</button>
 </div>
 
 <script>
-var map=L.map("map").setView([31.903,35.203],11);
+var map = L.map("map").setView([31.903, 35.203], 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-L.control.scale({imperial:false}).addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
 
-var layers={points:{},lines:{},polys:{}};
-var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
+var layers = { points:{}, lines:{}, polys:{} };
+var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-// Point icons
-function getPointIcon(type){ return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]}); }
+function getPointIcon(type){
+    return L.divIcon({ html: type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•", className:"", iconSize:[25,25], iconAnchor:[12,12] });
+}
 
-// Load layers
-function loadLayer(file,name,group,styleObj,callback){
+function loadLayer(file,name,group,styleObj){
     $.getJSON(file,function(data){
         var layer;
-        if(group==="points"){ layer=L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:getPointIcon(name)})}).addTo(map);}
-        else{layer=L.geoJson(data,{style:styleObj}).addTo(map);}
+        if(group==="points") layer=L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:getPointIcon(name)})}).addTo(map);
+        else layer=L.geoJson(data,{style:styleObj}).addTo(map);
         layers[group][name]=layer;
         control.addOverlay(layer,name);
-        document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
-        if(callback) callback();
+        document.getElementById("opacity-select").innerHTML += `<option value="${name}">${name}</option>`;
     });
 }
 
-// Opacity
 document.getElementById("opacity-slider").oninput=function(){
     let selected=document.getElementById("opacity-select").value;
-    for(let group in layers){
-        if(layers[group][selected]) layers[group][selected].setStyle({opacity:this.value,fillOpacity:this.value});
-    }
+    for(let group in layers) if(layers[group][selected]) layers[group][selected].setStyle({opacity:this.value, fillOpacity:this.value});
 };
 
-// Legend toggle
 document.getElementById("legend-title").onclick=function(){
     let c=document.getElementById("legend-content");
     c.style.display=c.style.display==="none"?"block":"none";
     this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
-// Load layers
+/* LOAD LAYERS */
 loadLayer("Schools.geojson","Schools","points");
 loadLayer("Wells.geojson","Wells","points");
 loadLayer("Quarries.geojson","Quarries","points");
@@ -137,67 +158,80 @@ loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#f
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
-// Smart Advisor
+/* SMART INVESTMENT ADVISOR */
 var investmentLayer;
 function runSmartAdvisor(){
-    let agri=layers.polys["Agricultural Land"].toGeoJSON();
-    let temp=layers.polys["Temperature Zones"].toGeoJSON();
-    let roads=layers.lines["Roads"].toGeoJSON();
-    let built=layers.polys["Built-up Areas"].toGeoJSON();
+    if(investmentLayer) { map.removeLayer(investmentLayer); control.removeLayer(investmentLayer); }
 
-    let roadBuffer=turf.buffer(roads,0.5,{units:"kilometers"});
-    let builtBuffer=turf.buffer(built,0.3,{units:"kilometers"});
+    let agri = layers.polys["Agricultural Land"].toGeoJSON();
+    let temp = layers.polys["Temperature Zones"].toGeoJSON();
+    let roads = layers.lines["Roads"].toGeoJSON();
+    let built = layers.polys["Built-up Areas"].toGeoJSON();
+
+    let roadBuffer = turf.buffer(roads,0.2,{units:"kilometers"});
+    let builtBuffer = turf.buffer(built,0.3,{units:"kilometers"});
 
     agri.features.forEach(f=>{
         let score=1;
         temp.features.forEach(t=>{ if(turf.booleanIntersects(f,t)) score+=2; });
         if(turf.booleanIntersects(f,roadBuffer)) score+=1.5;
-        if(turf.booleanIntersects(f,builtBuffer)) score-=1;
+        if(turf.booleanIntersects(f,builtBuffer)) score+=1;
+
         if(score>=5) f.properties.level="High";
         else if(score>=3) f.properties.level="Medium";
         else f.properties.level="Low";
     });
 
-    if(investmentLayer){ map.removeLayer(investmentLayer); control.removeLayer(investmentLayer); }
-
     investmentLayer=L.geoJson(agri,{
         style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
-        onEachFeature:(f,l)=>{
-            l.bindPopup(`
-<b>Smart Investment Zone</b><br>
-Level: ${f.properties.level}<br>
-Agricultural: ${f.properties.level!=="Low"?"✔":"✖"}<br>
-Mean Temp: ${f.properties.MEAN_ANNUA ?? "Unknown"} °C<br>
-Near Roads: ${turf.booleanIntersects(f, roadBuffer)?"✔":"✖"}<br>
-Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
-`);
-        }
+        onEachFeature:(f,l)=>l.bindPopup("Suitability: "+f.properties.level)
     }).addTo(map);
-
-    control.addOverlay(investmentLayer,"Smart Investment Zones");
+    control.addOverlay(investmentLayer,"Investment Suitability");
 }
 
-// Generate PDF
+/* GENERATE PDF */
 function generatePDF(){
     if(!investmentLayer) return alert("Run Smart Advisor first!");
-    let high=0, medium=0, low=0;
+
+    let high=0,medium=0,low=0;
     investmentLayer.eachLayer(layer=>{
-        let area=turf.area(layer.toGeoJSON())/10000; // هكتار
+        let area=turf.area(layer.toGeoJSON()); // m²
         if(layer.feature.properties.level==="High") high+=area;
         else if(layer.feature.properties.level==="Medium") medium+=area;
         else low+=area;
     });
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Smart Investment Report",20,20);
-    doc.setFontSize(12);
-    doc.text(`High suitability (green): ${high.toFixed(2)} ha`,20,40);
-    doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} ha`,20,50);
-    doc.text(`Low suitability (red): ${low.toFixed(2)} ha`,20,60);
-    doc.save("Investment_Report.pdf");
+    // Clone map for screenshot
+    let container = map.getContainer();
+    // Hide all other layers temporarily
+    let tempLayers = [];
+    for(let g in layers){
+        for(let l in layers[g]){
+            let layer=layers[g][l];
+            if(layer!==investmentLayer){ container.style.display="none"; }
+        }
+    }
+
+    html2canvas(container).then(canvas=>{
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text("Smart Investment Report",20,20);
+        doc.setFontSize(12);
+        const startY=40;
+        const rowHeight=10;
+        doc.text("Level",20,startY); doc.text("Area (m²)",80,startY);
+        doc.text("High (green)",20,startY+rowHeight); doc.text(high.toFixed(2),80,startY+rowHeight);
+        doc.text("Medium (yellow)",20,startY+2*rowHeight); doc.text(medium.toFixed(2),80,startY+2*rowHeight);
+        doc.text("Low (red)",20,startY+3*rowHeight); doc.text(low.toFixed(2),80,startY+3*rowHeight);
+
+        // Add map image below table
+        let imgData=canvas.toDataURL("image/png");
+        doc.addImage(imgData,'PNG',20,startY+4*rowHeight,170,120);
+        doc.save("Investment_Report.pdf");
+    });
 }
 </script>
+
 </body>
 </html>
