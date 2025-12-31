@@ -195,7 +195,7 @@ html2canvas(document.getElementById('map')).then(canvas => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    doc.setFontSize(16);
+    doc.setFontSize(20);
     doc.text("Smart Investment Report", 20, 20);
 
     // تخفيض السكيل لتظهر الخريطة كاملة
@@ -231,4 +231,5 @@ html2canvas(document.getElementById('map')).then(canvas => {
 </script>
 </body>
 </html>
+
 
