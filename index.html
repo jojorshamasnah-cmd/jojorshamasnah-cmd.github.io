@@ -32,18 +32,18 @@ select,input[type=range]{width:100%;margin-top:6px;}
 /* Scale */
 .leaflet-control-scale{left:50% !important;transform:translateX(-50%);bottom:5px !important;}
 
-/* Investment + PDF box */
+/* Advisor + PDF box (مرفوع فوق شوية) */
 #advisor-box{
     position:absolute;
     right:10px;
-    bottom:10px; /* أسفل الخريطة */
+    bottom:120px; /* رفعتو فوق بوكس الشفافية */
     background:white;
     padding:8px;
     border-radius:8px;
     box-shadow:0 0 10px rgba(0,0,0,0.3);
     z-index:9999;
     font-family:Arial;
-    width:220px; /* نفس عرض بوكس الشفافية */
+    width:220px;
 }
 #advisor-box button{width:100%; margin-top:5px; cursor:pointer;}
 </style>
@@ -94,10 +94,8 @@ L.control.scale({imperial:false}).addTo(map);
 var layers={points:{},lines:{},polys:{}};
 var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
 
-// Point icons
 function getPointIcon(type){ return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]}); }
 
-// Load layers
 function loadLayer(file,name,group,styleObj,callback){
     $.getJSON(file,function(data){
         var layer;
@@ -140,7 +138,6 @@ loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#f
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
-// Smart Advisor
 var investmentLayer;
 function runSmartAdvisor(){
     let agri=layers.polys["Agricultural Land"].toGeoJSON();
@@ -180,27 +177,44 @@ Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
     control.addOverlay(investmentLayer,"Smart Investment Zones");
 }
 
-// Generate PDF in m²
+// PDF with map image
 function generatePDF(){
     if(!investmentLayer) return alert("Run Smart Advisor first!");
-    let high=0, medium=0, low=0;
-    investmentLayer.eachLayer(layer=>{
-        let area=turf.area(layer.toGeoJSON()); // m²
-        if(layer.feature.properties.level==="High") high+=area;
-        else if(layer.feature.properties.level==="Medium") medium+=area;
-        else low+=area;
-    });
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Smart Investment Report",20,20);
-    doc.setFontSize(12);
-    doc.text(`High suitability (green): ${high.toFixed(2)} m²`,20,40);
-    doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`,20,50);
-    doc.text(`Low suitability (red): ${low.toFixed(2)} m²`,20,60);
-    doc.save("Investment_Report.pdf");
+    // Capture map as image
+    map.once('render', function(){
+        html2canvas(document.getElementById('map')).then(canvas=>{
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(16);
+            doc.text("Smart Investment Report", 20, 20);
+
+            // Insert map image
+            doc.addImage(imgData, 'PNG', 15, 40, 180, 100);
+
+            // Calculate areas in m²
+            let high=0, medium=0, low=0;
+            investmentLayer.eachLayer(layer=>{
+                let area=turf.area(layer.toGeoJSON());
+                if(layer.feature.properties.level==="High") high+=area;
+                else if(layer.feature.properties.level==="Medium") medium+=area;
+                else low+=area;
+            });
+
+            doc.setFontSize(12);
+            doc.text(`High suitability (green): ${high.toFixed(2)} m²`, 20, 150);
+            doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`, 20, 160);
+            doc.text(`Low suitability (red): ${low.toFixed(2)} m²`, 20, 170);
+
+            doc.save("Investment_Report.pdf");
+        });
+    });
 }
 </script>
+
+<!-- html2canvas for map screenshot -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 </body>
 </html>
