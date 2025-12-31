@@ -9,10 +9,11 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body, html { margin: 0; padding: 0; height: 100%; }
-#map { height: 100vh; }
+body, html { margin:0; padding:0; height:100%; }
+#map{height:100vh;}
 
 /* Legend */
 #legend-box{position:absolute;bottom:45px;left:10px;background:white;padding:10px 14px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9998;}
@@ -34,9 +35,12 @@ select,input[type=range]{width:100%;margin-top:6px;}
 /* Investment button */
 #investment-btn{position:absolute;bottom:150px;right:10px;background:white;padding:8px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:9999;font-family:Arial;}
 #investment-btn button{width:100%;cursor:pointer;}
+
+/* PDF button */
+#pdf-btn{position:absolute;bottom:110px;right:10px;background:white;padding:8px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:9999;font-family:Arial;}
+#pdf-btn button{width:100%;cursor:pointer;}
 </style>
 </head>
-
 <body>
 <div id="map"></div>
 
@@ -72,6 +76,11 @@ select,input[type=range]{width:100%;margin-top:6px;}
 <!-- Investment button -->
 <div id="investment-btn">
     <button onclick="runSmartAdvisor()">📊 Smart Investment Advisor</button>
+</div>
+
+<!-- PDF button -->
+<div id="pdf-btn">
+    <button onclick="generatePDF()">📄 Export PDF</button>
 </div>
 
 <script>
@@ -128,6 +137,7 @@ loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#f
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
+// Smart Advisor
 var investmentLayer;
 function runSmartAdvisor(){
     let agri=layers.polys["Agricultural Land"].toGeoJSON();
@@ -140,13 +150,9 @@ function runSmartAdvisor(){
 
     agri.features.forEach(f=>{
         let score=1;
-        // الحرارة
         temp.features.forEach(t=>{ if(turf.booleanIntersects(f,t)) score+=2; });
-        // قرب الطرق
         if(turf.booleanIntersects(f,roadBuffer)) score+=1.5;
-        // قرب المباني → يقلل التقييم
         if(turf.booleanIntersects(f,builtBuffer)) score-=1;
-        // درجات High/Medium/Low
         if(score>=5) f.properties.level="High";
         else if(score>=3) f.properties.level="Medium";
         else f.properties.level="Low";
@@ -169,6 +175,28 @@ Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
     }).addTo(map);
 
     control.addOverlay(investmentLayer,"Smart Investment Zones");
+}
+
+// Generate PDF
+function generatePDF(){
+    if(!investmentLayer) return alert("Run Smart Advisor first!");
+    let high=0, medium=0, low=0;
+    investmentLayer.eachLayer(layer=>{
+        let area=turf.area(layer.toGeoJSON())/10000; // هكتار
+        if(layer.feature.properties.level==="High") high+=area;
+        else if(layer.feature.properties.level==="Medium") medium+=area;
+        else low+=area;
+    });
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Smart Investment Report",20,20);
+    doc.setFontSize(12);
+    doc.text(`High suitability (green): ${high.toFixed(2)} ha`,20,40);
+    doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} ha`,20,50);
+    doc.text(`Low suitability (red): ${low.toFixed(2)} ha`,20,60);
+    doc.save("Investment_Report.pdf");
 }
 </script>
 </body>
