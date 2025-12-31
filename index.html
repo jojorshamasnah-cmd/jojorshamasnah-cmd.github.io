@@ -190,34 +190,35 @@ function generatePDF(){
         }
     }
 
-    html2canvas(document.getElementById("map")).then(canvas=>{
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({
-            orientation: 'landscape',
-            unit: 'px',
-            format: [canvas.width, canvas.height + 150]
-        });
+html2canvas(document.getElementById('map')).then(canvas => {
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
 
-        doc.setFontSize(20);
-        doc.text("Smart Investment Report", 20, 30);
-        doc.addImage(imgData, 'PNG', 0, 50, canvas.width, canvas.height);
+    doc.setFontSize(16);
+    doc.text("Smart Investment Report", 20, 20);
 
-        // المساحات
-        let high=0, medium=0, low=0;
-        investmentLayer.eachLayer(layer=>{
-            let area=turf.area(layer.toGeoJSON());
-            if(layer.feature.properties.level==="High") high+=area;
-            else if(layer.feature.properties.level==="Medium") medium+=area;
-            else low+=area;
-        });
+    // تخفيض السكيل لتظهر الخريطة كاملة
+    let scale = 0.6; // 60% من الحجم الأصلي
+    doc.addImage(imgData, 'PNG', 10, 40, canvas.width * scale, canvas.height * scale);
 
-        doc.setFontSize(16);
-        doc.text(`High suitability (green): ${high.toFixed(2)} m²`, 20, canvas.height + 60);
-        doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`, 20, canvas.height + 80);
-        doc.text(`Low suitability (red): ${low.toFixed(2)} m²`, 20, canvas.height + 100);
+    // إضافة المساحات
+    let high=0, medium=0, low=0;
+    investmentLayer.eachLayer(layer=>{
+        let area=turf.area(layer.toGeoJSON()); // متر مربع
+        if(layer.feature.properties.level==="High") high+=area;
+        else if(layer.feature.properties.level==="Medium") medium+=area;
+        else low+=area;
+    });
 
-        doc.save("Investment_Report.pdf");
+    doc.setFontSize(12);
+    doc.text(`High suitability (green): ${high.toFixed(2)} m²`, 20, 150);
+    doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`, 20, 160);
+    doc.text(`Low suitability (red): ${low.toFixed(2)} m²`, 20, 170);
+
+    doc.save("Investment_Report.pdf");
+});
+
 
         // إعادة جميع الطبقات للخريطة
         for(let g in layers){
@@ -230,3 +231,4 @@ function generatePDF(){
 </script>
 </body>
 </html>
+
