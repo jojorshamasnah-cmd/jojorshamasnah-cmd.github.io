@@ -37,7 +37,7 @@ select,input[type=range]{width:100%;margin-top:6px;}
 #advisor-box{
     position:absolute;
     right:10px;
-    bottom:200px; /* رفع أكثر */
+    bottom:220px;
     background:white;
     padding:8px;
     border-radius:8px;
@@ -179,23 +179,23 @@ Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
     control.addOverlay(investmentLayer,"Smart Investment Zones");
 }
 
-// Generate PDF with only Smart Advisor layer
+// Generate PDF with full map
 function generatePDF(){
     if(!investmentLayer) return alert("Run Smart Advisor first!");
 
-    // Hide all other layers temporarily
+    // Hide all other layers
     for(let g in layers){
         for(let l in layers[g]){
             if(l !== "Smart Investment Zones") map.removeLayer(layers[g][l]);
         }
     }
 
-    // Resize map for clear image
+    // Resize map for better capture
     let mapContainer = document.getElementById("map");
     let origWidth = mapContainer.offsetWidth;
     let origHeight = mapContainer.offsetHeight;
-    mapContainer.style.width = "1200px";
-    mapContainer.style.height = "800px";
+    mapContainer.style.width = "1400px";
+    mapContainer.style.height = "900px";
     map.invalidateSize();
 
     html2canvas(mapContainer).then(canvas=>{
@@ -204,14 +204,14 @@ function generatePDF(){
         const doc = new jsPDF({
             orientation: 'landscape',
             unit: 'px',
-            format: [1200, 850]
+            format: [1400, 950]
         });
 
         doc.setFontSize(20);
         doc.text("Smart Investment Report", 20, 30);
 
-        // Add map image
-        doc.addImage(imgData, 'PNG', 0, 50, 1200, 700);
+        // Insert full map image
+        doc.addImage(imgData, 'PNG', 0, 50, 1400, 750);
 
         // Calculate areas in m²
         let high=0, medium=0, low=0;
@@ -223,13 +223,13 @@ function generatePDF(){
         });
 
         doc.setFontSize(16);
-        doc.text(`High suitability (green): ${high.toFixed(2)} m²`, 20, 770);
-        doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`, 20, 790);
-        doc.text(`Low suitability (red): ${low.toFixed(2)} m²`, 20, 810);
+        doc.text(`High suitability (green): ${high.toFixed(2)} m²`, 20, 820);
+        doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`, 20, 840);
+        doc.text(`Low suitability (red): ${low.toFixed(2)} m²`, 20, 860);
 
         doc.save("Investment_Report.pdf");
 
-        // Restore map size
+        // Restore map
         mapContainer.style.width = origWidth + "px";
         mapContainer.style.height = origHeight + "px";
         map.invalidateSize();
