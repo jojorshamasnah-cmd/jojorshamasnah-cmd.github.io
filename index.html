@@ -82,8 +82,7 @@ select,input[type=range]{width:100%;margin-top:6px;}
 <div id="advisor-box">
     <button onclick="runSmartAdvisor()">📊 Run Smart Advisor</button>
     <button onclick="runRiskScanner()" style="background-color: #f39c12; color: white;">⚠️ Run Risk Scanner</button>
-    <button onclick="generateRiskPDF()" style="background-color: #d35400; color: white;">📄 Export Risk PDF</button>
-    <button onclick="generatePDF()">📄 Export Investment PDF</button>
+    <button id="export-btn" onclick="unifiedPDFExport()" style="background-color: #d35400; color: white; display:none;">📄 Export PDF Report</button>
 </div>
 
 <script>
@@ -93,6 +92,7 @@ L.control.scale({imperial:false}).addTo(map);
 
 var layers={points:{},lines:{},polys:{}};
 var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
+var lastAnalysis = ""; // متغير لمتابعة نوع التحليل الأخير
 
 function getPointIcon(type){ return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]}); }
 
@@ -138,9 +138,12 @@ loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#f
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
-// 1. Smart Advisor
+// 1. Smart Investment Advisor
 var investmentLayer;
 function runSmartAdvisor(){
+    lastAnalysis = "investment";
+    document.getElementById("export-btn").style.display = "block";
+    
     let agri=layers.polys["Agricultural Land"].toGeoJSON();
     let temp=layers.polys["Temperature Zones"].toGeoJSON();
     let roads=layers.lines["Roads"].toGeoJSON();
@@ -164,23 +167,19 @@ function runSmartAdvisor(){
     investmentLayer=L.geoJson(agri,{
         style:f=>({fillOpacity:0.7,color:"#000",fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"}),
         onEachFeature:(f,l)=>{
-            l.bindPopup(`
-<b>Smart Investment Zone</b><br>
-Level: ${f.properties.level}<br>
-Agricultural: ${f.properties.level!=="Low"?"✔":"✖"}<br>
-Mean Temp: ${f.properties.MEAN_ANNUA ?? "Unknown"} °C<br>
-Near Roads: ${turf.booleanIntersects(f, roadBuffer)?"✔":"✖"}<br>
-Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
-`);
+            l.bindPopup(`<b>Smart Investment Zone</b><br>Level: ${f.properties.level}`);
         }
     }).addTo(map);
-
     control.addOverlay(investmentLayer,"Smart Investment Zones");
+    alert("Smart Advisor: Analysis ready for export.");
 }
 
 // 2. Municipal Risk Scanner
 var riskLayer;
 function runRiskScanner() {
+    lastAnalysis = "risk";
+    document.getElementById("export-btn").style.display = "block";
+
     let quarries = layers.points["Quarries"].toGeoJSON();
     let streams = layers.lines["Streams"].toGeoJSON();
 
@@ -190,92 +189,67 @@ function runRiskScanner() {
     if(riskLayer){ map.removeLayer(riskLayer); control.removeLayer(riskLayer); }
 
     riskLayer = L.geoJson(null, {
-        style: function(f) {
-            return {
-                color: f.properties.riskType === "Quarry" ? "#e67e22" : "#3498db",
-                fillOpacity: 0.5,
-                weight: 2
-            };
-        },
-        onEachFeature: function(f, l) {
-            l.bindPopup(`<b>Risk Warning</b><br>Type: ${f.properties.desc}`);
-        }
+        style: f => ({ color: f.properties.riskType === "Quarry" ? "#e67e22" : "#3498db", fillOpacity: 0.5 }),
+        onEachFeature: (f, l) => { l.bindPopup(`<b>Risk Warning</b><br>${f.properties.desc}`); }
     }).addTo(map);
 
     quarryBuffer.features.forEach(f => {
-        f.properties = { riskType: "Quarry", desc: "Quarry Impact Zone (Noise & Dust)" };
+        f.properties = { riskType: "Quarry", desc: "Quarry Impact (Noise/Dust)" };
         riskLayer.addData(f);
     });
-
     floodBuffer.features.forEach(f => {
-        f.properties = { riskType: "Flood", desc: "Flood Risk Zone (Near Stream)" };
+        f.properties = { riskType: "Flood", desc: "Flood Risk Zone" };
         riskLayer.addData(f);
     });
 
-    control.addOverlay(riskLayer, "Municipal Risk Scanner");
-    alert("Risk Scanner Analysis Complete.");
+    control.addOverlay(riskLayer, "Municipal Risk Zones");
+    alert("Risk Scanner: Analysis ready for export.");
 }
 
-// 3. Export Risk PDF
-function generateRiskPDF(){
-    if(!riskLayer) return alert("Run Risk Scanner first!");
-    let originalBounds = map.getBounds();
-    map.fitBounds(riskLayer.getBounds());
-    for(let g in layers){ for(let l in layers[g]){ map.removeLayer(layers[g][l]); } }
-
-    html2canvas(document.getElementById("map"), {scale:2}).then(canvas=>{
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 150] });
-        doc.setFontSize(22);
-        doc.setTextColor(211, 84, 0);
-        doc.text("Municipal Risk Analysis Report", 20, 40);
-        doc.addImage(imgData, 'PNG', 0, 60, canvas.width, canvas.height);
-
-        let qArea = 0, fArea = 0;
-        riskLayer.eachLayer(layer => {
-            let area = turf.area(layer.toGeoJSON());
-            if(layer.feature.properties.riskType === "Quarry") qArea += area;
-            else if(layer.feature.properties.riskType === "Flood") fArea += area;
-        });
-
-        doc.setFontSize(16); doc.setTextColor(0, 0, 0);
-        doc.text(`Quarry Impact Area: ${(qArea/1000).toFixed(2)} Dunams`, 20, canvas.height + 80);
-        doc.text(`Flood Risk Area: ${(fArea/1000).toFixed(2)} Dunams`, 20, canvas.height + 110);
-        doc.save("Municipal_Risk_Report.pdf");
-
-        for(let g in layers){ for(let l in layers[g]){ map.addLayer(layers[g][l]); } }
-        map.fitBounds(originalBounds);
-    });
+// 3. Unified PDF Logic
+function unifiedPDFExport() {
+    if (lastAnalysis === "investment") generateInvestmentPDF();
+    else if (lastAnalysis === "risk") generateRiskPDF();
 }
 
-// 4. Export Investment PDF (Original)
-function generatePDF(){
-    if(!investmentLayer) return alert("Run Smart Advisor first!");
+function generateInvestmentPDF(){
     let originalBounds = map.getBounds();
     map.fitBounds(investmentLayer.getBounds());
     for(let g in layers){ for(let l in layers[g]){ map.removeLayer(layers[g][l]); } }
 
     html2canvas(document.getElementById("map"), {scale:2}).then(canvas=>{
-        const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 150] });
-        doc.setFontSize(20); doc.text("Smart Investment Report", 20, 30);
-        doc.addImage(imgData, 'PNG', 0, 50, canvas.width, canvas.height);
-
-        let high=0, medium=0, low=0;
-        investmentLayer.eachLayer(layer=>{
-            let area=turf.area(layer.toGeoJSON());
-            if(layer.feature.properties.level==="High") high+=area;
-            else if(layer.feature.properties.level==="Medium") medium+=area;
-            else low+=area;
+        doc.text("Smart Investment Report", 20, 30);
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 50, canvas.width, canvas.height);
+        
+        let high=0, med=0;
+        investmentLayer.eachLayer(l => { 
+            let a = turf.area(l.toGeoJSON())/1000;
+            if(l.feature.properties.level==="High") high+=a; else med+=a; 
         });
-
-        doc.setFontSize(16);
-        doc.text(`High suitability (green): ${(high/1000).toFixed(2)} Dunams`, 20, canvas.height + 60);
-        doc.text(`Medium suitability (yellow): ${(medium/1000).toFixed(2)} Dunams`, 20, canvas.height + 80);
-        doc.text(`Low suitability (red): ${(low/1000).toFixed(2)} Dunams`, 20, canvas.height + 100);
+        doc.text(`High Suitability: ${high.toFixed(2)} Dunams`, 20, canvas.height + 70);
         doc.save("Investment_Report.pdf");
+        
+        for(let g in layers){ for(let l in layers[g]){ map.addLayer(layers[g][l]); } }
+        map.fitBounds(originalBounds);
+    });
+}
+
+function generateRiskPDF(){
+    let originalBounds = map.getBounds();
+    map.fitBounds(riskLayer.getBounds());
+    for(let g in layers){ for(let l in layers[g]){ map.removeLayer(layers[g][l]); } }
+
+    html2canvas(document.getElementById("map"), {scale:2}).then(canvas=>{
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 150] });
+        doc.setTextColor(211, 84, 0); doc.text("Municipal Risk Report", 20, 30);
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 50, canvas.width, canvas.height);
+        
+        let qArea=0; riskLayer.eachLayer(l => { if(l.feature.properties.riskType==="Quarry") qArea += turf.area(l.toGeoJSON())/1000; });
+        doc.setTextColor(0,0,0); doc.text(`Quarry Impact: ${qArea.toFixed(2)} Dunams`, 20, canvas.height + 70);
+        doc.save("Risk_Report.pdf");
 
         for(let g in layers){ for(let l in layers[g]){ map.addLayer(layers[g][l]); } }
         map.fitBounds(originalBounds);
