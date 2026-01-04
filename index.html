@@ -52,14 +52,12 @@ select,input[type=range]{width:100%;margin-top:6px;}
 <body>
 <div id="map"></div>
 
-<!-- Opacity box -->
 <div id="opacity-box">
     <div id="opacity-title">Layer Opacity</div>
     <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
     <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
-<!-- Legend -->
 <div id="legend-box">
     <div id="legend-title">Legend ▼</div>
     <div id="legend-content">
@@ -81,9 +79,9 @@ select,input[type=range]{width:100%;margin-top:6px;}
     </div>
 </div>
 
-<!-- Advisor + PDF box -->
 <div id="advisor-box">
     <button onclick="runSmartAdvisor()">📊 Run Smart Advisor</button>
+    <button onclick="runRiskScanner()" style="background-color: #f39c12; color: white;">⚠️ Run Risk Scanner</button>
     <button onclick="generatePDF()">📄 Export PDF</button>
 </div>
 
@@ -179,17 +177,54 @@ Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
     control.addOverlay(investmentLayer,"Smart Investment Zones");
 }
 
+// --- الميزة الثانية: ماسح المخاطر البلدي ---
+var riskLayer;
+function runRiskScanner() {
+    let quarries = layers.points["Quarries"].toGeoJSON();
+    let streams = layers.lines["Streams"].toGeoJSON();
+
+    // تحليل النطاق العازل للمحاجر (1 كم) ومجاري الوديان (300 متر)
+    let quarryBuffer = turf.buffer(quarries, 1, {units: "kilometers"});
+    let floodBuffer = turf.buffer(streams, 0.3, {units: "kilometers"});
+
+    if(riskLayer){ map.removeLayer(riskLayer); control.removeLayer(riskLayer); }
+
+    riskLayer = L.geoJson(null, {
+        style: function(f) {
+            return {
+                color: f.properties.riskType === "Quarry" ? "#e67e22" : "#3498db",
+                fillOpacity: 0.5,
+                weight: 2
+            };
+        },
+        onEachFeature: function(f, l) {
+            l.bindPopup(`<b>Risk Warning</b><br>Type: ${f.properties.desc}`);
+        }
+    }).addTo(map);
+
+    // إضافة مناطق تأثير المحاجر
+    quarryBuffer.features.forEach(f => {
+        f.properties = { riskType: "Quarry", desc: "Quarry Impact Zone (Noise & Dust)" };
+        riskLayer.addData(f);
+    });
+
+    // إضافة مناطق خطر الفيضانات
+    floodBuffer.features.forEach(f => {
+        f.properties = { riskType: "Flood", desc: "Flood Risk Zone (Near Stream)" };
+        riskLayer.addData(f);
+    });
+
+    control.addOverlay(riskLayer, "Municipal Risk Scanner");
+    alert("Risk Scanner: Quarry buffers (orange) and Flood zones (blue) added.");
+}
+
 // Generate PDF (full map)
 function generatePDF(){
     if(!investmentLayer) return alert("Run Smart Advisor first!");
 
-    // حفظ extent الأصلي
     let originalBounds = map.getBounds();
-
-    // عرض كل المناطق
     map.fitBounds(investmentLayer.getBounds());
 
-    // إخفاء باقي الطبقات
     for(let g in layers){
         for(let l in layers[g]){
             map.removeLayer(layers[g][l]);
@@ -209,7 +244,6 @@ function generatePDF(){
         doc.text("Smart Investment Report", 20, 30);
         doc.addImage(imgData, 'PNG', 0, 50, canvas.width, canvas.height);
 
-        // المساحات
         let high=0, medium=0, low=0;
         investmentLayer.eachLayer(layer=>{
             let area=turf.area(layer.toGeoJSON());
@@ -225,7 +259,6 @@ function generatePDF(){
 
         doc.save("Investment_Report.pdf");
 
-        // إعادة جميع الطبقات والخريطة
         for(let g in layers){
             for(let l in layers[g]){
                 map.addLayer(layers[g][l]);
@@ -237,4 +270,3 @@ function generatePDF(){
 </script>
 </body>
 </html>
-
