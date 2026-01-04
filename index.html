@@ -89,7 +89,7 @@ function loadLayer(file,name,group,styleObj){
     });
 }
 
-// تحميل كافة الطبقات الـ 12
+// تحميل الطبقات الـ 12 كاملة
 loadLayer("Schools.geojson","Schools","points");
 loadLayer("Wells.geojson","Wells","points");
 loadLayer("Quarries.geojson","Quarries","points");
@@ -108,78 +108,82 @@ function setGlobalOpacity(val) {
     for(let g in layers) for(let name in layers[g]) if(layers[g][name].setStyle) layers[g][name].setStyle({fillOpacity: val, opacity: val});
 }
 
-// 1. المستشار الذكي (أحمر، أصفر، أخضر)
-var investmentLayer;
+document.getElementById("opacity-slider").oninput=function(){
+    let selected=document.getElementById("opacity-select").value;
+    for(let g in layers) if(layers[g][selected] && layers[g][selected].setStyle) layers[g][selected].setStyle({opacity:this.value,fillOpacity:this.value});
+};
+
+document.getElementById("legend-title").onclick=function(){
+    let c=document.getElementById("legend-content");
+    c.style.display=c.style.display==="none"?"block":"none";
+    this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
+};
+
+// المستشار الذكي المطور (أحمر، أصفر، أخضر) بناءً على المعيقات
 function runSmartAdvisor(){
     lastAnalysis = "investment";
     document.getElementById("export-btn").style.display = "block";
-    setGlobalOpacity(0.2); 
+    setGlobalOpacity(0.1); 
 
-    let agri=layers.polys["Agricultural Land"].toGeoJSON();
-    let temp=layers.polys["Temperature Zones"].toGeoJSON();
-    let roads=layers.lines["Roads"].toGeoJSON();
-    let roadBuffer=turf.buffer(roads, 0.8, {units:"kilometers"});
+    let agri = layers.polys["Agricultural Land"].toGeoJSON();
+    let settlements = layers.polys["Settlements"].toGeoJSON();
+    let closedAreas = layers.polys["Closed Areas"].toGeoJSON();
+    let roads = layers.lines["Roads"].toGeoJSON();
+    let roadBuffer = turf.buffer(roads, 0.4, {units:"kilometers"});
 
-    agri.features.forEach(f=>{
-        let score = 0;
-        // هل تتقاطع مع نطاق الحرارة؟
-        temp.features.forEach(t=>{ if(turf.booleanIntersects(f,t)) score += 2; });
-        // هل قريبة من الطرق؟
-        if(turf.booleanIntersects(f,roadBuffer)) score += 2;
+    agri.features.forEach(f => {
+        let isSettlement = false;
+        let isClosed = false;
+        let isNearRoad = turf.booleanIntersects(f, roadBuffer);
 
-        // تصنيف ثلاثي
-        if(score >= 4) f.properties.level="High";
-        else if(score >= 2) f.properties.level="Medium";
-        else f.properties.level="Low";
+        settlements.features.forEach(s => { if(turf.booleanIntersects(f, s)) isSettlement = true; });
+        closedAreas.features.forEach(c => { if(turf.booleanIntersects(f, c)) isClosed = true; });
+
+        if (isSettlement || isClosed) { f.properties.level = "Low"; } // أحمر
+        else if (isNearRoad) { f.properties.level = "High"; } // أخضر
+        else { f.properties.level = "Medium"; } // أصفر
     });
 
     if(investmentLayer){ map.removeLayer(investmentLayer); control.removeLayer(investmentLayer); }
-    investmentLayer=L.geoJson(agri,{
-        style:f=>({
-            fillOpacity:0.85, color:"#000", weight:1, 
-            fillColor:f.properties.level==="High"?"#2ecc71":f.properties.level==="Medium"?"#f1c40f":"#e74c3c"
-        })
+    investmentLayer = L.geoJson(agri, {
+        style: f => ({
+            fillOpacity: 0.9, color: "#000", weight: 0.5, 
+            fillColor: f.properties.level === "High" ? "#2ecc71" : f.properties.level === "Medium" ? "#f1c40f" : "#e74c3c"
+        }),
+        onEachFeature: (f,l) => l.bindPopup("Suitability: " + f.properties.level)
     }).addTo(map);
-    control.addOverlay(investmentLayer,"Smart Investment Zones");
+    control.addOverlay(investmentLayer, "Smart Investment Zones");
 }
 
-// 2. ماسح المخاطر
-var riskLayer;
 function runRiskScanner() {
     lastAnalysis = "risk";
     document.getElementById("export-btn").style.display = "block";
-    setGlobalOpacity(0.2);
+    setGlobalOpacity(0.1);
     let qData = layers.points["Quarries"].toGeoJSON();
     let sData = layers.lines["Streams"].toGeoJSON();
-    let qBuf = turf.buffer(qData, 1.2, {units: "kilometers"});
-    let fBuf = turf.buffer(sData, 0.4, {units: "kilometers"});
-    
+    let qBuf = turf.buffer(qData, 1, {units: "kilometers"});
+    let fBuf = turf.buffer(sData, 0.3, {units: "kilometers"});
     if(riskLayer){ map.removeLayer(riskLayer); control.removeLayer(riskLayer); }
     riskLayer = L.geoJson(null, {
-        style: f => ({ color: f.properties.riskType === "Quarry" ? "#e67e22" : "#3498db", fillOpacity: 0.65, weight:2 })
+        style: f => ({ color: f.properties.riskType === "Quarry" ? "#e67e22" : "#3498db", fillOpacity: 0.7, weight:2 })
     }).addTo(map);
     qBuf.features.forEach(f => { f.properties = { riskType: "Quarry" }; riskLayer.addData(f); });
     fBuf.features.forEach(f => { f.properties = { riskType: "Flood" }; riskLayer.addData(f); });
     control.addOverlay(riskLayer, "Risk Zones");
 }
 
-// تصدير PDF عمودي
 function unifiedPDFExport() {
     const { jsPDF } = window.jspdf;
     let targetLayer = (lastAnalysis === "investment") ? investmentLayer : riskLayer;
     let originalBounds = map.getBounds();
     map.fitBounds(targetLayer.getBounds());
 
-    for(let g in layers) for(let l in layers[g]) {
-        if(lastAnalysis === "risk" && (l === "Quarries" || l === "Streams")) continue;
-        map.removeLayer(layers[g][l]);
-    }
+    for(let g in layers) for(let l in layers[g]) map.removeLayer(layers[g][l]);
 
     html2canvas(document.getElementById("map"), {scale:2, useCORS: true}).then(canvas=>{
         const doc = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
         let pageWidth = doc.internal.pageSize.getWidth();
         doc.setFontSize(18); doc.text((lastAnalysis==="investment"?"Investment Suitability Report":"Environmental Risk Report"), 20, 40);
-        
         let imgWidth = pageWidth - 40;
         let imgHeight = (canvas.height * imgWidth) / canvas.width;
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 20, 60, imgWidth, imgHeight);
@@ -203,13 +207,13 @@ function unifiedPDFExport() {
         let textY = imgHeight + 90;
         if(lastAnalysis === "investment") {
             doc.setTextColor(46, 204, 113); doc.text(`High (Green): ${h.toFixed(4)} km2`, 20, textY);
-            doc.setTextColor(241, 196, 15); doc.text(`Medium (Yellow): ${m.toFixed(4)} km2`, 20, textY + 20);
+            doc.setTextColor(211, 158, 0); doc.text(`Medium (Yellow): ${m.toFixed(4)} km2`, 20, textY + 20);
             doc.setTextColor(231, 76, 60); doc.text(`Low (Red): ${l.toFixed(4)} km2`, 20, textY + 40);
         } else {
             doc.setTextColor(0); doc.text(`Total Risk Area: ${r.toFixed(4)} km2`, 20, textY);
         }
 
-        doc.save(lastAnalysis + "_Portrait.pdf");
+        doc.save(lastAnalysis + "_Report.pdf");
         setGlobalOpacity(1);
         for(let g in layers) for(let l in layers[g]) map.addLayer(layers[g][l]);
         map.fitBounds(originalBounds);
