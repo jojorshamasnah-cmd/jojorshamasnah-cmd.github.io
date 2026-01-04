@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ramallah WebGIS</title>
+<title>Ramallah WebGIS - GeoBrain</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -82,7 +82,8 @@ select,input[type=range]{width:100%;margin-top:6px;}
 <div id="advisor-box">
     <button onclick="runSmartAdvisor()">📊 Run Smart Advisor</button>
     <button onclick="runRiskScanner()" style="background-color: #f39c12; color: white;">⚠️ Run Risk Scanner</button>
-    <button onclick="generatePDF()">📄 Export PDF</button>
+    <button onclick="generateRiskPDF()" style="background-color: #d35400; color: white;">📄 Export Risk PDF</button>
+    <button onclick="generatePDF()">📄 Export Investment PDF</button>
 </div>
 
 <script>
@@ -137,7 +138,7 @@ loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#f
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
-// Smart Advisor
+// 1. Smart Advisor
 var investmentLayer;
 function runSmartAdvisor(){
     let agri=layers.polys["Agricultural Land"].toGeoJSON();
@@ -177,13 +178,12 @@ Outside Built-up: ${!turf.booleanIntersects(f, builtBuffer)?"✔":"✖"}
     control.addOverlay(investmentLayer,"Smart Investment Zones");
 }
 
-// --- الميزة الثانية: ماسح المخاطر البلدي ---
+// 2. Municipal Risk Scanner
 var riskLayer;
 function runRiskScanner() {
     let quarries = layers.points["Quarries"].toGeoJSON();
     let streams = layers.lines["Streams"].toGeoJSON();
 
-    // تحليل النطاق العازل للمحاجر (1 كم) ومجاري الوديان (300 متر)
     let quarryBuffer = turf.buffer(quarries, 1, {units: "kilometers"});
     let floodBuffer = turf.buffer(streams, 0.3, {units: "kilometers"});
 
@@ -202,46 +202,65 @@ function runRiskScanner() {
         }
     }).addTo(map);
 
-    // إضافة مناطق تأثير المحاجر
     quarryBuffer.features.forEach(f => {
         f.properties = { riskType: "Quarry", desc: "Quarry Impact Zone (Noise & Dust)" };
         riskLayer.addData(f);
     });
 
-    // إضافة مناطق خطر الفيضانات
     floodBuffer.features.forEach(f => {
         f.properties = { riskType: "Flood", desc: "Flood Risk Zone (Near Stream)" };
         riskLayer.addData(f);
     });
 
     control.addOverlay(riskLayer, "Municipal Risk Scanner");
-    alert("Risk Scanner: Quarry buffers (orange) and Flood zones (blue) added.");
+    alert("Risk Scanner Analysis Complete.");
 }
 
-// Generate PDF (full map)
-function generatePDF(){
-    if(!investmentLayer) return alert("Run Smart Advisor first!");
-
+// 3. Export Risk PDF
+function generateRiskPDF(){
+    if(!riskLayer) return alert("Run Risk Scanner first!");
     let originalBounds = map.getBounds();
-    map.fitBounds(investmentLayer.getBounds());
-
-    for(let g in layers){
-        for(let l in layers[g]){
-            map.removeLayer(layers[g][l]);
-        }
-    }
+    map.fitBounds(riskLayer.getBounds());
+    for(let g in layers){ for(let l in layers[g]){ map.removeLayer(layers[g][l]); } }
 
     html2canvas(document.getElementById("map"), {scale:2}).then(canvas=>{
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({
-            orientation: 'landscape',
-            unit: 'px',
-            format: [canvas.width, canvas.height + 150]
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 150] });
+        doc.setFontSize(22);
+        doc.setTextColor(211, 84, 0);
+        doc.text("Municipal Risk Analysis Report", 20, 40);
+        doc.addImage(imgData, 'PNG', 0, 60, canvas.width, canvas.height);
+
+        let qArea = 0, fArea = 0;
+        riskLayer.eachLayer(layer => {
+            let area = turf.area(layer.toGeoJSON());
+            if(layer.feature.properties.riskType === "Quarry") qArea += area;
+            else if(layer.feature.properties.riskType === "Flood") fArea += area;
         });
 
-        doc.setFontSize(20);
-        doc.text("Smart Investment Report", 20, 30);
+        doc.setFontSize(16); doc.setTextColor(0, 0, 0);
+        doc.text(`Quarry Impact Area: ${(qArea/1000).toFixed(2)} Dunams`, 20, canvas.height + 80);
+        doc.text(`Flood Risk Area: ${(fArea/1000).toFixed(2)} Dunams`, 20, canvas.height + 110);
+        doc.save("Municipal_Risk_Report.pdf");
+
+        for(let g in layers){ for(let l in layers[g]){ map.addLayer(layers[g][l]); } }
+        map.fitBounds(originalBounds);
+    });
+}
+
+// 4. Export Investment PDF (Original)
+function generatePDF(){
+    if(!investmentLayer) return alert("Run Smart Advisor first!");
+    let originalBounds = map.getBounds();
+    map.fitBounds(investmentLayer.getBounds());
+    for(let g in layers){ for(let l in layers[g]){ map.removeLayer(layers[g][l]); } }
+
+    html2canvas(document.getElementById("map"), {scale:2}).then(canvas=>{
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 150] });
+        doc.setFontSize(20); doc.text("Smart Investment Report", 20, 30);
         doc.addImage(imgData, 'PNG', 0, 50, canvas.width, canvas.height);
 
         let high=0, medium=0, low=0;
@@ -253,17 +272,12 @@ function generatePDF(){
         });
 
         doc.setFontSize(16);
-        doc.text(`High suitability (green): ${high.toFixed(2)} m²`, 20, canvas.height + 60);
-        doc.text(`Medium suitability (yellow): ${medium.toFixed(2)} m²`, 20, canvas.height + 80);
-        doc.text(`Low suitability (red): ${low.toFixed(2)} m²`, 20, canvas.height + 100);
-
+        doc.text(`High suitability (green): ${(high/1000).toFixed(2)} Dunams`, 20, canvas.height + 60);
+        doc.text(`Medium suitability (yellow): ${(medium/1000).toFixed(2)} Dunams`, 20, canvas.height + 80);
+        doc.text(`Low suitability (red): ${(low/1000).toFixed(2)} Dunams`, 20, canvas.height + 100);
         doc.save("Investment_Report.pdf");
 
-        for(let g in layers){
-            for(let l in layers[g]){
-                map.addLayer(layers[g][l]);
-            }
-        }
+        for(let g in layers){ for(let l in layers[g]){ map.addLayer(layers[g][l]); } }
         map.fitBounds(originalBounds);
     });
 }
