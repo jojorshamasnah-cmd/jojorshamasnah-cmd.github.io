@@ -16,7 +16,6 @@
 body, html { margin:0; padding:0; height:100%; }
 #map{height:100vh;}
 
-/* Legend */
 #legend-box{position:absolute;bottom:45px;left:10px;background:white;padding:10px 14px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9998;}
 #legend-title{font-weight:bold;text-align:center;font-size:16px;cursor:pointer;user-select:none;}
 #legend-content{display:none;margin-top:8px;font-size:14px;}
@@ -25,15 +24,12 @@ body, html { margin:0; padding:0; height:100%; }
 .symbol-line{width:30px;height:4px;margin-right:6px;}
 .symbol-poly{width:22px;height:12px;border:1px solid #000;margin-right:6px;}
 
-/* Opacity box */
 #opacity-box{position:absolute;right:10px;bottom:45px;background:white;padding:12px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9999;}
 #opacity-title{font-weight:bold;text-align:center;font-size:15px;margin-bottom:8px;}
 select,input[type=range]{width:100%;margin-top:6px;}
 
-/* Scale */
 .leaflet-control-scale{left:50% !important;transform:translateX(-50%);bottom:5px !important;}
 
-/* Advisor + PDF box */
 #advisor-box{
     position:absolute;
     right:10px;
@@ -108,7 +104,6 @@ function loadLayer(file,name,group,styleObj,callback){
     });
 }
 
-// Opacity
 document.getElementById("opacity-slider").oninput=function(){
     let selected=document.getElementById("opacity-select").value;
     for(let group in layers){
@@ -116,14 +111,12 @@ document.getElementById("opacity-slider").oninput=function(){
     }
 };
 
-// Legend toggle
 document.getElementById("legend-title").onclick=function(){
     let c=document.getElementById("legend-content");
     c.style.display=c.style.display==="none"?"block":"none";
     this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
-// Load layers
 loadLayer("Schools.geojson","Schools","points");
 loadLayer("Wells.geojson","Wells","points");
 loadLayer("Quarries.geojson","Quarries","points");
@@ -131,14 +124,13 @@ loadLayer("Roads.geojson","Roads","lines",{color:"black",weight:2});
 loadLayer("Streams.geojson","Streams","lines",{color:"#0077ff",weight:2});
 loadLayer("Annexation_Wall.geojson","Annexation Wall","lines",{color:"#555",weight:3});
 loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillColor:"#8fd19e",fillOpacity:0.6});
-loadLayer("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{color:"orange",fillColor:#ffb347",fillOpacity:0.6});
+loadLayer("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{color:"orange",fillColor:"#ffb347",fillOpacity:0.6});
 loadLayer("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillColor:"#c49a6c",fillOpacity:0.6});
 loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson","Master Plans","polys",{color:"purple",fillColor:"#af7ac5",fillOpacity:0.6});
 loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#ff6666",fillOpacity:0.6});
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
 loadLayer("Ramallah.geojson","Ramallah Boundary","polys",{color:"black",fillOpacity:0});
 
-// 1. Smart Advisor
 var investmentLayer;
 function runSmartAdvisor(){
     lastAnalysis = "investment";
@@ -169,7 +161,6 @@ function runSmartAdvisor(){
     alert("Advisor Ready");
 }
 
-// 2. Risk Scanner
 var riskLayer;
 function runRiskScanner() {
     lastAnalysis = "risk";
@@ -191,7 +182,6 @@ function runRiskScanner() {
     alert("Risk Scanner Ready");
 }
 
-// Unified Export
 function unifiedPDFExport() {
     if (lastAnalysis === "investment") generateInvestmentPDF();
     else if (lastAnalysis === "risk") generateRiskPDF();
@@ -200,19 +190,18 @@ function unifiedPDFExport() {
 function generateInvestmentPDF(){
     let originalBounds = map.getBounds();
     map.fitBounds(investmentLayer.getBounds());
-    // إخفاء الكل ما عدا الاستثمار
     for(let g in layers) for(let l in layers[g]) map.removeLayer(layers[g][l]);
     
     html2canvas(document.getElementById("map"), {scale:2}).then(canvas=>{
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 200] });
         doc.setFontSize(22); doc.text("Smart Investment Suitability Report", 20, 30);
-        doc.setFontSize(14); doc.text("هذا التقرير يوضح مدى ملائمة الأراضي الزراعية للاستثمار بناءً على الحرارة والقرب من الطرق.", 20, 50);
+        doc.setFontSize(14); doc.text("This report shows agricultural suitability based on temp and road proximity.", 20, 50);
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 70, canvas.width, canvas.height);
         
         let high=0, med=0, low=0;
         investmentLayer.eachLayer(l => { 
-            let a = turf.area(l.toGeoJSON())/1000000; // تحويل لـ كيلومتر مربع
+            let a = turf.area(l.toGeoJSON())/1000000;
             if(l.feature.properties.level==="High") high+=a; 
             else if(l.feature.properties.level==="Medium") med+=a;
             else low+=a;
@@ -220,9 +209,9 @@ function generateInvestmentPDF(){
 
         let y = canvas.height + 100;
         doc.setFontSize(16);
-        doc.setTextColor(46, 204, 113); doc.text(`High Suitability (Green): ${high.toFixed(4)} km²`, 20, y);
-        doc.setTextColor(241, 196, 15); doc.text(`Medium Suitability (Yellow): ${med.toFixed(4)} km²`, 20, y + 25);
-        doc.setTextColor(231, 76, 60); doc.text(`Low Suitability (Red): ${low.toFixed(4)} km²`, 20, y + 50);
+        doc.setTextColor(46, 204, 113); doc.text(`High Suitability (Green): ${high.toFixed(4)} km2`, 20, y);
+        doc.setTextColor(241, 196, 15); doc.text(`Medium Suitability (Yellow): ${med.toFixed(4)} km2`, 20, y + 25);
+        doc.setTextColor(231, 76, 60); doc.text(`Low Suitability (Red): ${low.toFixed(4)} km2`, 20, y + 50);
         
         doc.save("Investment_Report.pdf");
         for(let g in layers) for(let l in layers[g]) map.addLayer(layers[g][l]);
@@ -233,8 +222,6 @@ function generateInvestmentPDF(){
 function generateRiskPDF(){
     let originalBounds = map.getBounds();
     map.fitBounds(riskLayer.getBounds());
-    
-    // إخفاء كل الطبقات ما عدا المخاطر والوديان والمحاجر
     for(let g in layers) {
         for(let l in layers[g]) {
             if (l !== "Quarries" && l !== "Streams") map.removeLayer(layers[g][l]);
@@ -245,7 +232,7 @@ function generateRiskPDF(){
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 200] });
         doc.setFontSize(22); doc.setTextColor(211, 84, 0); doc.text("Municipal Environmental Risk Report", 20, 30);
-        doc.setFontSize(14); doc.setTextColor(0,0,0); doc.text("تقرير يوضح المناطق المعرضة لمخاطر الفيضانات بالقرب من الوديان والتلوث بالقرب من المحاجر.", 20, 50);
+        doc.setFontSize(14); doc.setTextColor(0,0,0); doc.text("This report shows flood risks near streams and pollution near quarries.", 20, 50);
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 70, canvas.width, canvas.height);
         
         let qArea=0, fArea=0;
@@ -256,8 +243,8 @@ function generateRiskPDF(){
 
         let y = canvas.height + 100;
         doc.setFontSize(16);
-        doc.text(`Total Quarry Impact Zone: ${qArea.toFixed(4)} km²`, 20, y);
-        doc.text(`Total Flood Risk Zone: ${fArea.toFixed(4)} km²`, 20, y + 25);
+        doc.text(`Total Quarry Impact Zone: ${qArea.toFixed(4)} km2`, 20, y);
+        doc.text(`Total Flood Risk Zone: ${fArea.toFixed(4)} km2`, 20, y + 25);
         
         doc.save("Risk_Report.pdf");
         for(let g in layers) for(let l in layers[g]) map.addLayer(layers[g][l]);
