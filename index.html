@@ -191,7 +191,7 @@ function runWaterSensitivity() {
     let wells = layers.points["Wells"].toGeoJSON();
     let streams = layers.lines["Streams"].toGeoJSON();
     let agri = layers.polys["Agricultural Land"].toGeoJSON();
-    let streamBuffer = turf.buffer(streams, 0.5, {units: "kilometers"});
+    let streamBuffer = turf.buffer(streams, 0.2, {units: "kilometers"});
 
     if(waterLayer){ map.removeLayer(waterLayer); control.removeLayer(waterLayer); }
     waterLayer = L.geoJson(null, {
@@ -257,3 +257,4 @@ function generatePDF(title){
 </script>
 </body>
 </html>
+
