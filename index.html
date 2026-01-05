@@ -53,11 +53,11 @@ select,input[type=range]{width:100%;margin-top:6px;}
         <div class="legend-item"><span class="symbol-line" style="background:#555"></span> Annexation Wall</div>
         <hr>
         <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb"></span> Temperature Zones</div>
+        <hr>
+        <div class="legend-item"><span class="symbol-poly" style="background:#003366"></span> Water Risk (Populated)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#00d2ff"></span> Water Sensitive</div>
     </div>
 </div>
 
@@ -111,7 +111,7 @@ document.getElementById("legend-title").onclick=function(){
     this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
-// تحميل الطبقات - تم تصحيح الأخطاء هنا
+// تحميل الطبقات الأساسية
 loadLayer("Schools.geojson","Schools","points");
 loadLayer("Wells.geojson","Wells","points");
 loadLayer("Quarries.geojson","Quarries","points");
@@ -119,23 +119,20 @@ loadLayer("Roads.geojson","Roads","lines",{color:"black",weight:2});
 loadLayer("Streams.geojson","Streams","lines",{color:"#0077ff",weight:2});
 loadLayer("Annexation_Wall.geojson","Annexation Wall","lines",{color:"#555",weight:3});
 loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillColor:"#8fd19e",fillOpacity:0.6});
-loadLayer("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{color:"orange",fillColor:"#ffb347",fillOpacity:0.6});
 loadLayer("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillColor:"#c49a6c",fillOpacity:0.6});
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson","Master Plans","polys",{color:"purple",fillColor:"#af7ac5",fillOpacity:0.6});
-loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#ff6666",fillOpacity:0.6});
 loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
+loadLayer("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{color:"orange",fillOpacity:0.4});
+loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillOpacity:0.4});
 
-// 1. المستشار الذكي (الكود الأصلي المطلوب)
+// 1. المستشار الذكي (حسب نظام النقاط الخاص بك)
 var investmentLayer;
 function runSmartAdvisor(){
     lastAnalysis = "investment";
     document.getElementById("export-btn").style.display = "block";
-    
     let agri = layers.polys["Agricultural Land"].toGeoJSON();
     let temp = layers.polys["Temperature Zones"].toGeoJSON();
     let roads = layers.lines["Roads"].toGeoJSON();
     let built = layers.polys["Built-up Areas"].toGeoJSON();
-
     let roadBuffer = turf.buffer(roads, 0.5, {units: "kilometers"});
     let builtBuffer = turf.buffer(built, 0.3, {units: "kilometers"});
 
@@ -144,29 +141,17 @@ function runSmartAdvisor(){
         temp.features.forEach(t => { if(turf.booleanIntersects(f, t)) score += 2; });
         if(turf.booleanIntersects(f, roadBuffer)) score += 1.5;
         if(turf.booleanIntersects(f, builtBuffer)) score -= 1;
-
-        if(score >= 5) f.properties.level = "High";
-        else if(score >= 3) f.properties.level = "Medium";
-        else f.properties.level = "Low";
+        f.properties.level = score >= 5 ? "High" : (score >= 3 ? "Medium" : "Low");
     });
-
     if(investmentLayer){ map.removeLayer(investmentLayer); control.removeLayer(investmentLayer); }
-
     investmentLayer = L.geoJson(agri, {
-        style: f => ({
-            fillOpacity: 0.7, color: "#000", weight: 1,
-            fillColor: f.properties.level === "High" ? "#2ecc71" : f.properties.level === "Medium" ? "#f1c40f" : "#e74c3c"
-        }),
-        onEachFeature: (f, l) => {
-            l.bindPopup(`<b>Smart Investment Zone</b><br>Level: ${f.properties.level}`);
-        }
+        style: f => ({ fillOpacity: 0.7, color: "#000", weight: 1, fillColor: f.properties.level === "High" ? "#2ecc71" : f.properties.level === "Medium" ? "#f1c40f" : "#e74c3c" }),
+        onEachFeature: (f, l) => { l.bindPopup(`<b>Suitability: ${f.properties.level}</b>`); }
     }).addTo(map);
-
     control.addOverlay(investmentLayer, "Smart Investment Zones");
-    alert("Advisor Ready!");
 }
 
-// 2. ماسح المخاطر
+// 2. ماسح المخاطر (الكسارات والفيضانات)
 var riskLayer;
 function runRiskScanner() {
     lastAnalysis = "risk";
@@ -175,57 +160,56 @@ function runRiskScanner() {
     let sData = layers.lines["Streams"].toGeoJSON();
     let qBuf = turf.buffer(qData, 1, {units: "kilometers"});
     let fBuf = turf.buffer(sData, 0.3, {units: "kilometers"});
-
     if(riskLayer){ map.removeLayer(riskLayer); control.removeLayer(riskLayer); }
     riskLayer = L.geoJson(null, {
         style: f => ({ color: f.properties.riskType === "Quarry" ? "#e67e22" : "#3498db", fillOpacity: 0.6 }),
         onEachFeature: (f, l) => { l.bindPopup(f.properties.desc); }
     }).addTo(map);
-
     qBuf.features.forEach(f => { f.properties = { riskType: "Quarry", desc: "Quarry Risk Area" }; riskLayer.addData(f); });
     fBuf.features.forEach(f => { f.properties = { riskType: "Flood", desc: "Flood Risk Area" }; riskLayer.addData(f); });
     control.addOverlay(riskLayer, "Risk Zones");
-    alert("Risk Scanner Ready");
 }
 
-// 3. محلل حساسية المياه
+// 3. محلل حساسية المياه المطور (يأخذ السكان بعين الاعتبار)
 var waterLayer;
 function runWaterSensitivity() {
     lastAnalysis = "water";
     document.getElementById("export-btn").style.display = "block";
+    
     let wells = layers.points["Wells"].toGeoJSON();
     let streams = layers.lines["Streams"].toGeoJSON();
     let agri = layers.polys["Agricultural Land"].toGeoJSON();
-    let streamBuffer = turf.buffer(streams, 0.2, {units: "kilometers"});
+    let built = layers.polys["Built-up Areas"].toGeoJSON();
+
+    let streamBuffer = turf.buffer(streams, 0.08, {units: "kilometers"}); // حرم 80 متر
 
     if(waterLayer){ map.removeLayer(waterLayer); control.removeLayer(waterLayer); }
+    
     waterLayer = L.geoJson(null, {
-        style: f => ({ color: "#00d2ff", fillColor: "#00d2ff", fillOpacity: 0.6, weight: 1 }),
+        style: f => ({
+            color: f.properties.isPopulated ? "#003366" : "#00d2ff",
+            fillColor: f.properties.isPopulated ? "#003366" : "#00d2ff",
+            fillOpacity: 0.7, weight: 1
+        }),
         onEachFeature: (f, l) => { l.bindPopup(f.properties.desc); }
     }).addTo(map);
 
-    wells.features.forEach(w => {
-        if(turf.booleanIntersects(w, streamBuffer)) {
-            let p = turf.circle(w.geometry.coordinates, 0.3, {units: 'kilometers'});
-            p.properties = { desc: "Threatened Well" };
-            waterLayer.addData(p);
-        }
-    });
-
     agri.features.forEach(a => {
         if(turf.booleanIntersects(a, streamBuffer)) {
-            a.properties.desc = "Sensitive Farm";
+            let isPopulated = false;
+            built.features.forEach(b => { if(turf.booleanIntersects(a, b)) isPopulated = true; });
+
+            a.properties.isPopulated = isPopulated;
+            a.properties.desc = isPopulated ? "<b>High Risk:</b> Residential near water source" : "<b>Sensitive:</b> Near water source";
             waterLayer.addData(a);
         }
     });
-
     control.addOverlay(waterLayer, "Water Sensitivity Zones");
-    alert("Water Sensitivity Ready");
+    alert("Water Analysis Ready: Dark blue for populated areas.");
 }
 
 function unifiedPDFExport() {
-    let title = (lastAnalysis === "investment") ? "Smart Investment Suitability Report" : 
-                (lastAnalysis === "risk" ? "Municipal Environmental Risk Report" : "Water Sources Sensitivity Report");
+    let title = (lastAnalysis === "investment") ? "Smart Investment Report" : (lastAnalysis === "risk" ? "Risk Report" : "Water Sensitivity Report");
     generatePDF(title);
 }
 
@@ -233,9 +217,7 @@ function generatePDF(title){
     let targetLayer = (lastAnalysis === "investment") ? investmentLayer : (lastAnalysis === "risk" ? riskLayer : waterLayer);
     let originalBounds = map.getBounds();
     map.fitBounds(targetLayer.getBounds());
-    
     for(let g in layers) for(let l in layers[g]) map.removeLayer(layers[g][l]);
-    
     html2canvas(document.getElementById("map"), {scale:2, useCORS: true}).then(canvas=>{
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 150] });
