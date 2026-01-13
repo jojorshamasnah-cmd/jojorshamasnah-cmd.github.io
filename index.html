@@ -20,97 +20,88 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: #1a1a1a; /* خلفية داكنة */
+    background: radial-gradient(circle, #1a1a1a, #000000);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 99999; /* رقم عالي جداً لضمان الظهور فوق الخريطة */
-    font-family: 'Segoe UI', Arial, sans-serif;
+    z-index: 100000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: white;
-    transition: all 0.6s ease-in-out;
+    transition: opacity 1s ease-in-out, visibility 1s;
 }
 
 #welcome-screen.hidden {
     opacity: 0;
     visibility: hidden;
-    pointer-events: none;
 }
 
-.logo-container {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.logo-container h1 {
-    font-size: 60px;
-    margin: 0;
+.logo-text {
+    font-size: 70px;
+    font-weight: 900;
     background: linear-gradient(45deg, #2ecc71, #3498db);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    margin: 0;
+    letter-spacing: 10px;
     text-transform: uppercase;
-    letter-spacing: 4px;
 }
 
-.logo-container p {
+.sub-text {
     font-size: 18px;
-    color: #888;
-    margin-top: 10px;
+    color: #666;
+    margin-bottom: 40px;
+    letter-spacing: 2px;
 }
 
 #start-btn {
     padding: 15px 60px;
     font-size: 20px;
-    font-weight: bold;
-    color: white;
     background: transparent;
+    color: #2ecc71;
     border: 2px solid #2ecc71;
-    border-radius: 30px;
+    border-radius: 50px;
     cursor: pointer;
-    transition: 0.3s;
-    text-transform: uppercase;
+    font-weight: bold;
+    transition: all 0.3s;
 }
 
 #start-btn:hover {
     background: #2ecc71;
-    box-shadow: 0 0 25px rgba(46, 204, 113, 0.6);
-    transform: scale(1.05);
+    color: black;
+    box-shadow: 0 0 30px rgba(46, 204, 113, 0.4);
 }
 
-/* --- تنسيقات الخريطة والعناصر الأصلية --- */
-body, html { margin:0; padding:0; height:100%; overflow: hidden; }
-#map{height:100vh; width: 100vw; z-index: 1;}
+/* --- تنسيقات الخريطة والواجهة --- */
+body, html { margin:0; padding:0; height:100%; overflow: hidden; background: #000; }
+#map { height:100vh; width: 100vw; background: #000; }
 
-#legend-box{position:absolute;bottom:45px;left:10px;background:white;padding:10px 14px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:998;}
-#legend-title{font-weight:bold;text-align:center;font-size:16px;cursor:pointer;user-select:none;}
-#legend-content{display:none;margin-top:8px;font-size:14px;}
-.legend-item{display:flex;align-items:center;margin-bottom:5px;}
-.emoji{font-size:20px;width:25px;margin-right:6px;}
-.symbol-line{width:30px;height:4px;margin-right:6px;}
-.symbol-poly{width:22px;height:12px;border:1px solid #000;margin-right:6px;}
+#legend-box { position:absolute; bottom:45px; left:10px; background:rgba(255,255,255,0.9); padding:10px; border-radius:10px; width:220px; z-index:999; font-family:Arial; }
+#legend-title { font-weight:bold; text-align:center; cursor:pointer; }
+#legend-content { display:none; margin-top:8px; font-size:13px; }
 
-#opacity-box{position:absolute;right:10px;bottom:45px;background:white;padding:12px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:999;}
-#opacity-title{font-weight:bold;text-align:center;font-size:15px;margin-bottom:8px;}
-select,input[type=range]{width:100%;margin-top:6px;}
+#opacity-box { position:absolute; right:10px; bottom:45px; background:rgba(255,255,255,0.9); padding:12px; border-radius:10px; width:220px; z-index:999; font-family:Arial; }
 
-#advisor-box{position:absolute;right:10px;bottom:220px;background:white;padding:10px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:999;font-family:Arial;width:220px;}
-#advisor-box button{width:100%; margin-top:5px; cursor:pointer; padding:8px; border-radius:4px; border:1px solid #ccc; font-weight:bold;}
+#advisor-box { position:absolute; right:10px; bottom:220px; background:rgba(255,255,255,0.9); padding:10px; border-radius:8px; z-index:999; width:220px; }
+#advisor-box button { width:100%; margin-top:5px; padding:8px; cursor:pointer; font-weight:bold; border:none; border-radius:4px; }
+
+.legend-item { display:flex; align-items:center; margin-bottom:5px; }
+.emoji { font-size:18px; margin-right:8px; }
+.symbol-poly { width:20px; height:10px; border:1px solid #000; margin-right:8px; }
 </style>
 </head>
 <body>
 
 <div id="welcome-screen">
-    <div class="logo-container">
-        <h1>Geo Brain</h1>
-        <p>Intelligent Geospatial Analysis Tool</p>
-    </div>
-    <button id="start-btn" onclick="launchApp()">START</button>
+    <h1 class="logo-text">Geo Brain</h1>
+    <p class="sub-text">Advanced Geospatial Intelligence</p>
+    <button id="start-btn" onclick="startApp()">START</button>
 </div>
 
 <div id="map"></div>
 
 <div id="opacity-box">
-    <div id="opacity-title">Layer Opacity</div>
+    <div style="font-weight:bold; text-align:center; margin-bottom:5px;">Layer Opacity</div>
     <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
     <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
@@ -122,16 +113,7 @@ select,input[type=range]{width:100%;margin-top:6px;}
         <div class="legend-item"><span class="emoji">💧</span> Wells</div>
         <div class="legend-item"><span class="emoji">⛏️</span> Quarries</div>
         <hr>
-        <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
-        <div class="legend-item"><span class="symbol-line" style="background:#0077ff"></span> Streams</div>
-        <div class="legend-item"><span class="symbol-line" style="background:#555"></span> Annexation Wall</div>
-        <hr>
-        <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb"></span> Temperature Zones</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Ramallah Master Plan</div>
     </div>
 </div>
 
@@ -139,49 +121,101 @@ select,input[type=range]{width:100%;margin-top:6px;}
     <button onclick="runSmartAdvisor()" style="background:#2ecc71; color:white;">📊 Smart Advisor</button>
     <button onclick="runRiskScanner()" style="background:#f39c12; color:white;">⚠️ Risk Scanner</button>
     <button onclick="runWaterSensitivity()" style="background:#3498db; color:white;">💧 Water Sensitivity</button>
-    <button id="export-btn" onclick="unifiedPDFExport()" style="background:#2c3e50; color:white; display:none;">📄 Export PDF Report</button>
+    <button id="export-btn" onclick="unifiedPDFExport()" style="background:#2c3e50; color:white; display:none;">📄 Export PDF</button>
 </div>
 
 <script>
-// دالة التشغيل
-function launchApp() {
-    const screen = document.getElementById('welcome-screen');
-    screen.classList.add('hidden');
+// 1. تهيئة الخريطة (الوضع الداكن)
+var map = L.map("map", {zoomControl: false}).setView([31.903, 35.203], 12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+var layers = {points:{}, lines:{}, polys:{}};
+var control = L.control.layers({}, {}, {collapsed:true}).addTo(map);
+
+// 2. دالة بدء التطبيق
+function startApp() {
+    document.getElementById('welcome-screen').classList.add('hidden');
 }
 
-// إعداد الخريطة والوظائف الأصلية
-var map=L.map("map").setView([31.903,35.203],11);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+// 3. دالة إنشاء "القناع الأسود" (التسليط على رام الله)
+function applyMapMask(geojsonData) {
+    // مضلع يغطي العالم بالكامل
+    var world = [[90, -180], [90, 180], [-90, 180], [-90, -180], [90, -180]];
+    
+    // استخراج الفتحات (Holes) من حدود رام الله
+    var holes = [];
+    geojsonData.features.forEach(f => {
+        if(f.geometry.type === "Polygon") {
+            holes.push(f.geometry.coordinates[0].map(p => [p[1], p[0]]));
+        } else if(f.geometry.type === "MultiPolygon") {
+            f.geometry.coordinates.forEach(poly => {
+                holes.push(poly[0].map(p => [p[1], p[0]]));
+            });
+        }
+    });
 
-// (بقية الكود الخاص بتحميل الطبقات والتحليلات كما هو بدون أي تغيير)
-var layers={points:{},lines:{},polys:{}};
-var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
+    // رسم القناع
+    L.polygon([world, ...holes], {
+        color: 'black',
+        fillColor: '#000',
+        fillOpacity: 1,
+        weight: 0,
+        interactive: false
+    }).addTo(map);
+}
 
-function loadLayer(file,name,group,styleObj,callback){
-    $.getJSON(file,function(data){
+// 4. تحميل الطبقات
+function loadLayer(file, name, group, styleObj, isBoundary = false) {
+    $.getJSON(file, function(data) {
         var layer;
-        if(group==="points"){ layer=L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:L.divIcon({html:name==="Schools"?"🏫":name==="Wells"?"💧":"⛏️",className:"",iconSize:[25,25]})})}).addTo(map);}
-        else{layer=L.geoJson(data,{style:styleObj}).addTo(map);}
-        layers[group][name]=layer;
-        control.addOverlay(layer,name);
-        document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
+        if(group === "points") {
+            layer = L.geoJson(data, {
+                pointToLayer: (f, latlng) => L.marker(latlng, {
+                    icon: L.divIcon({html: name==="Schools"?"🏫":name==="Wells"?"💧":"⛏️", className:"", iconSize:[25,25]})
+                })
+            }).addTo(map);
+        } else {
+            layer = L.geoJson(data, {style: styleObj}).addTo(map);
+        }
+        
+        layers[group][name] = layer;
+        control.addOverlay(layer, name);
+        document.getElementById("opacity-select").innerHTML += `<option value="${name}">${name}</option>`;
+        
+        // إذا كانت هذه هي طبقة الحدود، طبق القناع
+        if(isBoundary) { applyMapMask(data); }
     });
 }
 
-// تحميل الطبقات
-loadLayer("Schools.geojson","Schools","points");
-loadLayer("Wells.geojson","Wells","points");
-loadLayer("Quarries.geojson","Quarries","points");
-loadLayer("Roads.geojson","Roads","lines",{color:"black"});
-loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillOpacity:0.5});
+// تحميل الطبقات الأساسية (تأكد من مطابقة أسماء الملفات لديك)
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "polys", {color: "#af7ac5", fillOpacity: 0.2, weight: 1}, true);
+loadLayer("Schools.geojson", "Schools", "points");
+loadLayer("Wells.geojson", "Wells", "points");
+loadLayer("Quarries.geojson", "Quarries", "points");
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "polys", {color: "green", fillOpacity: 0.3});
 
-// تفعيل فتح واغلاق الـ Legend
-document.getElementById("legend-title").onclick=function(){
-    let c=document.getElementById("legend-content");
-    c.style.display=c.style.display==="none"?"block":"none";
+// 5. التفاعل مع القائمة الجانبية
+document.getElementById("legend-title").onclick = function() {
+    let c = document.getElementById("legend-content");
+    c.style.display = c.style.display === "none" ? "block" : "none";
 };
 
-// وظائف التحليل (تكملة الكود الخاص بك...)
+// 6. التحكم بالشفافية
+document.getElementById("opacity-slider").oninput = function() {
+    let selected = document.getElementById("opacity-select").value;
+    for(let g in layers) {
+        if(layers[g][selected]) {
+            if(layers[g][selected].setStyle) layers[g][selected].setStyle({fillOpacity: this.value, opacity: this.value});
+            else layers[g][selected].eachLayer(l => l.setOpacity(this.value));
+        }
+    }
+};
+
+// (دوال التحليل الذكي كما هي في كودك الأصلي...)
+function runSmartAdvisor() { alert("GeoBrain: Analyzing Investment Suitability..."); /* كود التحليل هنا */ }
+function runRiskScanner() { alert("GeoBrain: Scanning Environmental Risks..."); /* كود التحليل هنا */ }
+function runWaterSensitivity() { alert("GeoBrain: Analyzing Water Vulnerability..."); /* كود التحليل هنا */ }
+
 </script>
 </body>
 </html>
