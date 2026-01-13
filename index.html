@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>GeoBrain Pro - Ramallah WebGIS</title>
+<title>GeoBrain Pro - WebGIS</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -13,75 +13,65 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
-/* --- واجهة الترحيب (Splash Screen) --- */
-#welcome-screen {
+/* تنسيق واجهة الهبوط (Splash Screen) */
+#landing-page {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: #1a1a1a; /* خلفية داكنة */
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, #2c3e50, #000000);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 99999; /* رقم عالي جداً لضمان الظهور فوق الخريطة */
-    font-family: 'Segoe UI', Arial, sans-serif;
+    z-index: 10001; /* فوق كل شيء */
     color: white;
-    transition: all 0.6s ease-in-out;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: opacity 0.8s ease;
 }
 
-#welcome-screen.hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-}
-
-.logo-container {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.logo-container h1 {
-    font-size: 60px;
-    margin: 0;
-    background: linear-gradient(45deg, #2ecc71, #3498db);
+#landing-page h1 {
+    font-size: 4rem;
+    margin-bottom: 10px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    background: linear-gradient(to right, #2ecc71, #3498db);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-transform: uppercase;
-    letter-spacing: 4px;
+    filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.5));
 }
 
-.logo-container p {
-    font-size: 18px;
-    color: #888;
-    margin-top: 10px;
+#landing-page p {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+    color: #bdc3c7;
 }
 
 #start-btn {
-    padding: 15px 60px;
-    font-size: 20px;
-    font-weight: bold;
+    padding: 15px 50px;
+    font-size: 1.5rem;
+    background-color: transparent;
     color: white;
-    background: transparent;
     border: 2px solid #2ecc71;
-    border-radius: 30px;
+    border-radius: 50px;
     cursor: pointer;
-    transition: 0.3s;
+    transition: all 0.3s ease;
     text-transform: uppercase;
+    font-weight: bold;
 }
 
 #start-btn:hover {
-    background: #2ecc71;
-    box-shadow: 0 0 25px rgba(46, 204, 113, 0.6);
-    transform: scale(1.05);
+    background-color: #2ecc71;
+    box-shadow: 0 0 20px #2ecc71;
+    transform: scale(1.1);
 }
 
-/* --- تنسيقات الخريطة والعناصر الأصلية --- */
+/* التنسيقات الأصلية للمشروع */
 body, html { margin:0; padding:0; height:100%; overflow: hidden; }
-#map{height:100vh; width: 100vw; z-index: 1;}
+#map{height:100vh; width: 100vw;}
 
-#legend-box{position:absolute;bottom:45px;left:10px;background:white;padding:10px 14px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:998;}
+#legend-box{position:absolute;bottom:45px;left:10px;background:white;padding:10px 14px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9998;}
 #legend-title{font-weight:bold;text-align:center;font-size:16px;cursor:pointer;user-select:none;}
 #legend-content{display:none;margin-top:8px;font-size:14px;}
 .legend-item{display:flex;align-items:center;margin-bottom:5px;}
@@ -89,22 +79,20 @@ body, html { margin:0; padding:0; height:100%; overflow: hidden; }
 .symbol-line{width:30px;height:4px;margin-right:6px;}
 .symbol-poly{width:22px;height:12px;border:1px solid #000;margin-right:6px;}
 
-#opacity-box{position:absolute;right:10px;bottom:45px;background:white;padding:12px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:999;}
+#opacity-box{position:absolute;right:10px;bottom:45px;background:white;padding:12px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:9999;}
 #opacity-title{font-weight:bold;text-align:center;font-size:15px;margin-bottom:8px;}
 select,input[type=range]{width:100%;margin-top:6px;}
 
-#advisor-box{position:absolute;right:10px;bottom:220px;background:white;padding:10px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:999;font-family:Arial;width:220px;}
+#advisor-box{position:absolute;right:10px;bottom:220px;background:white;padding:10px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:9999;font-family:Arial;width:220px;}
 #advisor-box button{width:100%; margin-top:5px; cursor:pointer; padding:8px; border-radius:4px; border:1px solid #ccc; font-weight:bold;}
 </style>
 </head>
 <body>
 
-<div id="welcome-screen">
-    <div class="logo-container">
-        <h1>Geo Brain</h1>
-        <p>Intelligent Geospatial Analysis Tool</p>
-    </div>
-    <button id="start-btn" onclick="launchApp()">START</button>
+<div id="landing-page">
+    <h1>Geo Brain</h1>
+    <p>Smart WebGIS Analysis System</p>
+    <button id="start-btn" onclick="startSystem()">Start</button>
 </div>
 
 <div id="map"></div>
@@ -132,6 +120,9 @@ select,input[type=range]{width:100%;margin-top:6px;}
         <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb"></span> Temperature Zones</div>
+        <hr>
+        <div class="legend-item"><span class="symbol-poly" style="background:#003366"></span> Water Risk (Populated)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#00d2ff"></span> Water Sensitive</div>
     </div>
 </div>
 
@@ -143,45 +134,175 @@ select,input[type=range]{width:100%;margin-top:6px;}
 </div>
 
 <script>
-// دالة التشغيل
-function launchApp() {
-    const screen = document.getElementById('welcome-screen');
-    screen.classList.add('hidden');
+// دالة بدء النظام وإخفاء واجهة الهبوط
+function startSystem() {
+    let landing = document.getElementById('landing-page');
+    landing.style.opacity = '0';
+    setTimeout(() => {
+        landing.style.display = 'none';
+    }, 800); // إخفاء بعد انتهاء حركة التلاشي
 }
 
-// إعداد الخريطة والوظائف الأصلية
 var map=L.map("map").setView([31.903,35.203],11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.control.scale({imperial:false}).addTo(map);
 
-// (بقية الكود الخاص بتحميل الطبقات والتحليلات كما هو بدون أي تغيير)
 var layers={points:{},lines:{},polys:{}};
 var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
+var lastAnalysis = ""; 
+
+function getPointIcon(type){ return L.divIcon({html:type==="Schools"?"🏫":type==="Wells"?"💧":type==="Quarries"?"⛏️":"•",className:"",iconSize:[25,25],iconAnchor:[12,12]}); }
 
 function loadLayer(file,name,group,styleObj,callback){
     $.getJSON(file,function(data){
         var layer;
-        if(group==="points"){ layer=L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:L.divIcon({html:name==="Schools"?"🏫":name==="Wells"?"💧":"⛏️",className:"",iconSize:[25,25]})})}).addTo(map);}
+        if(group==="points"){ layer=L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:getPointIcon(name)})}).addTo(map);}
         else{layer=L.geoJson(data,{style:styleObj}).addTo(map);}
         layers[group][name]=layer;
         control.addOverlay(layer,name);
         document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
-    });
+        if(callback) callback();
+    }).fail(function() { console.log("Error loading: " + file); });
 }
 
-// تحميل الطبقات
-loadLayer("Schools.geojson","Schools","points");
-loadLayer("Wells.geojson","Wells","points");
-loadLayer("Quarries.geojson","Quarries","points");
-loadLayer("Roads.geojson","Roads","lines",{color:"black"});
-loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillOpacity:0.5});
+// التحكم في الشفافية
+document.getElementById("opacity-slider").oninput=function(){
+    let selected=document.getElementById("opacity-select").value;
+    for(let group in layers){
+        if(layers[group][selected]) {
+            if(layers[group][selected].setStyle) {
+                layers[group][selected].setStyle({opacity:this.value, fillOpacity:this.value});
+            } else {
+                layers[group][selected].eachLayer(lyr => lyr.setOpacity(this.value));
+            }
+        }
+    }
+};
 
-// تفعيل فتح واغلاق الـ Legend
 document.getElementById("legend-title").onclick=function(){
     let c=document.getElementById("legend-content");
     c.style.display=c.style.display==="none"?"block":"none";
+    this.innerHTML=c.style.display==="none"?"Legend ▼":"Legend ▲";
 };
 
-// وظائف التحليل (تكملة الكود الخاص بك...)
+// تحميل كافة الطبقات
+loadLayer("Schools.geojson","Schools","points");
+loadLayer("Wells.geojson","Wells","points");
+loadLayer("Quarries.geojson","Quarries","points");
+loadLayer("Roads.geojson","Roads","lines",{color:"black",weight:2});
+loadLayer("Streams.geojson","Streams","lines",{color:"#0077ff",weight:2});
+loadLayer("Annexation_Wall.geojson","Annexation Wall","lines",{color:"#555",weight:3});
+loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillColor:"#8fd19e",fillOpacity:0.6});
+loadLayer("Areas_totaly_closed_by_the_wall.geojson","Closed Areas","polys",{color:"orange",fillColor:"#ffb347",fillOpacity:0.6});
+loadLayer("Built_up.geojson","Built-up Areas","polys",{color:"brown",fillColor:"#c49a6c",fillOpacity:0.6});
+loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson","Master Plans","polys",{color:"purple",fillColor:"#af7ac5",fillOpacity:0.6});
+loadLayer("Settlements.geojson","Settlements","polys",{color:"red",fillColor:"#ff6666",fillOpacity:0.6});
+loadLayer("Temperature.geojson","Temperature Zones","polys",{color:"blue",fillColor:"#87ceeb",fillOpacity:0.6});
+
+// (باقي وظائف التحليل والاستخراج تبقى كما هي)
+function runSmartAdvisor(){
+    lastAnalysis = "investment";
+    document.getElementById("export-btn").style.display = "block";
+    let agri = layers.polys["Agricultural Land"].toGeoJSON();
+    let temp = layers.polys["Temperature Zones"].toGeoJSON();
+    let roads = layers.lines["Roads"].toGeoJSON();
+    let built = layers.polys["Built-up Areas"].toGeoJSON();
+    
+    let roadBuffer = turf.buffer(roads, 0.5, {units: "kilometers"});
+    let builtBuffer = turf.buffer(built, 0.3, {units: "kilometers"});
+
+    agri.features.forEach(f => {
+        let score = 1;
+        temp.features.forEach(t => { if(turf.booleanIntersects(f, t)) score += 2; });
+        if(turf.booleanIntersects(f, roadBuffer)) score += 1.5;
+        if(turf.booleanIntersects(f, builtBuffer)) score -= 1;
+        f.properties.level = score >= 5 ? "High" : (score >= 3 ? "Medium" : "Low");
+    });
+    if(investmentLayer){ map.removeLayer(investmentLayer); control.removeLayer(investmentLayer); }
+    investmentLayer = L.geoJson(agri, {
+        style: f => ({ fillOpacity: 0.7, color: "#000", weight: 1, fillColor: f.properties.level === "High" ? "#2ecc71" : f.properties.level === "Medium" ? "#f1c40f" : "#e74c3c" }),
+        onEachFeature: (f, l) => { l.bindPopup(`<b>Smart Investment Suitability: ${f.properties.level}</b>`); }
+    }).addTo(map);
+    control.addOverlay(investmentLayer, "Smart Investment Zones");
+    alert("Smart Advisor Activated!");
+}
+
+function runRiskScanner() {
+    lastAnalysis = "risk";
+    document.getElementById("export-btn").style.display = "block";
+    let qData = layers.points["Quarries"].toGeoJSON();
+    let sData = layers.lines["Streams"].toGeoJSON();
+    let qBuf = turf.buffer(qData, 1, {units: "kilometers"});
+    let fBuf = turf.buffer(sData, 0.3, {units: "kilometers"});
+    if(riskLayer){ map.removeLayer(riskLayer); control.removeLayer(riskLayer); }
+    riskLayer = L.geoJson(null, {
+        style: f => ({ color: f.properties.riskType === "Quarry" ? "#e67e22" : "#3498db", fillOpacity: 0.6 }),
+        onEachFeature: (f, l) => { l.bindPopup(f.properties.desc); }
+    }).addTo(map);
+    qBuf.features.forEach(f => { f.properties = { riskType: "Quarry", desc: "Quarry Risk Area (Dust/Noise)" }; riskLayer.addData(f); });
+    fBuf.features.forEach(f => { f.properties = { riskType: "Flood", desc: "Potential Flood Risk Area" }; riskLayer.addData(f); });
+    control.addOverlay(riskLayer, "Environmental Risk Zones");
+    alert("Risk Scanner Activated!");
+}
+
+function runWaterSensitivity() {
+    lastAnalysis = "water";
+    document.getElementById("export-btn").style.display = "block";
+    let wells = layers.points["Wells"].toGeoJSON();
+    let streams = layers.lines["Streams"].toGeoJSON();
+    let agri = layers.polys["Agricultural Land"].toGeoJSON();
+    let built = layers.polys["Built-up Areas"].toGeoJSON();
+
+    let streamBuffer = turf.buffer(streams, 0.08, {units: "kilometers"});
+
+    if(waterLayer){ map.removeLayer(waterLayer); control.removeLayer(waterLayer); }
+    waterLayer = L.geoJson(null, {
+        style: f => ({
+            color: f.properties.isPopulated ? "#003366" : "#00d2ff",
+            fillColor: f.properties.isPopulated ? "#003366" : "#00d2ff",
+            fillOpacity: 0.7, weight: 1
+        }),
+        onEachFeature: (f, l) => { l.bindPopup(f.properties.desc); }
+    }).addTo(map);
+
+    agri.features.forEach(a => {
+        if(turf.booleanIntersects(a, streamBuffer)) {
+            let isPopulated = false;
+            built.features.forEach(b => { if(turf.booleanIntersects(a, b)) isPopulated = true; });
+            a.properties.isPopulated = isPopulated;
+            a.properties.desc = isPopulated ? "<b>Populated Water Risk:</b> High pollution threat" : "<b>Sensitive:</b> Land near water stream";
+            waterLayer.addData(a);
+        }
+    });
+    control.addOverlay(waterLayer, "Water Sensitivity Zones");
+    alert("Water Sensitivity Analysis Activated!");
+}
+
+function unifiedPDFExport() {
+    let title = (lastAnalysis === "investment") ? "Smart Investment Report" : (lastAnalysis === "risk" ? "Environmental Risk Report" : "Water Sensitivity Report");
+    generatePDF(title);
+}
+
+function generatePDF(title){
+    let targetLayer = (lastAnalysis === "investment") ? investmentLayer : (lastAnalysis === "risk" ? riskLayer : waterLayer);
+    let originalBounds = map.getBounds();
+    map.fitBounds(targetLayer.getBounds());
+    
+    for(let g in layers) for(let l in layers[g]) map.removeLayer(layers[g][l]);
+    
+    html2canvas(document.getElementById("map"), {scale:2, useCORS: true}).then(canvas=>{
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height + 150] });
+        doc.setFontSize(22); doc.text(title, 20, 30);
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 50, canvas.width, canvas.height);
+        doc.setFontSize(14);
+        doc.text("Generated by GeoBrain WebGIS - Ramallah Municipality Analysis", 20, canvas.height + 80);
+        doc.save(lastAnalysis + "_Report.pdf");
+        
+        for(let g in layers) for(let l in layers[g]) map.addLayer(layers[g][l]);
+        map.fitBounds(originalBounds);
+    });
+}
 </script>
 </body>
 </html>
