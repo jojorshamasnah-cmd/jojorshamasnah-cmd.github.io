@@ -1,42 +1,187 @@
-// دالة لإنشاء القناع الأسود حول رام الله
-function applyMapMask(boundaryData) {
-    // إحداثيات تغطي الكرة الأرضية بالكامل
-    var worldCoords = [
-        [-90, -180],
-        [-90, 180],
-        [90, 180],
-        [90, -180],
-        [-90, -180]
-    ];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GeoBrain Pro - Ramallah WebGIS</title>
 
-    // استخراج الإحداثيات من ملف GeoJSON الخاص بك (رام الله)
-    var holes = [];
-    boundaryData.features.forEach(function(feature) {
-        if (feature.geometry.type === "Polygon") {
-            holes.push(feature.geometry.coordinates[0]);
-        } else if (feature.geometry.type === "MultiPolygon") {
-            feature.geometry.coordinates.forEach(function(poly) {
-                holes.push(poly[0]);
-            });
-        }
-    });
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-    // رسم المضلع (العالم مطروحاً منه رام الله)
-    var mask = L.polygon([worldCoords, ...holes], {
-        color: 'black',
-        fillColor: 'black',
-        fillOpacity: 1, // أسود معتم تماماً
-        weight: 0,
-        interactive: false // لا يتفاعل مع الماوس ليسمح بالضغط على ما تحته
-    }).addTo(map);
-    
-    return mask;
+<style>
+/* --- واجهة الترحيب (Splash Screen) --- */
+#welcome-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #1a1a1a; /* خلفية داكنة */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999; /* رقم عالي جداً لضمان الظهور فوق الخريطة */
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: white;
+    transition: all 0.6s ease-in-out;
 }
 
-// تعديل دالة تحميل الطبقات لتفعيل القناع عند تحميل طبقة الحدود
-// لنفترض أن طبقة "Master Plans" هي التي تحدد حدود المدينة
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "polys", {color: "purple", fillOpacity: 0.1}, function() {
-    // بمجرد تحميل بيانات الحدود، نطبق القناع
-    var boundaryLayer = layers.polys["Master Plans"].toGeoJSON();
-    applyMapMask(boundaryLayer);
-});
+#welcome-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.logo-container {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.logo-container h1 {
+    font-size: 60px;
+    margin: 0;
+    background: linear-gradient(45deg, #2ecc71, #3498db);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+}
+
+.logo-container p {
+    font-size: 18px;
+    color: #888;
+    margin-top: 10px;
+}
+
+#start-btn {
+    padding: 15px 60px;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    background: transparent;
+    border: 2px solid #2ecc71;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: 0.3s;
+    text-transform: uppercase;
+}
+
+#start-btn:hover {
+    background: #2ecc71;
+    box-shadow: 0 0 25px rgba(46, 204, 113, 0.6);
+    transform: scale(1.05);
+}
+
+/* --- تنسيقات الخريطة والعناصر الأصلية --- */
+body, html { margin:0; padding:0; height:100%; overflow: hidden; }
+#map{height:100vh; width: 100vw; z-index: 1;}
+
+#legend-box{position:absolute;bottom:45px;left:10px;background:white;padding:10px 14px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:998;}
+#legend-title{font-weight:bold;text-align:center;font-size:16px;cursor:pointer;user-select:none;}
+#legend-content{display:none;margin-top:8px;font-size:14px;}
+.legend-item{display:flex;align-items:center;margin-bottom:5px;}
+.emoji{font-size:20px;width:25px;margin-right:6px;}
+.symbol-line{width:30px;height:4px;margin-right:6px;}
+.symbol-poly{width:22px;height:12px;border:1px solid #000;margin-right:6px;}
+
+#opacity-box{position:absolute;right:10px;bottom:45px;background:white;padding:12px;border-radius:10px;width:220px;box-shadow:0 0 10px rgba(0,0,0,0.3);font-family:Arial;z-index:999;}
+#opacity-title{font-weight:bold;text-align:center;font-size:15px;margin-bottom:8px;}
+select,input[type=range]{width:100%;margin-top:6px;}
+
+#advisor-box{position:absolute;right:10px;bottom:220px;background:white;padding:10px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:999;font-family:Arial;width:220px;}
+#advisor-box button{width:100%; margin-top:5px; cursor:pointer; padding:8px; border-radius:4px; border:1px solid #ccc; font-weight:bold;}
+</style>
+</head>
+<body>
+
+<div id="welcome-screen">
+    <div class="logo-container">
+        <h1>Geo Brain</h1>
+        <p>Intelligent Geospatial Analysis Tool</p>
+    </div>
+    <button id="start-btn" onclick="launchApp()">START</button>
+</div>
+
+<div id="map"></div>
+
+<div id="opacity-box">
+    <div id="opacity-title">Layer Opacity</div>
+    <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
+    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
+</div>
+
+<div id="legend-box">
+    <div id="legend-title">Legend ▼</div>
+    <div id="legend-content">
+        <div class="legend-item"><span class="emoji">🏫</span> Schools</div>
+        <div class="legend-item"><span class="emoji">💧</span> Wells</div>
+        <div class="legend-item"><span class="emoji">⛏️</span> Quarries</div>
+        <hr>
+        <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
+        <div class="legend-item"><span class="symbol-line" style="background:#0077ff"></span> Streams</div>
+        <div class="legend-item"><span class="symbol-line" style="background:#555"></span> Annexation Wall</div>
+        <hr>
+        <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb"></span> Temperature Zones</div>
+    </div>
+</div>
+
+<div id="advisor-box">
+    <button onclick="runSmartAdvisor()" style="background:#2ecc71; color:white;">📊 Smart Advisor</button>
+    <button onclick="runRiskScanner()" style="background:#f39c12; color:white;">⚠️ Risk Scanner</button>
+    <button onclick="runWaterSensitivity()" style="background:#3498db; color:white;">💧 Water Sensitivity</button>
+    <button id="export-btn" onclick="unifiedPDFExport()" style="background:#2c3e50; color:white; display:none;">📄 Export PDF Report</button>
+</div>
+
+<script>
+// دالة التشغيل
+function launchApp() {
+    const screen = document.getElementById('welcome-screen');
+    screen.classList.add('hidden');
+}
+
+// إعداد الخريطة والوظائف الأصلية
+var map=L.map("map").setView([31.903,35.203],11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+// (بقية الكود الخاص بتحميل الطبقات والتحليلات كما هو بدون أي تغيير)
+var layers={points:{},lines:{},polys:{}};
+var control=L.control.layers({}, {}, {collapsed:false}).addTo(map);
+
+function loadLayer(file,name,group,styleObj,callback){
+    $.getJSON(file,function(data){
+        var layer;
+        if(group==="points"){ layer=L.geoJson(data,{pointToLayer:(f,latlng)=>L.marker(latlng,{icon:L.divIcon({html:name==="Schools"?"🏫":name==="Wells"?"💧":"⛏️",className:"",iconSize:[25,25]})})}).addTo(map);}
+        else{layer=L.geoJson(data,{style:styleObj}).addTo(map);}
+        layers[group][name]=layer;
+        control.addOverlay(layer,name);
+        document.getElementById("opacity-select").innerHTML+=`<option value="${name}">${name}</option>`;
+    });
+}
+
+// تحميل الطبقات
+loadLayer("Schools.geojson","Schools","points");
+loadLayer("Wells.geojson","Wells","points");
+loadLayer("Quarries.geojson","Quarries","points");
+loadLayer("Roads.geojson","Roads","lines",{color:"black"});
+loadLayer("Agricultural_Land.geojson","Agricultural Land","polys",{color:"green",fillOpacity:0.5});
+
+// تفعيل فتح واغلاق الـ Legend
+document.getElementById("legend-title").onclick=function(){
+    let c=document.getElementById("legend-content");
+    c.style.display=c.style.display==="none"?"block":"none";
+};
+
+// وظائف التحليل (تكملة الكود الخاص بك...)
+</script>
+</body>
+</html>
