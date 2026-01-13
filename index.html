@@ -1,45 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geo Brain Pro</title>
-    
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GeoBrain Pro - Ramallah WebGIS</title>
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
     <style>
-        /* 1. واجهة الترحيب (Splash Screen) */
-        #splash-screen {
+        /* --- واجهة الترحيب - إجبارية الظهور --- */
+        #welcome-screen {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
-            background: radial-gradient(circle, #1a1a1a, #000);
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            z-index: 99999;
-            transition: opacity 0.8s ease;
+            background: #000; /* خلفية سوداء ملكية */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999; /* أعلى طبقة ممكنة */
             color: white;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: sans-serif;
+            text-align: center;
         }
 
-        #splash-screen h1 {
+        .logo-title {
             font-size: 60px;
+            font-weight: bold;
             background: linear-gradient(45deg, #2ecc71, #3498db);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin: 0; letter-spacing: 8px;
+            margin-bottom: 10px;
+            letter-spacing: 5px;
         }
 
         #start-btn {
-            margin-top: 25px;
-            padding: 12px 50px;
-            background: transparent;
+            padding: 15px 50px;
+            font-size: 20px;
             color: #2ecc71;
             border: 2px solid #2ecc71;
-            border-radius: 30px;
-            font-size: 18px;
+            background: transparent;
+            border-radius: 50px;
             cursor: pointer;
             font-weight: bold;
             transition: 0.3s;
@@ -47,107 +51,150 @@
 
         #start-btn:hover {
             background: #2ecc71;
-            color: black;
+            color: #000;
             box-shadow: 0 0 20px #2ecc71;
         }
 
-        /* 2. تنسيق الخريطة */
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a1a1a; }
-        #map { height: 100vh; width: 100vw; visibility: hidden; } /* مخفية حتى نضغط Start */
+        /* --- تنسيق الخريطة --- */
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; background: #000; }
 
-        /* صناديق التحكم */
+        /* تنسيق القوائم الجانبية */
         .ui-panel {
             position: absolute;
-            background: rgba(30, 30, 30, 0.9);
-            color: white;
-            padding: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
             border-radius: 8px;
             z-index: 1000;
             font-family: Arial, sans-serif;
-            border: 1px solid #444;
-            display: none; /* تظهر بعد الضغط على Start */
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
-        #advisor-box { top: 20px; right: 20px; width: 220px; }
+        #legend-box { bottom: 40px; left: 10px; width: 200px; }
+        #opacity-box { bottom: 40px; right: 10px; width: 200px; }
+        #advisor-box { bottom: 210px; right: 10px; width: 200px; }
+        button.action-btn { width: 100%; margin-top: 5px; padding: 8px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; }
     </style>
 </head>
 <body>
 
-    <div id="splash-screen">
-        <h1>GEO BRAIN</h1>
-        <p style="color: #888; letter-spacing: 2px;">RAMALLAH ANALYTICS SYSTEM</p>
-        <button id="start-btn" onclick="startSystem()">START</button>
+<div id="welcome-screen">
+    <div class="logo-title">Geo Brain</div>
+    <p style="color: #666; margin-bottom: 30px;">Strategic Analysis System</p>
+    <button id="start-btn" onclick="launchApp()">START</button>
+</div>
+
+<div id="map"></div>
+
+<div id="legend-box" class="ui-panel">
+    <div id="legend-title" style="font-weight:bold; cursor:pointer; text-align:center;">Legend ▼</div>
+    <div id="legend-content" style="display:none; font-size: 13px; margin-top:10px;">
+        <div style="margin-bottom:5px;">🏫 Schools</div>
+        <div style="margin-bottom:5px;">💧 Wells</div>
+        <hr>
+        <div style="display:flex; align-items:center;">
+            <div style="width:20px; height:10px; background:#af7ac5; margin-right:5px; border:1px solid #000;"></div>
+            Ramallah Area
+        </div>
     </div>
+</div>
 
-    <div id="map"></div>
+<div id="opacity-box" class="ui-panel">
+    <div style="font-weight:bold; text-align:center;">Opacity</div>
+    <select id="layer-select" style="width:100%; margin:5px 0;"><option>Select Layer</option></select>
+    <input type="range" id="opacity-range" min="0" max="1" step="0.1" value="1" style="width:100%;">
+</div>
 
-    <div id="advisor-box" class="ui-panel">
-        <h3 style="margin: 0 0 10px 0; font-size: 16px; text-align: center; color: #2ecc71;">Control Panel</h3>
-        <button onclick="alert('Running Analysis...')" style="width:100%; padding:8px; background:#2ecc71; border:none; color:black; font-weight:bold; cursor:pointer;">📊 Smart Advisor</button>
-    </div>
+<div id="advisor-box" class="ui-panel">
+    <button class="action-btn" onclick="alert('Running Analysis...')" style="background:#2ecc71;">📊 Smart Advisor</button>
+    <button class="action-btn" onclick="alert('Scanning Risks...')" style="background:#f39c12;">⚠️ Risk Scanner</button>
+</div>
 
-    <script>
-        var map;
+<script>
+    // 1. تشغيل التطبيق
+    function launchApp() {
+        const screen = document.getElementById('welcome-screen');
+        screen.style.opacity = '0';
+        setTimeout(() => screen.style.display = 'none', 1000);
+    }
 
-        // دالة البدء
-        function startSystem() {
-            // إخفاء واجهة الترحيب
-            document.getElementById('splash-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('splash-screen').style.display = 'none';
-                document.getElementById('map').style.visibility = 'visible';
-                $(".ui-panel").fadeIn();
-            }, 800);
-        }
+    // 2. إعداد الخريطة (وضع داكن)
+    var map = L.map("map", {zoomControl: false}).setView([31.903, 35.203], 12);
+    
+    // استخدام خريطة داكنة جداً لتناسب "القناع"
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; GeoBrain'
+    }).addTo(map);
 
-        // إعداد الخريطة
-        map = L.map('map', {zoomControl: true}).setView([31.903, 35.203], 12);
+    var layers = {};
 
-        // إضافة ستايل خريطة داكن واحترافي (CartoDB Dark Matter)
-        // هذا الستايل سيجعل كل شيء داكن لكن الخريطة والشوارع واضحة جداً
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; GeoBrain Pro'
+    // 3. دالة رسم القناع (المساحة السوداء حول رام الله)
+    function createMask(geoData) {
+        var world = [[90, -180], [90, 180], [-90, 180], [-90, -180], [90, -180]];
+        var holes = [];
+
+        geoData.features.forEach(feature => {
+            if (feature.geometry.type === "Polygon") {
+                holes.push(feature.geometry.coordinates[0].map(p => [p[1], p[0]]));
+            } else if (feature.geometry.type === "MultiPolygon") {
+                feature.geometry.coordinates.forEach(poly => {
+                    holes.push(poly[0].map(p => [p[1], p[0]]));
+                });
+            }
+        });
+
+        L.polygon([world, ...holes], {
+            fillColor: 'black',
+            fillOpacity: 1,
+            color: 'black',
+            weight: 0,
+            interactive: false
         }).addTo(map);
+    }
 
-        // دالة لتحميل حدود محافظة رام الله
-        function loadRamallahBoundary() {
-            // ملاحظة: استبدل اسم الملف باسم ملف الحدود الموجود عندك
-            $.getJSON("Approved_Urban_Master_Plans_super_simplified.geojson", function(data) {
-                var boundaryStyle = {
-                    "color": "#2ecc71", // لون الحدود أخضر فسفوري احترافي
-                    "weight": 3,
-                    "opacity": 1,
-                    "fillOpacity": 0.1 // تظليل خفيف جداً داخل المدينة
-                };
+    // 4. دالة تحميل الطبقات
+    function loadLayer(file, name, isBoundary = false) {
+        $.getJSON(file, function(data) {
+            var layer = L.geoJson(data, {
+                style: function() {
+                    return isBoundary ? {color: "#af7ac5", fillOpacity: 0.2, weight: 2} : {color: "green", fillOpacity: 0.5};
+                },
+                pointToLayer: function(f, latlng) {
+                    return L.marker(latlng, {icon: L.divIcon({html: name === "Schools" ? "🏫" : "💧", className: ""})});
+                }
+            }).addTo(map);
 
-                var geoLayer = L.geoJson(data, {
-                    style: boundaryStyle
-                }).addTo(map);
+            layers[name] = layer;
+            $("#layer-select").append(`<option value="${name}">${name}</option>`);
 
-                // جعل الكاميرا تركز تلقائياً على حدود رام الله
-                map.fitBounds(geoLayer.getBounds());
-            }).fail(function() {
-                console.warn("ملف الحدود غير موجود، الخريطة ستعمل بشكل عادي.");
-            });
+            if (isBoundary) {
+                createMask(data); // تطبيق القناع فور تحميل طبقة الحدود
+                map.fitBounds(layer.getBounds());
+            }
+        }).fail(function() {
+            console.error("Could not load file: " + file);
+        });
+    }
+
+    // --- تحميل الملفات (تأكد من الأسماء الصحيحة لملفاتك) ---
+    // هذه الطبقة هي التي ستحدد "الفتحة" في السواد
+    loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Ramallah Boundary", true);
+    
+    // طبقات إضافية
+    loadLayer("Schools.geojson", "Schools");
+    loadLayer("Wells.geojson", "Wells");
+
+    // 5. التفاعل مع القائمة
+    $("#legend-title").click(function() {
+        $("#legend-content").toggle();
+    });
+
+    $("#opacity-range").on("input", function() {
+        var selected = $("#layer-select").val();
+        if (layers[selected]) {
+            layers[selected].setStyle({fillOpacity: this.value, opacity: this.value});
         }
+    });
 
-        // تحميل الملفات الأخرى (المدارس، الآبار...) بنفس الطريقة
-        function loadDataLayers() {
-            // مثال لتحميل المدارس
-            $.getJSON("Schools.geojson", function(data) {
-                L.geoJson(data, {
-                    pointToLayer: function(f, latlng) {
-                        return L.marker(latlng, {
-                            icon: L.divIcon({html: "🏫", className: "", iconSize: [20, 20]})
-                        });
-                    }
-                }).addTo(map);
-            });
-        }
-
-        // تشغيل التحميل
-        loadRamallahBoundary();
-        loadDataLayers();
-
-    </script>
+</script>
 </body>
 </html>
