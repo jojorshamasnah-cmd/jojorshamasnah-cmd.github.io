@@ -15,7 +15,6 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
         #map { height: 100vh; }
 
-        /* Advisor UI buttons styling */
         #advisor-ui {
             position: absolute;
             top: 10px;
@@ -39,7 +38,6 @@
         .btn-clear { background: #95a5a6; }
         .btn-advisor:hover { opacity: 0.9; }
 
-        /* ----------- LEGEND ----------- */
         #legend-box {
             position: absolute;
             bottom: 45px;
@@ -47,7 +45,7 @@
             background: white;
             padding: 10px 14px;
             border-radius: 10px;
-            width: 240px;
+            width: 250px;
             box-shadow: 0 0 10px rgba(0,0,0,0.3);
             z-index: 9998;
         }
@@ -55,11 +53,8 @@
         #legend-title { font-weight: bold; text-align: center; cursor: pointer; }
         #legend-content { display: none; margin-top: 8px; font-size: 14px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
-        .emoji { font-size: 20px; width: 25px; margin-right: 6px; }
-        .symbol-line { width: 30px; height: 4px; margin-right: 6px; }
         .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
 
-        /* ----------- OPACITY BOX ----------- */
         #opacity-box {
             position: absolute;
             right: 10px;
@@ -94,13 +89,11 @@
 <div id="legend-box">
     <div id="legend-title">Legend ▼</div>
     <div id="legend-content">
-        <div class="legend-item"><span class="symbol-poly" style="background:gold"></span> Promising Areas (Investment)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zones (Exposed)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#27ae60"></span> High Potential (Green)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential (Yellow)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zones (Red)</div>
         <hr>
-        <div class="legend-item"><span class="emoji">🏫</span> Schools</div>
-        <div class="legend-item"><span class="emoji">💧</span> Wells</div>
-        <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
+        <div id="dynamic-layers-legend"></div>
     </div>
 </div>
 
@@ -113,10 +106,8 @@ var analysisGroup = L.layerGroup().addTo(map);
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 function getPointIcon(type) {
-    return L.divIcon({
-        html: type === "Schools" ? "🏫" : type === "Wells" ? "💧" : type === "Quarries" ? "⛏️" : "•",
-        className: "", iconSize: [25, 25], iconAnchor: [12, 12]
-    });
+    let emoji = type === "Schools" ? "🏫" : type === "Wells" ? "💧" : type === "Quarries" ? "⛏️" : "📍";
+    return L.divIcon({ html: emoji, className: "", iconSize: [25, 25], iconAnchor: [12, 12] });
 }
 
 function loadLayer(file, name, group, styleObj) {
@@ -135,72 +126,84 @@ function loadLayer(file, name, group, styleObj) {
     });
 }
 
-// --- Smart Investment Advisor Logic ---
 function runSmartAdvisor() {
     clearAnalysis();
     
-    // 1. Exclusion Zones (Red) with Popups
+    // 1. RED: Exclusion Zones
     if (layers.polys["Settlements"]) {
         L.geoJson(layers.polys["Settlements"].toGeoJSON(), {
-            style: { color: "red", fillColor: "red", fillOpacity: 0.6 }
-        }).bindPopup("<b>Exclusion Zone</b><br>Investment not possible: Settlement area.")
+            style: { color: "#e74c3c", fillColor: "#e74c3c", fillOpacity: 0.6, weight: 1 }
+        }).bindPopup("<b>Exclusion Zone</b><br>Settlement Area: Investment Forbidden.")
           .addTo(analysisGroup);
     }
     
     if (layers.polys["Closed Areas"]) {
         L.geoJson(layers.polys["Closed Areas"].toGeoJSON(), {
-            style: { color: "red", fillColor: "red", fillOpacity: 0.4 }
-        }).bindPopup("<b>Exclusion Zone</b><br>Investment not possible: Military/Closed zone.")
+            style: { color: "#c0392b", fillColor: "#c0392b", fillOpacity: 0.5, weight: 1 }
+        }).bindPopup("<b>Exclusion Zone</b><br>Military Zone: Access Restricted.")
           .addTo(analysisGroup);
     }
 
-    // 2. Promising Investment Areas (Gold)
+    // 2. GREEN & YELLOW: Potential Analysis
     if (layers.polys["Agricultural Land"] && layers.polys["Temperature Zones"]) {
         let agri = layers.polys["Agricultural Land"].toGeoJSON();
         let temp = layers.polys["Temperature Zones"].toGeoJSON();
-        let result = [];
+        let highPot = [];
+        let modPot = [];
 
         agri.features.forEach(land => {
-            if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
-                temp.features.forEach(t => {
-                    if (t.properties.MEAN_ANNUA === "19 - 21") {
-                        let intersect = turf.intersect(land, t);
-                        if (intersect) result.push(intersect);
+            let isHighAgri = land.properties.Agricult_1 && land.properties.Agricult_1.includes("High");
+            
+            temp.features.forEach(t => {
+                let isIdealTemp = t.properties.MEAN_ANNUA === "19 - 21";
+                let intersect = turf.intersect(land, t);
+                
+                if (intersect) {
+                    if (isHighAgri && isIdealTemp) {
+                        highPot.push(intersect); // Green
+                    } else if (isHighAgri || isIdealTemp) {
+                        modPot.push(intersect); // Yellow
                     }
-                });
-            }
+                }
+            });
         });
 
-        if (result.length > 0) {
-            L.geoJson(turf.featureCollection(result), {
-                style: { color: "gold", fillColor: "gold", fillOpacity: 0.8, weight: 3 }
-            }).bindPopup("<b>Smart Advisor Result</b><br>Optimal area: High value soil + Ideal climate.")
+        // Display Green Results
+        if (highPot.length > 0) {
+            L.geoJson(turf.featureCollection(highPot), {
+                style: { color: "#27ae60", fillColor: "#2ecc71", fillOpacity: 0.8, weight: 2 }
+            }).bindPopup("<b>Best Choice (Green)</b><br>Optimal soil and climate conditions.")
+              .addTo(analysisGroup);
+        }
+
+        // Display Yellow Results
+        if (modPot.length > 0) {
+            L.geoJson(turf.featureCollection(modPot), {
+                style: { color: "#f1c40f", fillColor: "#fbc531", fillOpacity: 0.6, weight: 2 }
+            }).bindPopup("<b>Moderate Choice (Yellow)</b><br>Good conditions, but check details.")
               .addTo(analysisGroup);
         }
     }
-    alert("Analysis Complete. Click on Red areas for exclusion reasons or Gold for potential sites.");
+    alert("Smart Analysis Applied: Green (High), Yellow (Moderate), Red (Exclusion).");
 }
 
 function clearAnalysis() {
     analysisGroup.clearLayers();
 }
 
-// --- Loading Map Layers ---
+// --- Loading Layers ---
 loadLayer("Schools.geojson", "Schools", "points");
 loadLayer("Wells.geojson", "Wells", "points");
 loadLayer("Quarries.geojson", "Quarries", "points");
-loadLayer("Roads.geojson", "Roads", "lines", { color:"black", weight:2 });
-loadLayer("Streams.geojson", "Streams", "lines", { color:"#0077ff", weight:2 });
-loadLayer("Annexation_Wall.geojson", "Annexation Wall", "lines", { color:"#555", weight:3 });
-loadLayer("Agricultural_Land.geojson", "Agricultural Land", "polys", { color:"green", fillColor:"#8fd19e", fillOpacity:0.6 });
-loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "polys", { color:"orange", fillColor:"#ffb347", fillOpacity:0.6 });
-loadLayer("Built_up.geojson", "Built-up Areas", "polys", { color:"brown", fillColor:"#c49a6c", fillOpacity:0.6 });
-loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "polys", { color:"purple", fillColor:"#af7ac5", fillOpacity:0.6 });
-loadLayer("Settlements.geojson", "Settlements", "polys", { color:"red", fillColor:"#ff6666", fillOpacity:0.6 });
-loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color:"blue", fillColor:"#87ceeb", fillOpacity:0.6 });
-loadLayer("Ramallah.geojson", "Ramallah Boundary", "polys", { color:"black", fillOpacity:0 });
+loadLayer("Roads.geojson", "Roads", "lines", { color:"black", weight:1.5 });
+loadLayer("Streams.geojson", "Streams", "lines", { color:"#3498db", weight:1.5 });
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "polys", { color:"#2dcc71", fillColor:"#8fd19e", fillOpacity:0.4 });
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "polys", { color:"#e67e22", fillColor:"#ffb347", fillOpacity:0.4 });
+loadLayer("Settlements.geojson", "Settlements", "polys", { color:"#e74c3c", fillColor:"#ff6666", fillOpacity:0.4 });
+loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color:"#3498db", fillColor:"#87ceeb", fillOpacity:0.3 });
+loadLayer("Ramallah.geojson", "Ramallah Boundary", "polys", { color:"#2c3e50", weight:2, fillOpacity:0 });
 
-// Interaction Controls
+// Controls
 document.getElementById("opacity-slider").oninput = function () {
     let s = document.getElementById("opacity-select").value;
     for (let g in layers) { if (layers[g][s]) layers[g][s].setStyle({ opacity: this.value, fillOpacity: this.value }); }
