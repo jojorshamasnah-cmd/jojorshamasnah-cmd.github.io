@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Professional Tool</title>
+    <title>Ramallah WebGIS - Professional Suite</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -12,17 +12,18 @@
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
-        /* واجهة الأزرار */
+        /* أزرار التحكم */
         #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 10px; }
-        .btn-tool { background: #2c3e50; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .btn-tool { background: #2c3e50; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
         .btn-hazard { background: #d35400; }
         .btn-clear { background: #7f8c8d; }
+        .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
-        /* مفتاح الخريطة (Legend) - مغلق افتراضياً */
-        #legend-box { position: absolute; bottom: 30px; left: 15px; background: white; padding: 0; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
+        /* الليجند (مغلق افتراضياً) */
+        #legend-box { position: absolute; bottom: 30px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
         #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
         #legend-content { padding: 15px; max-height: 450px; overflow-y: auto; display: none; } /* مخفي */
         
@@ -31,12 +32,9 @@
         .symbol-poly { width: 20px; height: 12px; border: 1px solid #555; margin-right: 10px; }
         .symbol-line { width: 25px; height: 3px; margin-right: 10px; }
 
-        /* أداة الشفافية */
+        /* صندوق الشفافية */
         #opacity-box { position: absolute; right: 15px; bottom: 30px; background: white; padding: 15px; border-radius: 12px; width: 230px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; }
         select, input[type=range] { width: 100%; margin-top: 10px; }
-        
-        /* تحسين شكل صندوق الطبقات العلوي */
-        .leaflet-control-layers { border-radius: 8px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important; }
     </style>
 </head>
 
@@ -53,7 +51,7 @@
 <div id="opacity-box">
     <div style="font-weight:bold; text-align:center;">Layer Opacity</div>
     <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
-    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="0.5">
+    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
 <div id="legend-box">
@@ -70,13 +68,8 @@
         <div class="legend-item"><span style="font-size:16px; margin-right:10px;">⛏️</span> Quarries</div>
         <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
         <div class="legend-item"><span class="symbol-line" style="background:#3498db"></span> Streams (Wadis)</div>
-        <div class="legend-item"><span class="symbol-line" style="border-top: 2px dashed #555"></span> Annexation Wall</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb; opacity:0.5;"></span> Temp Zones</div>
         <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> City Boundary</div>
     </div>
 </div>
@@ -88,8 +81,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
 
-// التعديل الأساسي هنا: جعل صندوق الطبقات (Checkbox Box) مغلقاً افتراضياً
-// collapsed: true تعني أنه سيظهر كأيقونة فقط ويفتح عند المرور عليه
+// جعل صندوق الطبقات مغلقاً (مطوياً) افتراضياً
 var overlayControl = L.control.layers(null, null, { collapsed: true }).addTo(map);
 
 function toggleLegend() {
@@ -101,7 +93,7 @@ function toggleLegend() {
 
 function getIcon(name) {
     let html = name === "Schools" ? "🏫" : name === "Wells" ? "💧" : "⛏️";
-    return L.divIcon({ html: html, className: 'my-div-icon', iconSize: [25, 25], iconAnchor: [12, 12] });
+    return L.divIcon({ html: html, className: '', iconSize: [25, 25], iconAnchor: [12, 12] });
 }
 
 function addLayer(file, name, type, style) {
@@ -136,17 +128,48 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.2 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// أدوات التحليل
+// --- تفعيل ماسح الخطر (Hazard Scanner) بكامل وظائفه السابقة ---
 function runHazardScanner() {
     analysisGroup.clearLayers();
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> Flood Risk (150m)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#d35400; border-radius:50%"></span> Quarry Impact (500m)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact (500m)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#96281b"></span> Heat Stress (21-23°C)</div>
     `;
+
+    // 1. خطر الفيضانات (حرم 150م حول الأودية)
     if (layers["Streams"]) {
-        let buffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
-        L.geoJson(buffer, { style: { color: "#c0392b", fillOpacity: 0.5 } }).addTo(analysisGroup);
+        let streamBuffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
+        L.geoJson(streamBuffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.5, weight: 1 } })
+        .bindPopup("<b>Flood Risk Zone</b>").addTo(analysisGroup);
     }
+
+    // 2. تلوث الكسارات (حرم 500م حول المحاجر)
+    if (layers["Quarries"]) {
+        let quarryBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
+        L.geoJson(quarryBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.4, weight: 1 } })
+        .bindPopup("<b>Industrial Impact Zone</b>").addTo(analysisGroup);
+    }
+
+    // 3. الإجهاد الحراري (المناطق بين 21-23 درجة)
+    if (layers["Temperature Zones"]) {
+        let tempJSON = layers["Temperature Zones"].toGeoJSON();
+        tempJSON.features.forEach(f => {
+            if (f.properties.MEAN_ANNUA === "21 - 23") {
+                L.geoJson(f, { style: { color: "#96281b", fillColor: "#c0392b", fillOpacity: 0.3, weight: 1 } })
+                .bindPopup("<b>Heat Stress Zone</b> (21-23°C)").addTo(analysisGroup);
+            }
+        });
+    }
+}
+
+function runSmartAdvisor() {
+    analysisGroup.clearLayers();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zone</div>
+    `;
+    // ... منطق تحليل الاستثمار ...
 }
 
 function clearAnalysis() {
