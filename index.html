@@ -13,12 +13,12 @@
 
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        #map { height: 100vh; width: 100%; z-index: 1; background-color: #f4f4f4; } /* لون خلفية هادئ عند إطفاء الخريطة */
+        #map { height: 100vh; width: 100%; z-index: 1; background-color: #f4f4f4; }
         
         #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 10px; flex-wrap: wrap; }
         .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; font-size: 13px; }
-        .btn-hazard { background: #d35400; }
         .btn-basemap { background: #27ae60; } /* لون مميز لزر الخريطة */
+        .btn-hazard { background: #d35400; }
         .btn-clear { background: #7f8c8d; }
         .btn-tool:hover { opacity: 0.9; transform: translateY(-1px); }
         
@@ -40,9 +40,9 @@
 <body>
 
 <div id="advisor-ui">
+    <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ Toggle BaseMap</button>
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Smart Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard Scanner</button>
-    <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ Toggle BaseMap</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Clear</button>
 </div>
 
@@ -68,14 +68,10 @@
 </div>
 
 <script>
-// إعداد الخريطة
 var map = L.map("map").setView([31.903, 35.203], 12);
-
-// تعريف طبقة الأساس (OpenStreetMap) كمتغير للتحكم بها
 var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 var isBaseMapVisible = true;
 
-// وظيفة تبديل خريطة الأساس
 function toggleBaseMap() {
     if (isBaseMapVisible) {
         map.removeLayer(osmLayer);
@@ -99,12 +95,7 @@ function toggleLegend() {
 }
 
 function createMapIcon(emoji) {
-    return L.divIcon({ 
-        html: `<div class="map-icon">${emoji}</div>`, 
-        className: 'custom-div-icon', 
-        iconSize: [18, 18], 
-        iconAnchor: [9, 9] 
-    });
+    return L.divIcon({ html: `<div class="map-icon">${emoji}</div>`, className: 'custom-div-icon', iconSize: [18, 18], iconAnchor: [9, 9] });
 }
 
 function addLayer(file, name, type, style, emoji) {
@@ -122,7 +113,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الطبقات
+// تحميل الطبقات الـ 13
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -145,17 +136,15 @@ function runSmartAdvisor() {
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential</div>
         <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zone (Settlement + 300m)</div>
     `;
-
     if (layers["Settlements"]) {
         let buffer = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, { units: 'kilometers' });
         L.geoJson(buffer, { style: { color: "darkred", fillColor: "red", fillOpacity: 0.6, weight: 2 } })
         .bindPopup("<b>Exclusion Zone</b><br>Danger zone: 300m buffer from settlements.").addTo(analysisGroup);
     }
-
+    // بقية منطق تحليل التربة والحرارة مدمج هنا...
     if (layers["Agricultural Land"] && layers["Temperature Zones"]) {
         let agriJSON = layers["Agricultural Land"].toGeoJSON();
         let tempJSON = layers["Temperature Zones"].toGeoJSON();
-        
         L.geoJson(agriJSON, {
             style: { color: "#d4ac0d", fillColor: "#f1c40f", fillOpacity: 0.5, weight: 1 },
             filter: function(f) { return f.properties.Agricult_1 && f.properties.Agricult_1.includes("High"); }
@@ -187,17 +176,13 @@ function runHazardScanner() {
         <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> Flood Risk (150m)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Buffer (500m)</div>
     `;
-
     if (layers["Streams"]) {
         let buffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
-        L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.6 } })
-        .bindPopup("<b>Flood Risk Area</b><br>Risk detected within 150m from stream.").addTo(analysisGroup);
+        L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.6 } }).bindPopup("<b>Flood Risk Area</b> (150m)").addTo(analysisGroup);
     }
-
     if (layers["Quarries"]) {
         let qBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
-        L.geoJson(qBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.5 } })
-        .bindPopup("<b>Quarry Impact Zone</b><br>Environmental hazard within 500m of quarry site.").addTo(analysisGroup);
+        L.geoJson(qBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.5 } }).bindPopup("<b>Quarry Impact Zone</b> (500m)").addTo(analysisGroup);
     }
 }
 
