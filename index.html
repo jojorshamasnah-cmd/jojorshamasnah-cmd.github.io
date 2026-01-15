@@ -95,15 +95,12 @@
     <div id="legend-title">Legend ▼</div>
     <div id="legend-content">
         <div class="legend-item"><span class="symbol-poly" style="background:gold"></span> Promising Areas (Investment)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zones (Settlements/Closed)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zones (Exposed)</div>
         <hr>
         <div class="legend-item"><span class="emoji">🏫</span> Schools</div>
         <div class="legend-item"><span class="emoji">💧</span> Wells</div>
-        <div class="legend-item"><span class="emoji">⛏️</span> Quarries</div>
         <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
     </div>
 </div>
 
@@ -112,7 +109,7 @@ var map = L.map("map").setView([31.903, 35.203], 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 var layers = { points: {}, lines: {}, polys: {} };
-var analysisGroup = L.layerGroup().addTo(map); // Group for advisor results
+var analysisGroup = L.layerGroup().addTo(map); 
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 function getPointIcon(type) {
@@ -142,29 +139,30 @@ function loadLayer(file, name, group, styleObj) {
 function runSmartAdvisor() {
     clearAnalysis();
     
-    // 1. Identify Exclusion Zones (Red)
+    // 1. Exclusion Zones (Red) with Popups
     if (layers.polys["Settlements"]) {
         L.geoJson(layers.polys["Settlements"].toGeoJSON(), {
             style: { color: "red", fillColor: "red", fillOpacity: 0.6 }
-        }).addTo(analysisGroup);
+        }).bindPopup("<b>Exclusion Zone</b><br>Investment not possible: Settlement area.")
+          .addTo(analysisGroup);
     }
+    
     if (layers.polys["Closed Areas"]) {
         L.geoJson(layers.polys["Closed Areas"].toGeoJSON(), {
             style: { color: "red", fillColor: "red", fillOpacity: 0.4 }
-        }).addTo(analysisGroup);
+        }).bindPopup("<b>Exclusion Zone</b><br>Investment not possible: Military/Closed zone.")
+          .addTo(analysisGroup);
     }
 
-    // 2. Identify Promising Investment Areas (Gold)
+    // 2. Promising Investment Areas (Gold)
     if (layers.polys["Agricultural Land"] && layers.polys["Temperature Zones"]) {
         let agri = layers.polys["Agricultural Land"].toGeoJSON();
         let temp = layers.polys["Temperature Zones"].toGeoJSON();
         let result = [];
 
         agri.features.forEach(land => {
-            // Criteria: High Agricultural Value
             if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
                 temp.features.forEach(t => {
-                    // Criteria: Mean Annual Temperature 19-21
                     if (t.properties.MEAN_ANNUA === "19 - 21") {
                         let intersect = turf.intersect(land, t);
                         if (intersect) result.push(intersect);
@@ -176,11 +174,11 @@ function runSmartAdvisor() {
         if (result.length > 0) {
             L.geoJson(turf.featureCollection(result), {
                 style: { color: "gold", fillColor: "gold", fillOpacity: 0.8, weight: 3 }
-            }).bindPopup("<b>Smart Advisor: Promising Site</b><br>High value soil and ideal climate detected.")
+            }).bindPopup("<b>Smart Advisor Result</b><br>Optimal area: High value soil + Ideal climate.")
               .addTo(analysisGroup);
         }
     }
-    alert("Analysis Complete: Gold indicates promising sites, Red indicates exclusion zones.");
+    alert("Analysis Complete. Click on Red areas for exclusion reasons or Gold for potential sites.");
 }
 
 function clearAnalysis() {
