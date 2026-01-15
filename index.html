@@ -1,50 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ramallah WebGIS</title>
 
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; }
-        #map { height: 100vh; }
-        /* التنسيقات الأصلية كما هي */
-        #legend-box { position: absolute; bottom: 45px; left: 10px; background: white; padding: 10px 14px; border-radius: 10px; width: 220px; box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9998; }
-        #legend-title { font-weight: bold; text-align: center; font-size: 16px; cursor: pointer; user-select: none; }
-        #legend-content { display: none; margin-top: 8px; font-size: 14px; }
-        .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
-        .emoji { font-size: 20px; width: 25px; margin-right: 6px; }
-        .symbol-line { width: 30px; height: 4px; margin-right: 6px; }
-        .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
-        #opacity-box { position: absolute; right: 10px; bottom: 45px; background: white; padding: 12px; border-radius: 10px; width: 220px; box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999; }
-        #opacity-title { font-weight: bold; text-align: center; font-size: 15px; margin-bottom: 8px; }
-        select, input[type=range] { width: 100%; margin-top: 6px; }
-        .leaflet-control-scale { left: 50% !important; transform: translateX(-50%); bottom: 5px !important; }
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
-        /* ميزة Smart Advisor الجديدة */
-        #advisor-box {
-            position: absolute; right: 10px; top: 10px; background: white;
-            padding: 15px; border-radius: 10px; width: 220px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999;
-        }
-        .advisor-title { font-weight: bold; text-align: center; margin-bottom: 10px; }
-        .btn-run { background: #28a745; color: white; border: none; padding: 8px; width: 100%; cursor: pointer; border-radius: 5px; font-weight: bold; margin-top: 10px; }
-    </style>
+<style>
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { height: 100vh; }
+
+    /* ----------- LEGEND ----------- */
+    #legend-box {
+        position: absolute; bottom: 45px; left: 10px; background: white;
+        padding: 10px 14px; border-radius: 10px; width: 220px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9998;
+    }
+
+    #legend-title { font-weight: bold; text-align: center; font-size: 16px; cursor: pointer; user-select: none; }
+    #legend-content { display: none; margin-top: 8px; font-size: 14px; }
+    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+    .emoji { font-size: 20px; width: 25px; margin-right: 6px; }
+    .symbol-line { width: 30px; height: 4px; margin-right: 6px; }
+    .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
+
+    /* ----------- OPACITY BOX ----------- */
+    #opacity-box {
+        position: absolute; right: 10px; bottom: 45px; background: white;
+        padding: 12px; border-radius: 10px; width: 220px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999;
+    }
+
+    #opacity-title { font-weight: bold; text-align: center; font-size: 15px; margin-bottom: 8px; }
+    select, input[type=range] { width: 100%; margin-top: 6px; }
+
+    /* ----------- SMART ADVISOR BOX (القطعة المضافة) ----------- */
+    #advisor-box {
+        position: absolute; right: 10px; top: 10px; background: white;
+        padding: 15px; border-radius: 10px; width: 220px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999;
+    }
+    .btn-run { background: #28a745; color: white; border: none; padding: 8px; width: 100%; cursor: pointer; border-radius: 5px; font-weight: bold; margin-top: 10px; }
+
+    .leaflet-control-scale { left: 50% !important; transform: translateX(-50%); bottom: 5px !important; }
+</style>
 </head>
 
 <body>
+
 <div id="map"></div>
 
 <div id="advisor-box">
-    <div class="advisor-title">🧠 Smart Advisor</div>
-    <label style="font-size: 12px;">Road Buffer (m):</label>
-    <input type="number" id="buffer-val" value="200" style="width: 100%;">
+    <div style="font-weight:bold; text-align:center;">🧠 Smart Advisor</div>
+    <label style="font-size: 12px;">Distance from Roads (m):</label>
+    <input type="number" id="buffer-val" value="200" style="width:100%;">
     <button class="btn-run" onclick="runAnalysis()">Run Analysis 🚀</button>
-    <div id="status" style="font-size: 11px; margin-top: 5px; text-align: center; color: blue;"></div>
+    <div id="status" style="font-size:11px; margin-top:5px; text-align:center; color:blue;"></div>
 </div>
 
 <div id="opacity-box">
@@ -79,7 +95,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 L.control.scale({ imperial: false }).addTo(map);
 
 var layers = { points: {}, lines: {}, polys: {} };
-var rawGeoData = {}; // مخزن للبيانات الخام للتحليل
+var rawGeoData = {}; // هذا السطر ضروري جداً لتخزين البيانات للتحليل
 var resultLayer = null;
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
@@ -90,9 +106,10 @@ function getPointIcon(type) {
     });
 }
 
+/*** LOAD LAYER FUNCTION (نفس وظيفتك بالضبط مع إضافة سطر تخزين واحد) ***/
 function loadLayer(file, name, group, styleObj) {
     $.getJSON(file, function (data) {
-        rawGeoData[name] = data; // حفظ البيانات للتحليل
+        rawGeoData[name] = data; // السطر الوحيد المضاف هنا ليتمكن الزر من رؤية البيانات
         var layer;
         if (group === "points") {
             layer = L.geoJson(data, {
@@ -107,7 +124,7 @@ function loadLayer(file, name, group, styleObj) {
     });
 }
 
-// دالة التحليل الجديدة دون المساس بالكود الأصلي
+/*** وظيفة التحليل المضافة ***/
 function runAnalysis() {
     let dist = document.getElementById("buffer-val").value;
     let status = document.getElementById("status");
@@ -121,24 +138,21 @@ function runAnalysis() {
     try {
         let buffer = turf.buffer(rawGeoData["Roads"], dist / 1000, {units: 'kilometers'});
         let matches = [];
-        
         rawGeoData["Agricultural Land"].features.forEach(f => {
             let intersection = turf.intersect(buffer, f);
             if (intersection) matches.push(intersection);
         });
-
         if (matches.length > 0) {
             resultLayer = L.geoJson(turf.featureCollection(matches), {
                 style: { color: "gold", weight: 3, fillColor: "yellow", fillOpacity: 0.7 }
             }).addTo(map);
             map.fitBounds(resultLayer.getBounds());
             status.innerHTML = "✅ Found " + matches.length + " sites!";
-        } else {
-            status.innerHTML = "❌ No sites found.";
-        }
-    } catch (e) { status.innerHTML = "⚠️ Error!"; console.log(e); }
+        } else { status.innerHTML = "❌ No sites found."; }
+    } catch (e) { status.innerHTML = "⚠️ Error!"; }
 }
 
+/*** APPLY OPACITY (كودك الأصلي) ***/
 document.getElementById("opacity-slider").oninput = function () {
     let selected = document.getElementById("opacity-select").value;
     for (let group in layers) {
@@ -148,13 +162,14 @@ document.getElementById("opacity-slider").oninput = function () {
     }
 };
 
+/*** LEGEND TOGGLE (كودك الأصلي) ***/
 document.getElementById("legend-title").onclick = function () {
     let c = document.getElementById("legend-content");
     c.style.display = c.style.display === "none" ? "block" : "none";
     this.innerHTML = c.style.display === "none" ? "Legend ▼" : "Legend ▲";
 };
 
-/* تحميل الطبقات بأسماء الملفات الصحيحة من مجلدك */
+/*** تحميل الطبقات (نفس ترتيبك بالضبط) ***/
 loadLayer("Schools.geojson", "Schools", "points");
 loadLayer("Wells.geojson", "Wells", "points");
 loadLayer("Quarries.geojson", "Quarries", "points");
@@ -168,6 +183,7 @@ loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans"
 loadLayer("Settlements.geojson", "Settlements", "polys", { color:"red", fillColor:"#ff6666", fillOpacity:0.6 });
 loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color:"blue", fillColor:"#87ceeb", fillOpacity:0.6 });
 loadLayer("Ramallah.geojson", "Ramallah Boundary", "polys", { color:"black", fillOpacity:0 });
+
 </script>
 </body>
 </html>
