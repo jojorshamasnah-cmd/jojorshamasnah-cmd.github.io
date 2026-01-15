@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ramallah WebGIS</title>
+<title>Ramallah WebGIS - Smart Advisor</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -17,100 +17,41 @@
 
     /* ----------- LEGEND ----------- */
     #legend-box {
-        position: absolute;
-        bottom: 45px;
-        left: 10px;
-        background: white;
-        padding: 10px 14px;
-        border-radius: 10px;
-        width: 220px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.3);
-        font-family: Arial;
-        z-index: 9998;
+        position: absolute; bottom: 45px; left: 10px; background: white;
+        padding: 10px 14px; border-radius: 10px; width: 220px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9998;
     }
 
-    #legend-title {
-        font-weight: bold;
-        text-align: center;
-        font-size: 16px;
-        cursor: pointer;
-        user-select: none;
-    }
-
-    #legend-content {
-        display: none;
-        margin-top: 8px;
-        font-size: 14px;
-    }
-
+    #legend-title { font-weight: bold; text-align: center; font-size: 16px; cursor: pointer; user-select: none; }
+    #legend-content { display: none; margin-top: 8px; font-size: 14px; }
     .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
     .emoji { font-size: 20px; width: 25px; margin-right: 6px; }
-
     .symbol-line { width: 30px; height: 4px; margin-right: 6px; }
     .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
 
     /* ----------- OPACITY BOX ----------- */
     #opacity-box {
-        position: absolute;
-        right: 10px;
-        bottom: 45px;
-        background: white;
-        padding: 12px;
-        border-radius: 10px;
-        width: 220px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.3);
-        font-family: Arial;
-        z-index: 9999;
+        position: absolute; right: 10px; bottom: 45px; background: white;
+        padding: 12px; border-radius: 10px; width: 220px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999;
     }
 
-    /* ----------- SMART ADVISOR BOX (NEW POSITION & ENGLISH) ----------- */
+    /* ----------- SMART ADVISOR BOX ----------- */
     #advisor-box {
-        position: absolute;
-        right: 10px;
-        top: 310px; /* Positioned below the Layer Control */
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        width: 220px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.3);
-        font-family: Arial;
-        z-index: 9999;
-        direction: ltr;
+        position: absolute; right: 10px; top: 310px; background: white;
+        padding: 15px; border-radius: 10px; width: 220px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999;
     }
 
-    #opacity-title, .box-title {
-        font-weight: bold;
-        text-align: center;
-        font-size: 15px;
-        margin-bottom: 8px;
-    }
-
-    select, input[type=range], input[type=number] {
-        width: 100%;
-        margin-top: 6px;
-        box-sizing: border-box;
-    }
-
-    /* ----------- SCALE CENTER ----------- */
-    .leaflet-control-scale {
-        left: 50% !important;
-        transform: translateX(-50%);
-        bottom: 5px !important;
-    }
+    .box-title { font-weight: bold; text-align: center; font-size: 15px; margin-bottom: 8px; }
+    select, input[type=range], input[type=number] { width: 100%; margin-top: 6px; box-sizing: border-box; }
 
     .btn-run {
-        background: #28a745;
-        color: white;
-        border: none;
-        padding: 10px;
-        width: 100%;
-        margin-top: 10px;
-        cursor: pointer;
-        border-radius: 5px;
-        font-weight: bold;
+        background: #28a745; color: white; border: none; padding: 10px;
+        width: 100%; margin-top: 10px; cursor: pointer; border-radius: 5px; font-weight: bold;
     }
 
-    .btn-run:hover { background: #218838; }
+    .leaflet-control-scale { left: 50% !important; transform: translateX(-50%); bottom: 5px !important; }
 </style>
 </head>
 
@@ -120,7 +61,6 @@
 
 <div id="advisor-box">
     <div class="box-title">🧠 Smart Advisor</div>
-    
     <label style="font-size: 12px;">Distance from Roads (m):</label>
     <input type="number" id="buffer-val" value="200">
     
@@ -135,10 +75,8 @@
 </div>
 
 <div id="opacity-box">
-    <div id="opacity-title">Layer Opacity</div>
-    <select id="opacity-select">
-        <option value="" disabled selected>Select Layer</option>
-    </select>
+    <div class="box-title">Layer Opacity</div>
+    <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
     <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
@@ -159,32 +97,21 @@
         <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb"></span> Temperature Zones</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:none"></span> Ramallah Boundary</div>
     </div>
 </div>
 
 <script>
 var map = L.map("map").setView([31.903, 35.203], 11);
-
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 L.control.scale({ imperial: false }).addTo(map);
 
-var layers = {
-    points: {},
-    lines: {},
-    polys: {}
-};
-
+var layers = { points: {}, lines: {}, polys: {} };
 var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
 function getPointIcon(type) {
     return L.divIcon({
-        html: type === "Schools" ? "🏫" :
-              type === "Wells" ? "💧" :
-              type === "Quarries" ? "⛏️" : "•",
-        className: "",
-        iconSize: [25, 25],
-        iconAnchor: [12, 12]
+        html: type === "Schools" ? "🏫" : type === "Wells" ? "💧" : type === "Quarries" ? "⛏️" : "•",
+        className: "", iconSize: [25, 25], iconAnchor: [12, 12]
     });
 }
 
@@ -193,91 +120,79 @@ function loadLayer(file, name, group, styleObj) {
         var layer;
         if (group === "points") {
             layer = L.geoJson(data, {
-                pointToLayer: function (feature, latlng) {
-                    return L.marker(latlng, { icon: getPointIcon(name) });
-                }
+                pointToLayer: function (feature, latlng) { return L.marker(latlng, { icon: getPointIcon(name) }); }
             }).addTo(map);
-        }
-        else {
+        } else {
             layer = L.geoJson(data, { style: styleObj }).addTo(map);
         }
-
         layers[group][name] = layer;
         control.addOverlay(layer, name);
         document.getElementById("opacity-select").innerHTML += `<option value="${name}">${name}</option>`;
     });
 }
 
-/*** SMART ADVISOR ANALYSIS FUNCTION ***/
 var resultLayer = null;
 
 function runSmartAnalysis() {
     let bufferVal = document.getElementById("buffer-val").value;
     let status = document.getElementById("analysis-status");
     
-    // Clear previous results
     if (resultLayer) map.removeLayer(resultLayer);
-    status.innerHTML = "Processing Analysis...";
+    status.innerHTML = "Processing...";
+
+    // التأكد من تحميل الطبقات الأساسية
+    if (!layers.lines["Roads"] || !layers.polys["Agricultural Land"]) {
+        status.innerHTML = "⚠️ Error: Load Roads & Agri layers first.";
+        return;
+    }
 
     try {
-        // Ensure necessary layers are loaded
-        if (!layers.lines["Roads"] || !layers.polys["Agricultural Land"]) {
-            throw new Error("Missing Layers");
-        }
-
         let roadsGeo = layers.lines["Roads"].toGeoJSON();
         let agriGeo = layers.polys["Agricultural Land"].toGeoJSON();
 
-        // GIS Step 1: Create Buffer around Roads
+        // 1. عمل Buffer حول الطرق
         let bufferedRoads = turf.buffer(roadsGeo, bufferVal / 1000, {units: 'kilometers'});
 
-        // GIS Step 2: Intersect Buffer with Agricultural Land
-        let intersectResult = turf.intersect(bufferedRoads, agriGeo.features[0]);
+        // 2. تقاطع ذكي لكل مضلع زراعي على حدة
+        let suitableSites = [];
+        agriGeo.features.forEach(function(f) {
+            let intersect = turf.intersect(bufferedRoads, f);
+            if (intersect) {
+                suitableSites.push(intersect);
+            }
+        });
 
-        if (intersectResult) {
-            resultLayer = L.geoJson(intersectResult, {
-                style: { 
-                    color: "gold", 
-                    weight: 3, 
-                    fillColor: "#ffd700",
-                    fillOpacity: 0.7, 
-                    dashArray: '5, 5' 
-                }
+        if (suitableSites.length > 0) {
+            let collection = turf.featureCollection(suitableSites);
+            resultLayer = L.geoJson(collection, {
+                style: { color: "gold", weight: 2, fillColor: "yellow", fillOpacity: 0.7 }
             }).addTo(map);
             
             map.fitBounds(resultLayer.getBounds());
-            status.innerHTML = "✅ Best Locations Identified!";
-            resultLayer.bindPopup("<b>Analysis Result:</b><br>Suitable investment zone based on proximity to roads and land type.").openPopup();
+            status.innerHTML = "✅ Found " + suitableSites.length + " sites!";
         } else {
-            status.innerHTML = "❌ No matching areas found.";
+            status.innerHTML = "❌ No matching areas.";
         }
     } catch (e) {
+        status.innerHTML = "⚠️ Analysis Failed.";
         console.error(e);
-        status.innerHTML = "⚠️ Please ensure all layers are visible.";
     }
 }
 
-/*** OPACITY CONTROL ***/
+// Opacity Control
 document.getElementById("opacity-slider").oninput = function () {
     let selected = document.getElementById("opacity-select").value;
-    for (let group in layers) {
-        if (layers[group][selected]) {
-            layers[group][selected].setStyle({
-                opacity: this.value,
-                fillOpacity: this.value
-            });
-        }
-    }
+    for (let g in layers) { if (layers[g][selected]) { layers[g][selected].setStyle({ opacity: this.value, fillOpacity: this.value }); } }
 };
 
-/*** LEGEND TOGGLE ***/
+// Legend Toggle
 document.getElementById("legend-title").onclick = function () {
     let c = document.getElementById("legend-content");
     c.style.display = c.style.display === "none" ? "block" : "none";
     this.innerHTML = c.style.display === "none" ? "Legend ▼" : "Legend ▲";
 };
 
-/* LOAD ALL LAYERS */
+/* LOAD ALL YOUR ORIGINAL LAYERS */
 loadLayer("Schools.geojson", "Schools", "points");
 loadLayer("Wells.geojson", "Wells", "points");
 loadLayer("Quarries.geojson", "Quarries", "points");
