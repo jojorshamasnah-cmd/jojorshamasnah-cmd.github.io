@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Final Professional Version</title>
+    <title>Ramallah WebGIS - Professional Suite</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -14,13 +14,16 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
+        
         #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 10px; }
         .btn-tool { background: #2c3e50; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
         .btn-hazard { background: #d35400; }
         .btn-clear { background: #7f8c8d; }
+        
         #legend-box { position: absolute; bottom: 30px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
         #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
         #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; display: none; }
+        
         .legend-section { font-size: 13px; font-weight: bold; color: #2c3e50; margin: 10px 0 5px 0; border-bottom: 1px solid #eee; padding-bottom: 4px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
         .symbol-poly { width: 18px; height: 12px; border: 1px solid #555; margin-right: 10px; flex-shrink: 0; }
@@ -47,6 +50,7 @@
     <div id="legend-content">
         <div class="legend-section">Analysis Results</div>
         <div id="dynamic-items" style="color:gray; font-style:italic; margin-bottom:10px;">No tool selected...</div>
+
         <div class="legend-section">Base Map Layers</div>
         <div class="legend-item"><span class="symbol-icon">🏫</span> Schools</div>
         <div class="legend-item"><span class="symbol-icon">💧</span> Wells</div>
@@ -92,7 +96,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الطبقات
+// Loading Base Layers
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -103,33 +107,39 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- 🧠 1. المستشار الذكي (Smart Advisor) ---
+// --- 🧠 Smart Advisor Tool (Red, Yellow, Green) ---
 function runSmartAdvisor() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Green)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential (Yellow)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zone (Red)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion & Danger Zone</div>
     `;
 
-    // الأحمر: المستوطنات
+    // 1. RED: Settlements + 300m Buffer Danger Zone
     if (layers["Settlements"]) {
-        L.geoJson(layers["Settlements"].toGeoJSON(), { 
-            style: { color: "darkred", fillColor: "red", fillOpacity: 0.6 } 
-        }).bindPopup("<b>منطقة مستبعدة</b><br>لا يمكن الاستثمار داخل حدود المستوطنات.").addTo(analysisGroup);
+        let settlementGeoJSON = layers["Settlements"].toGeoJSON();
+        let bufferedSettlements = turf.buffer(settlementGeoJSON, 0.3, { units: 'kilometers' });
+
+        L.geoJson(bufferedSettlements, { 
+            style: { color: "darkred", fillColor: "red", fillOpacity: 0.6, weight: 2 } 
+        }).bindPopup("<b>Exclusion & Danger Zone</b><br>Investment is strictly prohibited due to proximity to settlements.")
+        .addTo(analysisGroup);
     }
 
+    // 2. Yellow & Green Analysis
     if (layers["Agricultural Land"] && layers["Temperature Zones"]) {
         let agriJSON = layers["Agricultural Land"].toGeoJSON();
         let tempJSON = layers["Temperature Zones"].toGeoJSON();
         
-        // الأصفر: أراضي زراعية ممتازة (إمكانية متوسطة)
+        // YELLOW: High Quality Soil
         L.geoJson(agriJSON, {
             style: { color: "#d4ac0d", fillColor: "#f1c40f", fillOpacity: 0.5, weight: 1 },
             filter: function(f) { return f.properties.Agricult_1 && f.properties.Agricult_1.includes("High"); }
-        }).bindPopup("<b>إمكانات متوسطة</b><br>تربة زراعية ممتازة.").addTo(analysisGroup);
+        }).bindPopup("<b>Moderate Potential</b><br>Excellent soil quality, but climate conditions are outside the ideal range.")
+        .addTo(analysisGroup);
 
-        // الأخضر: التقاطع (تربة + حرارة مثالية 19-21)
+        // GREEN: High Potential Intersection
         let highFeatures = [];
         agriJSON.features.forEach(land => {
             if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
@@ -144,13 +154,14 @@ function runSmartAdvisor() {
 
         if (highFeatures.length > 0) {
             L.geoJson(turf.featureCollection(highFeatures), {
-                style: { color: "#1d8348", fillColor: "#2ecc71", fillOpacity: 0.8 }
-            }).bindPopup("<b style='color:green;'>فرصة استثمارية ذهبية</b><br>تربة ممتازة ومناخ مثالي.").addTo(analysisGroup);
+                style: { color: "#1d8348", fillColor: "#2ecc71", fillOpacity: 0.85, weight: 1.5 }
+            }).bindPopup("<b style='color:green;'>Golden Investment Opportunity</b><br>This area combines prime agricultural soil with the perfect climate.")
+            .addTo(analysisGroup);
         }
     }
 }
 
-// --- ⚠️ 2. ماسح الخطر (Hazard Scanner) ---
+// --- ⚠️ Hazard Scanner Tool ---
 function runHazardScanner() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
@@ -158,18 +169,18 @@ function runHazardScanner() {
         <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact (500m)</div>
     `;
 
-    // خطر الفيضان (Buffer 150m حول الأودية)
     if (layers["Streams"]) {
         let buffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
-        L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.5 } })
-        .bindPopup("<b>خطر فيضان</b>: منطقة قريبة جداً من مجرى الوادي.").addTo(analysisGroup);
+        L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.6 } })
+        .bindPopup("<b>Flood Risk Area</b><br>High risk of flooding during winter seasons.")
+        .addTo(analysisGroup);
     }
 
-    // خطر المحاجر (Buffer 500m حول الكسارات)
     if (layers["Quarries"]) {
         let qBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
         L.geoJson(qBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.5 } })
-        .bindPopup("<b>تأثير بيئي</b>: منطقة متأثرة بالغبار والضجيج من المحاجر.").addTo(analysisGroup);
+        .bindPopup("<b>Quarry Impact Zone</b><br>Environmental hazards including noise and dust.")
+        .addTo(analysisGroup);
     }
 }
 
