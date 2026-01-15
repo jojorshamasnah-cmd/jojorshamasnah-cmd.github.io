@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Optimized Icons</title>
+    <title>Ramallah WebGIS - Pro Suite</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -13,11 +13,14 @@
 
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        #map { height: 100vh; width: 100%; z-index: 1; }
-        #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 10px; }
-        .btn-tool { background: #2c3e50; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
+        #map { height: 100vh; width: 100%; z-index: 1; background-color: #f4f4f4; } /* لون خلفية هادئ عند إطفاء الخريطة */
+        
+        #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; font-size: 13px; }
         .btn-hazard { background: #d35400; }
+        .btn-basemap { background: #27ae60; } /* لون مميز لزر الخريطة */
         .btn-clear { background: #7f8c8d; }
+        .btn-tool:hover { opacity: 0.9; transform: translateY(-1px); }
         
         #legend-box { position: absolute; bottom: 80px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
         #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
@@ -29,14 +32,7 @@
         .symbol-line { width: 22px; height: 3px; margin-right: 10px; flex-shrink: 0; }
         .symbol-icon { font-size: 16px; margin-right: 10px; width: 20px; text-align: center; }
         
-        /* تعديل حجم الأيقونات على الخريطة لتكون أصغر */
-        .map-icon { 
-            font-size: 14px; 
-            text-shadow: 0 0 3px white; 
-            text-align: center; 
-            line-height: 18px; 
-        }
-        
+        .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; line-height: 18px; }
         .leaflet-control-scale { margin-left: 15px !important; margin-bottom: 30px !important; }
     </style>
 </head>
@@ -46,6 +42,7 @@
 <div id="advisor-ui">
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Smart Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard Scanner</button>
+    <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ Toggle BaseMap</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Clear</button>
 </div>
 
@@ -71,8 +68,23 @@
 </div>
 
 <script>
+// إعداد الخريطة
 var map = L.map("map").setView([31.903, 35.203], 12);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+// تعريف طبقة الأساس (OpenStreetMap) كمتغير للتحكم بها
+var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+var isBaseMapVisible = true;
+
+// وظيفة تبديل خريطة الأساس
+function toggleBaseMap() {
+    if (isBaseMapVisible) {
+        map.removeLayer(osmLayer);
+    } else {
+        osmLayer.addTo(map);
+    }
+    isBaseMapVisible = !isBaseMapVisible;
+}
+
 L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
 var layers = {};
@@ -86,7 +98,6 @@ function toggleLegend() {
     arrow.innerHTML = content.style.display === "none" ? "▼" : "▲";
 }
 
-// تصغير حجم الأيقونة من 25 إلى 18
 function createMapIcon(emoji) {
     return L.divIcon({ 
         html: `<div class="map-icon">${emoji}</div>`, 
@@ -126,7 +137,7 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- Smart Advisor (Popups in English) ---
+// --- Smart Advisor ---
 function runSmartAdvisor() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
@@ -169,7 +180,7 @@ function runSmartAdvisor() {
     }
 }
 
-// --- Hazard Scanner (With Distances) ---
+// --- Hazard Scanner ---
 function runHazardScanner() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
