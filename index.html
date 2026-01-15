@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Full Advisor</title>
+    <title>Ramallah WebGIS - All Layers + Smart Advisor</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -29,7 +29,7 @@
 
         #legend-box {
             position: absolute; bottom: 45px; left: 10px; background: white;
-            padding: 10px 14px; border-radius: 10px; width: 240px;
+            padding: 10px 14px; border-radius: 10px; width: 250px;
             box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 9998;
         }
 
@@ -68,12 +68,12 @@
 <div id="legend-box">
     <div id="legend-title">Legend ▼</div>
     <div id="legend-content">
-        <div style="font-weight: bold; color: #2c3e50; margin-bottom: 5px;">Advisor Results:</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#27ae60"></span> Best Investment (Green)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential (Yellow)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zones (Red)</div>
+        <div style="font-weight: bold; color: #27ae60;">Analysis Results:</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#27ae60"></span> Best Investment</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zones</div>
         <hr>
-        <div style="font-weight: bold; color: #2c3e50; margin-bottom: 5px;">Map Layers:</div>
+        <div style="font-weight: bold;">Map Layers:</div>
         <div class="legend-item"><span class="emoji">🏫</span> Schools</div>
         <div class="legend-item"><span class="emoji">💧</span> Wells</div>
         <div class="legend-item"><span class="emoji">⛏️</span> Quarries</div>
@@ -116,7 +116,7 @@ function loadLayer(file, name, group, styleObj) {
         layers[group][name] = layer;
         control.addOverlay(layer, name);
         document.getElementById("opacity-select").innerHTML += `<option value="${name}">${name}</option>`;
-    });
+    }).fail(function() { console.log("Could not load: " + file); });
 }
 
 function runSmartAdvisor() {
@@ -132,7 +132,7 @@ function runSmartAdvisor() {
         .bindPopup("<b>Exclusion Zone</b><br>Closed/Military Area.").addTo(analysisGroup);
     }
 
-    // GREEN & YELLOW
+    // GREEN & YELLOW Analysis
     if (layers.polys["Agricultural Land"] && layers.polys["Temperature Zones"]) {
         let agri = layers.polys["Agricultural Land"].toGeoJSON();
         let temp = layers.polys["Temperature Zones"].toGeoJSON();
@@ -151,16 +151,16 @@ function runSmartAdvisor() {
         });
 
         if (high.length > 0) L.geoJson(turf.featureCollection(high), { style: { color: "#27ae60", fillColor: "#2ecc71", fillOpacity: 0.8 } })
-            .bindPopup("<b>Best Choice</b><br>Optimal conditions.").addTo(analysisGroup);
+            .bindPopup("<b>Best Choice</b><br>Optimal soil and climate.").addTo(analysisGroup);
         if (mod.length > 0) L.geoJson(turf.featureCollection(mod), { style: { color: "#f1c40f", fillColor: "#fbc531", fillOpacity: 0.6 } })
-            .bindPopup("<b>Moderate Choice</b><br>Check details.").addTo(analysisGroup);
+            .bindPopup("<b>Moderate Choice</b><br>Check specific details.").addTo(analysisGroup);
     }
     alert("Analysis Applied: Green (Best), Yellow (Moderate), Red (Exclusion)");
 }
 
 function clearAnalysis() { analysisGroup.clearLayers(); }
 
-// --- LOAD ALL 13 LAYERS ---
+// --- LOAD ALL 13 LAYERS WITH EXACT NAMES ---
 loadLayer("Schools.geojson", "Schools", "points");
 loadLayer("Wells.geojson", "Wells", "points");
 loadLayer("Quarries.geojson", "Quarries", "points");
@@ -177,6 +177,7 @@ loadLayer("Settlements.geojson", "Settlements", "polys", { color:"red", fillColo
 loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color:"blue", fillColor:"#87ceeb", fillOpacity:0.4 });
 loadLayer("Ramallah.geojson", "Ramallah Boundary", "polys", { color:"black", weight: 2, fillOpacity:0 });
 
+// Controls Logic
 document.getElementById("opacity-slider").oninput = function () {
     let s = document.getElementById("opacity-select").value;
     for (let g in layers) { if (layers[g][s]) layers[g][s].setStyle({ opacity: this.value, fillOpacity: this.value }); }
