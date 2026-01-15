@@ -79,11 +79,8 @@ var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
 var isBaseMapVisible = true;
 
 function toggleBaseMap() {
-    if (isBaseMapVisible) {
-        map.removeLayer(osmLayer);
-    } else {
-        osmLayer.addTo(map);
-    }
+    if (isBaseMapVisible) { map.removeLayer(osmLayer); } 
+    else { osmLayer.addTo(map); }
     isBaseMapVisible = !isBaseMapVisible;
 }
 
@@ -91,7 +88,6 @@ L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo
 
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
-// تم تصغير قائمة التحكم بالطبقات الأصلية لجعل الواجهة أنظف
 var overlayControl = L.control.layers(null, null, { collapsed: true }).addTo(map);
 
 function toggleLegend() {
@@ -120,7 +116,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل كافة الطبقات الـ 13
+// تحميل الطبقات الـ 13
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -135,7 +131,7 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- Smart Advisor ---
+// --- Smart Advisor (Popups Back!) ---
 function runSmartAdvisor() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
@@ -143,19 +139,21 @@ function runSmartAdvisor() {
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential</div>
         <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zone (300m)</div>
     `;
+
     if (layers["Settlements"]) {
         let buffer = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, { units: 'kilometers' });
         L.geoJson(buffer, { style: { color: "darkred", fillColor: "red", fillOpacity: 0.6, weight: 2 } })
         .bindPopup("<b>Exclusion Zone</b><br>Danger zone: 300m buffer from settlements.").addTo(analysisGroup);
     }
-    // تحليل الزراعة والحرارة
+
     if (layers["Agricultural Land"] && layers["Temperature Zones"]) {
         let agriJSON = layers["Agricultural Land"].toGeoJSON();
         let tempJSON = layers["Temperature Zones"].toGeoJSON();
+        
         L.geoJson(agriJSON, {
             style: { color: "#d4ac0d", fillColor: "#f1c40f", fillOpacity: 0.5, weight: 1 },
             filter: function(f) { return f.properties.Agricult_1 && f.properties.Agricult_1.includes("High"); }
-        }).addTo(analysisGroup);
+        }).bindPopup("<b>Moderate Potential</b><br>Suitable soil for agriculture.").addTo(analysisGroup);
 
         let highFeatures = [];
         agriJSON.features.forEach(land => {
@@ -171,25 +169,29 @@ function runSmartAdvisor() {
         if (highFeatures.length > 0) {
             L.geoJson(turf.featureCollection(highFeatures), {
                 style: { color: "#1d8348", fillColor: "#2ecc71", fillOpacity: 0.85, weight: 1.5 }
-            }).bindPopup("<b>Golden Investment Opportunity</b>").addTo(analysisGroup);
+            }).bindPopup("<b>Golden Investment Opportunity</b><br>Ideal soil and perfect temperature (19-21°C).").addTo(analysisGroup);
         }
     }
 }
 
-// --- Hazard Scanner ---
+// --- Hazard Scanner (Popups Back!) ---
 function runHazardScanner() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> Flood Risk (150m)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Buffer (500m)</div>
     `;
+
     if (layers["Streams"]) {
         let buffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
-        L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.6 } }).addTo(analysisGroup);
+        L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.6 } })
+        .bindPopup("<b>Flood Risk Area</b><br>Risk detected within 150m from stream.").addTo(analysisGroup);
     }
+
     if (layers["Quarries"]) {
         let qBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
-        L.geoJson(qBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.5 } }).addTo(analysisGroup);
+        L.geoJson(qBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.5 } })
+        .bindPopup("<b>Quarry Impact Zone</b><br>Environmental hazard within 500m of quarry site.").addTo(analysisGroup);
     }
 }
 
