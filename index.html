@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - All Layers Restored</title>
+    <title>Ramallah WebGIS - Professional Suite</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -14,19 +14,29 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
+        
         #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 10px; }
         .btn-tool { background: #2c3e50; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
         .btn-hazard { background: #d35400; }
         .btn-clear { background: #7f8c8d; }
+        
         #legend-box { position: absolute; bottom: 30px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
         #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
         #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; display: none; }
+        
         .legend-section { font-size: 13px; font-weight: bold; color: #2c3e50; margin: 10px 0 5px 0; border-bottom: 1px solid #eee; padding-bottom: 4px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
         .symbol-poly { width: 18px; height: 12px; border: 1px solid #555; margin-right: 10px; flex-shrink: 0; }
         .symbol-line { width: 22px; height: 3px; margin-right: 10px; flex-shrink: 0; }
         .symbol-icon { font-size: 16px; margin-right: 10px; width: 20px; text-align: center; }
         .map-icon { font-size: 20px; text-shadow: 0 0 3px white; text-align: center; line-height: 25px; }
+
+        /* تعديل شكل قائمة الطبقات لتناسب العرض الدائم */
+        .leaflet-control-layers { 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; 
+            border-radius: 8px !important; 
+            padding: 10px !important;
+        }
     </style>
 </head>
 
@@ -54,13 +64,8 @@
         <div class="legend-item"><span class="symbol-icon">⛏️</span> Quarries</div>
         <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
         <div class="legend-item"><span class="symbol-line" style="background:#3498db"></span> Streams (Wadis)</div>
-        <div class="legend-item"><span class="symbol-line" style="border-top: 2px dashed #555"></span> Annexation Wall</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb; opacity:0.5;"></span> Temp Zones</div>
         <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> City Boundary</div>
     </div>
 </div>
@@ -71,7 +76,9 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
-var overlayControl = L.control.layers(null, null, { collapsed: true }).addTo(map);
+
+// تعديل: القائمة تظل مفتوحة دائماً (collapsed: false)
+var overlayControl = L.control.layers(null, null, { collapsed: false }).addTo(map);
 
 function toggleLegend() {
     var content = document.getElementById("legend-content");
@@ -98,7 +105,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل كافة الطبقات الـ 13
+// تحميل الـ 13 طبقة
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -113,7 +120,7 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- المستشار الذكي المحدث مع Buffer و Popups بالإنجليزية ---
+// --- Smart Advisor ---
 function runSmartAdvisor() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
@@ -161,7 +168,7 @@ function runSmartAdvisor() {
     }
 }
 
-// --- ماسح الخطر المحدث بالإنجليزية ---
+// --- Hazard Scanner ---
 function runHazardScanner() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
