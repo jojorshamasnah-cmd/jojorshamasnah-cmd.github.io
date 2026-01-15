@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Full Features Ready</title>
+    <title>Ramallah WebGIS - Professional Suite</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -63,7 +63,6 @@
         <div class="legend-item"><span style="font-size:16px; margin-right:10px;">💧</span> Wells</div>
         <div class="legend-item"><span style="font-size:16px; margin-right:10px;">⛏️</span> Quarries</div>
         <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
-        <div class="legend-item"><span class="symbol-line" style="background:#3498db"></span> Streams (Wadis)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
         <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> City Boundary</div>
@@ -107,79 +106,85 @@ function addLayer(file, name, type, style) {
     });
 }
 
-// تحميل الطبقات الـ 13
+// تحميل الطبقات
 addLayer("Schools.geojson", "Schools", "point");
 addLayer("Wells.geojson", "Wells", "point");
 addLayer("Quarries.geojson", "Quarries", "point");
 addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 2 });
 addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 });
-addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5, 10' });
 addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillColor: "#8fd19e", fillOpacity: 0.4 });
-addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { color: "orange", fillColor: "#ffb347", fillOpacity: 0.4 });
-addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillColor: "#c49a6c", fillOpacity: 0.4 });
-addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.4 });
 addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.4 });
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.2 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- 🧠 إصلاح المستشار الذكي (Smart Advisor) ---
+// --- 🧠 المستشار الذكي المحدث (أحمر، أخضر، أصفر) ---
 function runSmartAdvisor() {
-    analysisGroup.clearLayers();
+    clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Agri + Ideal Temp)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zone (Settlements)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Green)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential (Yellow)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zone (Red)</div>
     `;
 
-    // 1. استثناء المستوطنات (خط أحمر)
+    // 1. المستوطنات باللون الأحمر (ممنوع)
     if (layers["Settlements"]) {
-        L.geoJson(layers["Settlements"].toGeoJSON(), { style: { color: "red", fillColor: "red", fillOpacity: 0.6 } })
-        .bindPopup("<b>Exclusion Zone</b>: Not for Investment").addTo(analysisGroup);
+        L.geoJson(layers["Settlements"].toGeoJSON(), { 
+            style: { color: "darkred", fillColor: "red", fillOpacity: 0.7 } 
+        }).bindPopup("<b>Exclusion Zone</b>").addTo(analysisGroup);
     }
 
-    // 2. تحليل التقاطع بين الزراعة والحرارة المثالية
+    // 2. تحليل الإمكانات (الأخضر والأصفر)
     if (layers["Agricultural Land"] && layers["Temperature Zones"]) {
         let agri = layers["Agricultural Land"].toGeoJSON();
         let temp = layers["Temperature Zones"].toGeoJSON();
-        let potentialAreas = [];
+        let highPoints = [];
+        let modPoints = [];
 
         agri.features.forEach(land => {
-            // التحقق من جودة التربة "High" من جدولك
-            let isGoodAgri = land.properties.Agricult_1 && land.properties.Agricult_1.includes("High");
+            let isHighAgri = land.properties.Agricult_1 && land.properties.Agricult_1.includes("High");
             
             temp.features.forEach(t => {
-                // التحقق من الحرارة المثالية "19-21" من جدولك
                 let isIdealTemp = t.properties.MEAN_ANNUA === "19 - 21";
+                let intersect = turf.intersect(land, t);
                 
-                if (isGoodAgri && isIdealTemp) {
-                    let intersect = turf.intersect(land, t);
-                    if (intersect) potentialAreas.push(intersect);
+                if (intersect) {
+                    if (isHighAgri && isIdealTemp) {
+                        highPoints.push(intersect); // أخضر: الشرطين محققين
+                    } else if (isHighAgri || isIdealTemp) {
+                        modPoints.push(intersect); // أصفر: شرط واحد محقق
+                    }
                 }
             });
         });
 
-        if (potentialAreas.length > 0) {
-            L.geoJson(turf.featureCollection(potentialAreas), {
-                style: { color: "#27ae60", fillColor: "#2ecc71", fillOpacity: 0.8, weight: 1 }
-            }).bindPopup("<b>Investment Opportunity</b>: Ideal Soil & Climate").addTo(analysisGroup);
+        if (highPoints.length > 0) {
+            L.geoJson(turf.featureCollection(highPoints), {
+                style: { color: "#27ae60", fillColor: "#2ecc71", fillOpacity: 0.8 }
+            }).bindPopup("<b>High Potential</b>").addTo(analysisGroup);
+        }
+
+        if (modPoints.length > 0) {
+            L.geoJson(turf.featureCollection(modPoints), {
+                style: { color: "#f39c12", fillColor: "#f1c40f", fillOpacity: 0.6 }
+            }).bindPopup("<b>Moderate Potential</b>").addTo(analysisGroup);
         }
     }
-    alert("Smart Advisor Activated: Green areas are best for investment.");
 }
 
-// --- ⚠️ ماسح الخطر (Hazard Scanner) ---
+// --- ⚠️ ماسح الخطر ---
 function runHazardScanner() {
-    analysisGroup.clearLayers();
+    clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> Flood Risk (150m)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact (500m)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> Flood Risk</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact</div>
     `;
     if (layers["Streams"]) {
-        let streamBuffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
-        L.geoJson(streamBuffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.5 } }).addTo(analysisGroup);
+        let buffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
+        L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.5 } }).addTo(analysisGroup);
     }
     if (layers["Quarries"]) {
-        let quarryBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
-        L.geoJson(quarryBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.4 } }).addTo(analysisGroup);
+        let qBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
+        L.geoJson(qBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.4 } }).addTo(analysisGroup);
     }
 }
 
