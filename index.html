@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Investment Advisor</title>
+    <title>Ramallah WebGIS - Professional Edition</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -14,48 +13,16 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
         #map { height: 100vh; }
-
-        #advisor-control {
-            position: absolute;
-            top: 10px;
-            left: 50px;
-            z-index: 1000;
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-advisor {
-            background: #2c3e50;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-
+        #advisor-control { position: absolute; top: 10px; left: 50px; z-index: 1000; display: flex; gap: 10px; }
+        .btn-advisor { background: #2c3e50; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .btn-clear { background: #95a5a6; }
         .btn-advisor:hover { background: #e67e22; }
-
-        #legend-box {
-            position: absolute;
-            bottom: 45px;
-            left: 10px;
-            background: white;
-            padding: 10px 14px;
-            border-radius: 10px;
-            width: 230px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            z-index: 9998;
-        }
-
-        #legend-content { display: block; margin-top: 8px; font-size: 13px; }
-        .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
-        .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; margin-right: 6px; }
+        
+        #legend-box { position: absolute; bottom: 45px; left: 10px; background: white; padding: 10px 14px; border-radius: 10px; width: 230px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 9998; }
+        #opacity-box { position: absolute; right: 10px; bottom: 45px; background: white; padding: 12px; border-radius: 10px; width: 220px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 9999; }
+        .symbol-poly { width: 22px; height: 12px; border: 1px solid #000; display: inline-block; margin-right: 6px; }
     </style>
 </head>
-
 <body>
 
 <div id="advisor-control">
@@ -65,16 +32,20 @@
 
 <div id="map"></div>
 
+<div id="opacity-box">
+    <div style="font-weight:bold; text-align:center; margin-bottom:8px;">شفافية الطبقات</div>
+    <select id="opacity-select"><option value="" disabled selected>اختر الطبقة</option></select>
+    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
+</div>
+
 <div id="legend-box">
     <div style="font-weight: bold; text-align: center;">دليل المستشار الذكي</div>
     <div id="legend-content">
-        <div class="legend-item"><span class="symbol-poly" style="background:gold"></span> مناطق واعدة (حرارة + تربة)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:red; opacity: 0.6;"></span> مناطق استبعاد (مستوطنات/إغلاق)</div>
+        <div style="margin-top: 5px;"><span class="symbol-poly" style="background:gold"></span> مناطق واعدة (استثمار)</div>
+        <div style="margin-top: 5px;"><span class="symbol-poly" style="background:red; opacity: 0.6;"></span> مناطق استبعاد (خطر)</div>
         <hr>
-        <div class="legend-item"><b>المعايير:</b></div>
-        <div class="legend-item">✅ أراضي زراعية عالية القيمة</div>
-        <div class="legend-item">✅ حرارة (19 - 21) مئوية</div>
-        <div class="legend-item">❌ تجنب المناطق المغلقة والمستوطنات</div>
+        <div style="font-size: 12px;">✅ أراضي عالية القيمة</div>
+        <div style="font-size: 12px;">✅ حرارة (19-21)</div>
     </div>
 </div>
 
@@ -83,43 +54,43 @@ var map = L.map("map").setView([31.903, 35.203], 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 var layers = { points: {}, lines: {}, polys: {} };
-var analysisGroup = L.layerGroup().addTo(map);
+var analysisGroup = L.layerGroup().addTo(map); // مجموعة خاصة للتحليل لكي لا تؤثر على الطبقات الأصلية
+var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
 
-function loadLayer(file, name, group, styleObj) {
+function loadLayer(file, name, group, styleObj, isPoint = false) {
     $.getJSON(file, function (data) {
-        var layer = L.geoJson(data, { style: styleObj }).addTo(map);
+        var layer = L.geoJson(data, {
+            style: styleObj,
+            pointToLayer: isPoint ? function(feature, latlng) { 
+                return L.marker(latlng, {icon: L.divIcon({html: '📍', className: ''})}); 
+            } : null
+        }).addTo(map);
+
         layers[group][name] = layer;
+        control.addOverlay(layer, name);
+        $("#opacity-select").append(`<option value="${name}">${name}</option>`);
     });
 }
 
-// --- ANALYSIS LOGIC ---
 function runSmartAdvisor() {
-    clearAnalysis();
+    analysisGroup.clearLayers(); // نمسح التحليل القديم فقط وليس الخريطة بالكامل
     
-    // 1. تحديد المناطق الحمراء (الاستبعاد)
-    // نجمع المستوطنات والمناطق المغلقة والمباني في طبقة واحدة حمراء
-    let redZones = [];
-    if(layers.polys["Settlements"]) redZones.push(layers.polys["Settlements"].toGeoJSON());
-    if(layers.polys["Closed Areas"]) redZones.push(layers.polys["Closed Areas"].toGeoJSON());
-    if(layers.polys["Built-up Areas"]) redZones.push(layers.polys["Built-up Areas"].toGeoJSON());
-
-    redZones.forEach(geoData => {
-        L.geoJson(geoData, {
-            style: { color: "red", fillColor: "red", fillOpacity: 0.5, weight: 1 }
+    // 1. إظهار مناطق الاستبعاد باللون الأحمر (بناءً على المستوطنات والمناطق المغلقة)
+    if(layers.polys["Settlements"]) {
+        L.geoJson(layers.polys["Settlements"].toGeoJSON(), {
+            style: { color: "red", fillColor: "red", fillOpacity: 0.4 }
         }).addTo(analysisGroup);
-    });
+    }
 
-    // 2. تحديد المناطق الذهبية (الواعدة)
+    // 2. تحليل المناطق الواعدة (تقاطع الزراعة مع الحرارة)
     if (layers.polys["Agricultural Land"] && layers.polys["Temperature Zones"]) {
         let agriData = layers.polys["Agricultural Land"].toGeoJSON();
         let tempData = layers.polys["Temperature Zones"].toGeoJSON();
         let successZones = [];
 
         agriData.features.forEach(land => {
-            // شرط: أراضي عالية القيمة
             if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
                 tempData.features.forEach(temp => {
-                    // شرط: حرارة مثالية
                     if (temp.properties.MEAN_ANNUA === "19 - 21") {
                         let intersect = turf.intersect(land, temp);
                         if (intersect) successZones.push(intersect);
@@ -130,26 +101,29 @@ function runSmartAdvisor() {
 
         if (successZones.length > 0) {
             L.geoJson(turf.featureCollection(successZones), {
-                style: { color: "gold", fillColor: "gold", fillOpacity: 0.8, weight: 2 }
-            }).bindPopup("<b>منطقة استثمارية واعدة</b>").addTo(analysisGroup);
+                style: { color: "gold", fillColor: "gold", fillOpacity: 0.7, weight: 3 }
+            }).bindPopup("<b>منطقة مرشحة للاستثمار</b>").addTo(analysisGroup);
         }
     }
-    
-    alert("تم تحليل الخريطة: اللون الذهبي للمناطق الواعدة، والأحمر لمناطق الاستبعاد.");
 }
 
 function clearAnalysis() {
-    analysisGroup.clearLayers();
+    analysisGroup.clearLayers(); // هذا سيمسح فقط اللون الأحمر والذهبي ويبقي الطبقات الأصلية
 }
 
-// --- LOAD DATA ---
-loadLayer("Settlements.geojson", "Settlements", "polys", { color:"#ff6666", fillOpacity:0.2 });
-loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "polys", { color:"orange", fillOpacity:0.2 });
-loadLayer("Built_up.geojson", "Built-up Areas", "polys", { color:"brown", fillOpacity:0.2 });
-loadLayer("Agricultural_Land.geojson", "Agricultural Land", "polys", { color:"green", fillOpacity:0.1 });
-loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color:"blue", fillOpacity:0.1 });
+// تحميل الطبقات مع الحفاظ على أسمائها البرمجية
+loadLayer("Settlements.geojson", "Settlements", "polys", { color:"#ff6666", fillOpacity:0.3 });
+loadLayer("Agricultural_Land.geojson", "Agricultural Land", "polys", { color:"green", fillOpacity:0.2 });
+loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color:"blue", fillOpacity:0.2 });
+loadLayer("Roads.geojson", "Roads", "lines", { color:"black", weight:1 });
+loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "polys", { color:"orange", fillOpacity:0.3 });
 loadLayer("Ramallah.geojson", "Ramallah Boundary", "polys", { color:"black", weight:2, fillOpacity:0 });
 
+// التحكم بالشفافية
+document.getElementById("opacity-slider").oninput = function () {
+    let selected = document.getElementById("opacity-select").value;
+    for (let g in layers) { if (layers[g][selected]) layers[g][selected].setStyle({fillOpacity: this.value, opacity: this.value}); }
+};
 </script>
 </body>
 </html>
