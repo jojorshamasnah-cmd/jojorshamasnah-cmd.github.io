@@ -2,36 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ramallah WebGIS - GeoBrain</title>
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: Arial; }
         #map { height: 100vh; }
-
-        /* الأداة تحت قائمة الطبقات مباشرة */
-        #advisor-box {
-            position: absolute; right: 10px; top: 310px; background: white;
-            padding: 15px; border-radius: 10px; width: 220px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999;
-        }
-
+        #advisor-box { position: absolute; right: 10px; top: 10px; background: white; padding: 15px; border-radius: 10px; width: 230px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 9999; }
         .box-title { font-weight: bold; text-align: center; font-size: 15px; margin-bottom: 8px; }
-        .btn-run {
-            background: #28a745; color: white; border: none; padding: 10px;
-            width: 100%; margin-top: 10px; cursor: pointer; border-radius: 5px; font-weight: bold;
-        }
-
-        #opacity-box {
-            position: absolute; right: 10px; bottom: 45px; background: white;
-            padding: 12px; border-radius: 10px; width: 220px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3); font-family: Arial; z-index: 9999;
-        }
+        .btn-run { background: #28a745; color: white; border: none; padding: 10px; width: 100%; margin-top: 10px; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        #opacity-box { position: absolute; right: 10px; bottom: 45px; background: white; padding: 12px; border-radius: 10px; width: 230px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 9999; }
+        select, input { width: 100%; margin-top: 5px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -41,70 +24,62 @@
 <div id="advisor-box">
     <div class="box-title">🧠 Smart Advisor</div>
     <label style="font-size: 11px;">Distance from Roads (m):</label>
-    <input type="number" id="buffer-val" value="200" style="width:100%">
-    
+    <input type="number" id="buffer-val" value="200">
     <label style="font-size: 11px; margin-top: 8px; display: block;">Temperature Filter:</label>
-    <select id="temp-val" style="width:100%">
+    <select id="temp-val">
         <option value="all">All Zones</option>
         <option value="suitable">Moderate Only</option>
     </select>
-    
     <button class="btn-run" onclick="runSmartAnalysis()">Run Analysis 🚀</button>
-    <div id="analysis-status" style="font-size: 11px; margin-top: 5px; color: blue; text-align: center;"></div>
+    <div id="analysis-status" style="font-size: 11px; margin-top: 8px; color: blue; text-align: center;"></div>
 </div>
 
 <div id="opacity-box">
     <div class="box-title">Layer Opacity</div>
-    <select id="opacity-select" style="width:100%"><option value="" disabled selected>Select Layer</option></select>
-    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1" style="width:100%">
+    <select id="opacity-select"><option value="" disabled selected>Select Layer</option></select>
+    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
 </div>
 
 <script>
     var map = L.map("map").setView([31.903, 35.203], 11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-    var layers = {}; // لتخزين البيانات الخام للتحليل المكاني
-    var leafletLayers = {}; // لتخزين كائنات الخريطة للشفافية
+    var rawData = {}; // لتخزين البيانات الخام للتحليل
+    var leafletLayers = {}; 
     var control = L.control.layers({}, {}, { collapsed: false }).addTo(map);
     var resultLayer = null;
 
-    function getPointIcon(emoji) {
-        return L.divIcon({ html: `<span style="font-size:18px">${emoji}</span>`, className: "", iconSize: [20, 20] });
-    }
-
-    // دالة التحميل المتوافقة مع أسماء ملفاتك
-    function loadLayer(file, name, group, styleObj, isPoint = false, emoji = "") {
+    function loadLayer(file, name, style, isPoint = false, emoji = "") {
         $.getJSON(file, function (data) {
-            layers[name] = data; // حفظ البيانات للتحليل
-            
+            rawData[name] = data; // حفظ البيانات للتحليل المكاني
             var layer = L.geoJson(data, {
-                style: styleObj,
-                pointToLayer: function (f, l) { return isPoint ? L.marker(l, { icon: getPointIcon(emoji) }) : null; }
+                style: style,
+                pointToLayer: function (f, l) { return isPoint ? L.marker(l, { icon: L.divIcon({html: emoji, className: "", iconSize: [20, 20]}) }) : null; }
             }).addTo(map);
-
             leafletLayers[name] = layer;
             control.addOverlay(layer, name);
             document.getElementById("opacity-select").innerHTML += `<option value="${name}">${name}</option>`;
-        });
+        }).fail(function() { console.log("Error loading: " + file); });
     }
 
-    // دالة التحليل المكاني المصلحة
     function runSmartAnalysis() {
-        let dist = document.getElementById("buffer-val").value;
         let status = document.getElementById("analysis-status");
+        let dist = document.getElementById("buffer-val").value;
         if (resultLayer) map.removeLayer(resultLayer);
 
-        if (!layers["Roads"] || !layers["Agricultural Land"]) {
-            status.innerHTML = "⚠️ Please ensure layers are loaded.";
+        // التحقق من أن الطبقات المطلوبة تم تحميلها بالكامل
+        if (!rawData["Roads"] || !rawData["Agricultural Land"]) {
+            status.innerHTML = "⚠️ Loading data... Please wait a moment.";
             return;
         }
 
         try {
-            status.innerHTML = "Processing...";
-            let roadsBuffer = turf.buffer(layers["Roads"], dist / 1000, {units: 'kilometers'});
+            status.innerHTML = "Processing Analysis...";
+            let roadsBuffer = turf.buffer(rawData["Roads"], dist / 1000, {units: 'kilometers'});
             
             let sites = [];
-            layers["Agricultural Land"].features.forEach(function(f) {
+            // التحليل المكاني بناءً على التقاطع بين الزراعة والطرق
+            rawData["Agricultural Land"].features.forEach(function(f) {
                 let inter = turf.intersect(roadsBuffer, f);
                 if (inter) sites.push(inter);
             });
@@ -114,38 +89,38 @@
                     style: { color: "gold", weight: 3, fillColor: "yellow", fillOpacity: 0.8 }
                 }).addTo(map);
                 map.fitBounds(resultLayer.getBounds());
-                status.innerHTML = "✅ Found " + sites.length + " Potential Sites!";
+                status.innerHTML = "✅ Success: Found " + sites.length + " suitable sites!";
             } else {
-                status.innerHTML = "❌ No matches found.";
+                status.innerHTML = "❌ No matching sites found.";
             }
         } catch (e) {
-            status.innerHTML = "⚠️ Analysis Failed.";
+            status.innerHTML = "⚠️ Analysis Failed. Check data.";
             console.error(e);
         }
     }
 
-    // الشفافية
+    // التحكم بالشفافية
     document.getElementById("opacity-slider").oninput = function () {
         let sel = document.getElementById("opacity-select").value;
-        if (leafletLayers[sel]) {
-            leafletLayers[sel].setStyle ? leafletLayers[sel].setStyle({ opacity: this.value, fillOpacity: this.value }) : null;
+        if (leafletLayers[sel] && leafletLayers[sel].setStyle) {
+            leafletLayers[sel].setStyle({ opacity: this.value, fillOpacity: this.value });
         }
     };
 
-    /* تحميل كافة الملفات بناءً على مجلدك */
-    loadLayer("Roads.geojson", "Roads", "lines", { color: "black", weight: 1.5 });
-    loadLayer("Agricultural_Land.geojson", "Agricultural Land", "polys", { color: "green", fillOpacity: 0.3 });
-    loadLayer("Built_up.geojson", "Built-up Areas", "polys", { color: "brown", fillOpacity: 0.4 });
-    loadLayer("Schools.geojson", "Schools", "points", {}, true, "🏫");
-    loadLayer("Wells.geojson", "Wells", "points", {}, true, "💧");
-    loadLayer("Quarries.geojson", "Quarries", "points", {}, true, "⛏️");
-    loadLayer("Settlements.geojson", "Settlements", "polys", { color: "red", fillOpacity: 0.5 });
-    loadLayer("Streams.geojson", "Streams", "lines", { color: "blue", weight: 2 });
-    loadLayer("Temperature.geojson", "Temperature Zones", "polys", { color: "orange", fillOpacity: 0.2 });
-    loadLayer("Annexation_Wall.geojson", "Annexation Wall", "lines", { color: "grey", weight: 3 });
-    loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "polys", { color: "purple", fillOpacity: 0.3 });
-    loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "polys", { color: "black", fillOpacity: 0.5 });
-    loadLayer("Ramallah.geojson", "Ramallah Boundary", "polys", { color: "blue", fillOpacity: 0 });
+    /* تحميل كافة الطبقات الـ 13 بناءً على أسماء ملفاتك */
+    loadLayer("Roads.geojson", "Roads", { color: "black", weight: 1.5 });
+    loadLayer("Agricultural_Land.geojson", "Agricultural Land", { color: "green", fillOpacity: 0.3 });
+    loadLayer("Schools.geojson", "Schools", {}, true, "🏫");
+    loadLayer("Wells.geojson", "Wells", {}, true, "💧");
+    loadLayer("Quarries.geojson", "Quarries", {}, true, "⛏️");
+    loadLayer("Settlements.geojson", "Settlements", { color: "red", fillOpacity: 0.4 });
+    loadLayer("Streams.geojson", "Streams", { color: "blue", weight: 2 });
+    loadLayer("Temperature.geojson", "Temperature Zones", { color: "orange", fillOpacity: 0.2 });
+    loadLayer("Annexation_Wall.geojson", "Annexation Wall", { color: "grey", weight: 3 });
+    loadLayer("Built_up.geojson", "Built-up Areas", { color: "brown", fillOpacity: 0.4 });
+    loadLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", { color: "purple", fillOpacity: 0.3 });
+    loadLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", { color: "black", fillOpacity: 0.5 });
+    loadLayer("Ramallah.geojson", "Ramallah Boundary", { color: "blue", fillOpacity: 0 });
 
 </script>
 </body>
