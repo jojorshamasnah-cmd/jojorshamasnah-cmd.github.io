@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Professional Suite</title>
+    <title>Ramallah WebGIS - Professional Suite with Scale</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -20,9 +20,10 @@
         .btn-hazard { background: #d35400; }
         .btn-clear { background: #7f8c8d; }
         
-        #legend-box { position: absolute; bottom: 30px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
+        /* صندوق الليجند */
+        #legend-box { position: absolute; bottom: 80px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
         #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
-        #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; display: none; }
+        #legend-content { padding: 15px; max-height: 350px; overflow-y: auto; display: none; }
         
         .legend-section { font-size: 13px; font-weight: bold; color: #2c3e50; margin: 10px 0 5px 0; border-bottom: 1px solid #eee; padding-bottom: 4px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
@@ -31,12 +32,8 @@
         .symbol-icon { font-size: 16px; margin-right: 10px; width: 20px; text-align: center; }
         .map-icon { font-size: 20px; text-shadow: 0 0 3px white; text-align: center; line-height: 25px; }
 
-        /* تعديل شكل قائمة الطبقات لتناسب العرض الدائم */
-        .leaflet-control-layers { 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; 
-            border-radius: 8px !important; 
-            padding: 10px !important;
-        }
+        /* تعديل مكان مقياس الرسم ليكون تحت الليجند مباشرة */
+        .leaflet-control-scale { margin-left: 15px !important; margin-bottom: 30px !important; }
     </style>
 </head>
 
@@ -74,10 +71,15 @@
 var map = L.map("map").setView([31.903, 35.203], 12);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
+// --- 📏 إضافة مقياس الرسم (Scale Bar) ---
+L.control.scale({
+    metric: true,       // يظهر بالمتر والكيلومتر
+    imperial: false,    // يخفي الميل والقدم
+    position: 'bottomleft' 
+}).addTo(map);
+
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
-
-// تعديل: القائمة تظل مفتوحة دائماً (collapsed: false)
 var overlayControl = L.control.layers(null, null, { collapsed: false }).addTo(map);
 
 function toggleLegend() {
@@ -105,7 +107,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الـ 13 طبقة
+// تحميل الطبقات
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
