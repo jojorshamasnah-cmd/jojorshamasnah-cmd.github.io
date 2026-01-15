@@ -63,11 +63,11 @@
         z-index: 9999;
     }
 
-    /* ----------- ADVISOR BOX ----------- */
+    /* ----------- SMART ADVISOR BOX (NEW POSITION & ENGLISH) ----------- */
     #advisor-box {
         position: absolute;
         right: 10px;
-        top: 10px;
+        top: 310px; /* Positioned below the Layer Control */
         background: white;
         padding: 15px;
         border-radius: 10px;
@@ -75,7 +75,7 @@
         box-shadow: 0 0 10px rgba(0,0,0,0.3);
         font-family: Arial;
         z-index: 9999;
-        direction: rtl;
+        direction: ltr;
     }
 
     #opacity-title, .box-title {
@@ -88,6 +88,7 @@
     select, input[type=range], input[type=number] {
         width: 100%;
         margin-top: 6px;
+        box-sizing: border-box;
     }
 
     /* ----------- SCALE CENTER ----------- */
@@ -101,12 +102,15 @@
         background: #28a745;
         color: white;
         border: none;
-        padding: 8px;
+        padding: 10px;
         width: 100%;
         margin-top: 10px;
         cursor: pointer;
         border-radius: 5px;
+        font-weight: bold;
     }
+
+    .btn-run:hover { background: #218838; }
 </style>
 </head>
 
@@ -115,18 +119,19 @@
 <div id="map"></div>
 
 <div id="advisor-box">
-    <div class="box-title">🧠 المستشار الاستثماري</div>
-    <label style="font-size: 12px;">المسافة عن الطرق (متر):</label>
+    <div class="box-title">🧠 Smart Advisor</div>
+    
+    <label style="font-size: 12px;">Distance from Roads (m):</label>
     <input type="number" id="buffer-val" value="200">
     
-    <label style="font-size: 12px; margin-top: 8px; display: block;">تصفية الحرارة:</label>
+    <label style="font-size: 12px; margin-top: 10px; display: block;">Temperature Filter:</label>
     <select id="temp-val">
-        <option value="all">كل المناطق</option>
-        <option value="suitable">المناطق المعتدلة فقط</option>
+        <option value="all">All Zones</option>
+        <option value="suitable">Moderate Zones Only</option>
     </select>
     
-    <button class="btn-run" onclick="runSmartAnalysis()">تشغيل النتيجة 🚀</button>
-    <div id="analysis-status" style="font-size: 11px; margin-top: 5px; color: blue;"></div>
+    <button class="btn-run" onclick="runSmartAnalysis()">Run Analysis 🚀</button>
+    <div id="analysis-status" style="font-size: 11px; margin-top: 8px; color: blue; text-align: center;"></div>
 </div>
 
 <div id="opacity-box">
@@ -203,43 +208,56 @@ function loadLayer(file, name, group, styleObj) {
     });
 }
 
-/*** ميزة المستشار الذكي ***/
+/*** SMART ADVISOR ANALYSIS FUNCTION ***/
 var resultLayer = null;
 
 function runSmartAnalysis() {
     let bufferVal = document.getElementById("buffer-val").value;
     let status = document.getElementById("analysis-status");
     
+    // Clear previous results
     if (resultLayer) map.removeLayer(resultLayer);
-    status.innerHTML = "جاري التحليل...";
+    status.innerHTML = "Processing Analysis...";
 
     try {
-        // 1. استخراج بيانات الطرق والأراضي الزراعية
+        // Ensure necessary layers are loaded
+        if (!layers.lines["Roads"] || !layers.polys["Agricultural Land"]) {
+            throw new Error("Missing Layers");
+        }
+
         let roadsGeo = layers.lines["Roads"].toGeoJSON();
         let agriGeo = layers.polys["Agricultural Land"].toGeoJSON();
 
-        // 2. عمل Buffer حول الطرق (بالمقدار الذي أدخله المستخدم)
+        // GIS Step 1: Create Buffer around Roads
         let bufferedRoads = turf.buffer(roadsGeo, bufferVal / 1000, {units: 'kilometers'});
 
-        // 3. تقاطع الطرق مع الأراضي الزراعية (البحث عن الأراضي القريبة من الشوارع)
+        // GIS Step 2: Intersect Buffer with Agricultural Land
         let intersectResult = turf.intersect(bufferedRoads, agriGeo.features[0]);
 
         if (intersectResult) {
             resultLayer = L.geoJson(intersectResult, {
-                style: { color: "gold", weight: 3, fillOpacity: 0.8, dashArray: '5, 5' }
+                style: { 
+                    color: "gold", 
+                    weight: 3, 
+                    fillColor: "#ffd700",
+                    fillOpacity: 0.7, 
+                    dashArray: '5, 5' 
+                }
             }).addTo(map);
             
             map.fitBounds(resultLayer.getBounds());
-            status.innerHTML = "✅ تم العثور على مناطق!";
-            resultLayer.bindPopup("منطقة استثمارية مقترحة بناءً على معاييرك").openPopup();
+            status.innerHTML = "✅ Best Locations Identified!";
+            resultLayer.bindPopup("<b>Analysis Result:</b><br>Suitable investment zone based on proximity to roads and land type.").openPopup();
         } else {
-            status.innerHTML = "❌ لا توجد مساحات تطابق هذه المعايير.";
+            status.innerHTML = "❌ No matching areas found.";
         }
     } catch (e) {
-        status.innerHTML = "⚠️ تأكد من تفعيل الطبقات أولاً.";
+        console.error(e);
+        status.innerHTML = "⚠️ Please ensure all layers are visible.";
     }
 }
 
+/*** OPACITY CONTROL ***/
 document.getElementById("opacity-slider").oninput = function () {
     let selected = document.getElementById("opacity-select").value;
     for (let group in layers) {
@@ -252,6 +270,7 @@ document.getElementById("opacity-slider").oninput = function () {
     }
 };
 
+/*** LEGEND TOGGLE ***/
 document.getElementById("legend-title").onclick = function () {
     let c = document.getElementById("legend-content");
     c.style.display = c.style.display === "none" ? "block" : "none";
