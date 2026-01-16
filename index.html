@@ -41,7 +41,7 @@
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">Hazard Scanner</button>
     <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">Isolation Analysis</button>
     <button class="btn-tool btn-story" onclick="startStory()">Story Mode</button>
-    <button class="btn-tool btn-clear" onclick="clearAnalysis()">Restore All</button>
+    <button class="btn-tool btn-clear" onclick="clearAnalysis()">Restore All Layers</button>
 </div>
 
 <div id="story-panel">
@@ -65,12 +65,20 @@
             <div class="legend-section">Analysis Results</div>
             <div id="dynamic-items" style="color:gray; font-style:italic;">No active analysis...</div>
         </div>
-        <div class="legend-section">Standard Layers</div>
+        
+        <div class="legend-section">Base Map Layers</div>
         <div class="legend-item"><span class="symbol-icon">🏫</span> Schools</div>
         <div class="legend-item"><span class="symbol-icon">💧</span> Wells</div>
+        <div class="legend-item"><span class="symbol-icon">⛏️</span> Quarries</div>
         <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
+        <div class="legend-item"><span class="symbol-line" style="background:#3498db"></span> Streams (Wadis)</div>
         <div class="legend-item"><span class="symbol-line" style="background:#555; border-top: 2px dashed #999;"></span> Annexation Wall</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb; opacity: 0.5;"></span> Temp Zones</div>
         <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> Boundary</div>
     </div>
 </div>
@@ -100,7 +108,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// Load 13 Layers
+// Loading all 13 Layers
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -115,7 +123,8 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// 1. Smart Advisor Tool (English Popups + Overlay Logic)
+// --- Analysis Functions (Smart Advisor, Hazard, Isolation) ---
+
 function runSmartAdvisor() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
@@ -149,7 +158,6 @@ function runSmartAdvisor() {
     }
 }
 
-// 2. Hazard Scanner (Quarries & Streams)
 function runHazardScanner() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
@@ -168,7 +176,6 @@ function runHazardScanner() {
     }
 }
 
-// 3. Isolation Scanner (Closed Areas Analysis)
 function runIsolationScanner() {
     clearAnalysis(); hideExceptBoundary();
     let total = 0;
@@ -186,7 +193,7 @@ function runIsolationScanner() {
     }
 }
 
-// 4. Original Story Mode
+// --- Story Mode ---
 const storySteps = [
     { title: "Scene 1: Urban Constraints", text: "Intersection between Master Plans and Settlements. Notice how expansion is blocked.", center: [31.910, 35.260], zoom: 14, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
     { title: "Scene 2: Wall & Isolation", text: "The constructed wall isolates vast 'High Agricultural Value' lands.", center: [31.940, 35.130], zoom: 14, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] },
@@ -202,12 +209,18 @@ function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; 
 function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
 function closeStory() { $("#story-panel").fadeOut(); clearAnalysis(); }
 
-// Utility Functions
+// --- Restoration and Utility ---
 function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]); }
+
 function clearAnalysis() {
-    analysisGroup.clearLayers(); $("#story-panel").hide();
-    for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-    document.getElementById("dynamic-items").innerHTML = "Analysis cleared.";
+    analysisGroup.clearLayers();
+    $("#story-panel").fadeOut();
+    // Restoring all layers to map
+    for (let k in layers) {
+        if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+    }
+    document.getElementById("dynamic-items").innerHTML = "All 13 layers restored.";
+    if (layers["Ramallah Boundary"]) map.fitBounds(layers["Ramallah Boundary"].getBounds());
 }
 </script>
 </body>
