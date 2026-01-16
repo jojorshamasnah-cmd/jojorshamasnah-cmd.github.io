@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Classic Pro Suite</title>
+    <title>Ramallah WebGIS - Advisor Focus Mode</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -100,7 +100,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الـ 13 طبقة بالكامل
+// تحميل الـ 13 طبقة
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -115,26 +115,36 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-function hideAllBaseLayers() {
-    for (let k in layers) map.removeLayer(layers[k]);
+// دالة مخصصة لإخفاء كل شيء ما عدا حدود المحافظة
+function hideExceptBoundary() {
+    for (let k in layers) {
+        if (k !== "Ramallah Boundary") {
+            map.removeLayer(layers[k]);
+        }
+    }
 }
 
 function clearAnalysis() {
     analysisGroup.clearLayers();
-    for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+    // استرجاع كافة الطبقات عند التنظيف
+    for (let k in layers) {
+        if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+    }
     document.getElementById("dynamic-items").innerHTML = "No tool selected...";
 }
 
-// 1. المستشار الذكي (أخضر، أصفر، أحمر)
+// 1. المستشار الذكي المحدث
 function runSmartAdvisor() {
     clearAnalysis();
-    hideAllBaseLayers();
+    hideExceptBoundary(); // تنفيذ طلبك: إبقاء حدود المحافظة فقط
+    
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Green)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential (Yellow)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zone (Red)</div>
     `;
 
+    // نظام التحليل (أحمر، أصفر، أخضر)
     if (layers["Settlements"]) {
         let buff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
         L.geoJson(buff, {style: {color:'#c0392b', fillColor:'#e74c3c', fillOpacity:0.7}})
@@ -169,10 +179,12 @@ function runSmartAdvisor() {
     }
 }
 
-// 2. ماسح الخطر (فيضانات وكسارات)
+// 2. ماسح الخطر
 function runHazardScanner() {
     clearAnalysis();
-    hideAllBaseLayers();
+    // في أداة الخطر، نخفي كل شيء للتركيز على مناطق التهديد
+    for (let k in layers) map.removeLayer(layers[k]);
+    
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Flood Danger Zone (150m)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact Zone (500m)</div>
