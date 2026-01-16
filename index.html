@@ -108,7 +108,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الطبقات الـ 13
+// Load 13 Layers
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -123,7 +123,7 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- الأداة 1: المستشار الذكي (المحدثة بالألوان والبوب اب) ---
+// --- Tool 1: Smart Advisor (Red/Green/Yellow Logic) ---
 function runSmartAdvisor() {
     clearAnalysis();
     hideExceptBoundary();
@@ -137,39 +137,42 @@ function runSmartAdvisor() {
     if (layers["Settlements"] && layers["Agricultural Land"]) {
         let settlements = layers["Settlements"].toGeoJSON();
         
-        // رسم منطقة خطر حمراء (Buffer 500m) حول المستوطنات
-        let dangerBuffer = turf.buffer(settlements, 0.5, {units: 'kilometers'});
-        L.geoJson(dangerBuffer, {
-            style: { color: 'none', fillColor: '#e74c3c', fillOpacity: 0.5 }
-        }).bindPopup("<b>Advisor Alert:</b><br>Red Zone: High risk/Settlement proximity.").addTo(analysisGroup);
+        // Red buffer around settlements
+        let dangerZone = turf.buffer(settlements, 0.5, {units: 'kilometers'});
+        L.geoJson(dangerZone, {
+            style: { color: 'none', fillColor: '#e74c3c', fillOpacity: 0.6 }
+        }).bindPopup("<b>Advisor Alert:</b><br>High Risk Zone due to Settlement Proximity.").addTo(analysisGroup);
 
-        // تحليل الأراضي الزراعية قطعة قطعة
         layers["Agricultural Land"].eachLayer(function(layer) {
+            let props = layer.feature.properties;
             let center = turf.centroid(layer.feature);
             let nearest = turf.nearestPoint(center, settlements);
             let dist = turf.distance(center, nearest, {units: 'kilometers'});
             
             let color, status, recommendation;
-            
-            if (dist < 0.6) { 
+
+            // Logic using ArcGIS Column names from your images
+            if (dist < 0.6) {
                 color = "#e74c3c"; 
-                status = "High Risk / Conflict Zone";
-                recommendation = "Development not recommended.";
-            } else if (layer.feature.properties.Agricult_1 && layer.feature.properties.Agricult_1.includes("High") && dist > 1.2) { 
+                status = "High Risk Area";
+                recommendation = "Development restricted due to security concerns.";
+            } 
+            else if (props.Agricult_1 && props.Agricult_1.includes("High Agricultural Value")) { 
                 color = "#2ecc71"; 
-                status = "Optimal Site"; 
-                recommendation = "Highly suitable for investment.";
-            } else { 
+                status = "Optimal Agricultural Land";
+                recommendation = "Highly recommended for sustainable development.";
+            } 
+            else {
                 color = "#f1c40f"; 
-                status = "Moderate Potential"; 
-                recommendation = "Safe area with average soil value.";
+                status = "Moderate Suitability";
+                recommendation = "Safe zone with standard soil value.";
             }
 
             L.geoJson(layer.feature, {
                 style: { fillColor: color, fillOpacity: 0.8, weight: 1, color: 'white' }
             }).bindPopup(`
-                <div style="font-family: Arial">
-                    <b style="color:${color}">Advisor Report</b><br>
+                <div style="font-family: Arial; text-align: left;">
+                    <b style="color:${color}; font-size:14px;">Advisor Site Report</b><br><hr>
                     <b>Status:</b> ${status}<br>
                     <b>Distance to Settlement:</b> ${dist.toFixed(2)} km<br>
                     <b>Recommendation:</b> ${recommendation}
@@ -179,7 +182,7 @@ function runSmartAdvisor() {
     }
 }
 
-// --- الأداة 2: ماسح المخاطر ---
+// --- Tool 2: Hazard Scanner ---
 function runHazardScanner() {
     clearAnalysis();
     hideExceptBoundary();
@@ -191,42 +194,51 @@ function runHazardScanner() {
     if (layers["Streams"]) {
         let fBuff = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'});
         L.geoJson(fBuff, {style:{color:'#922b21', fillColor:'#e74c3c', fillOpacity:0.6}})
-        .bindPopup("<b>Flood Hazard:</b><br>Buffer Zone for Water Streams").addTo(analysisGroup);
+        .bindPopup("<b>Flood Hazard:</b><br>Risk area near water streams.").addTo(analysisGroup);
     }
     if (layers["Quarries"]) {
         let qBuff = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units:'kilometers'});
         L.geoJson(qBuff, {style:{color:'#d35400', fillColor:'#e67e22', fillOpacity:0.5}})
-        .bindPopup("<b>Quarry Hazard:</b><br>Dust and Vibration Impact Zone").addTo(analysisGroup);
+        .bindPopup("<b>Quarry Hazard:</b><br>Dust and Vibration Impact Zone.").addTo(analysisGroup);
     }
 }
 
-// --- الأداة 3: نظام كشف العزل ---
+// --- Tool 3: Isolation System (Wall Impact Analysis) ---
 function runIsolationScanner() {
     clearAnalysis();
     hideExceptBoundary();
-    let total = 0;
+    let totalArea = 0;
+
     if (layers["Closed Areas"]) {
         layers["Closed Areas"].eachLayer(function(layer) {
             let props = layer.feature.properties;
+            // Check column Key_ as per your ArcGIS image
             if (props.Key_ && props.Key_.includes("معزولة")) {
-                let area = props.Shape_Area ? (props.Shape_Area / 1000000).toFixed(2) : 0;
-                total += parseFloat(area);
-                L.geoJson(layer.feature, {style: { color: '#4a235a', fillColor: '#8e44ad', fillOpacity: 0.7 }})
-                .bindPopup(`<b>Isolation Report:</b><br>Status: Isolated Area behind Wall<br>Area: ${area} km²`).addTo(analysisGroup);
+                let areaKm = props.Shape_Area ? (props.Shape_Area / 1000000).toFixed(3) : 0;
+                totalArea += parseFloat(areaKm);
+
+                L.geoJson(layer.feature, {
+                    style: { color: '#4a235a', fillColor: '#8e44ad', fillOpacity: 0.7 }
+                }).bindPopup(`
+                    <div style="text-align: left;">
+                        <b style="color:#8e44ad">Isolation System Report</b><br><hr>
+                        <b>Status:</b> Isolated Palestinian Land behind the Wall<br>
+                        <b>Area:</b> ${areaKm} km²
+                    </div>
+                `).addTo(analysisGroup);
             }
         });
     }
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> Isolated Areas</div>
-        <div style="font-weight:bold; font-size:10px;">Total Isolated: ${total.toFixed(2)} km²</div>
+        <div style="font-weight:bold; margin-top:5px;">Total Isolated Area: ${totalArea.toFixed(2)} km²</div>
     `;
 }
 
-// --- القصة الخرائطية ---
+// --- Story Mode ---
 const storySteps = [
     { title: "Scene 1: Urban Constraints", text: "Interaction between Master Plans and Settlements blocking natural growth.", center: [31.910, 35.260], zoom: 14, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
-    { title: "Scene 2: Wall & Isolation", text: "High Agricultural lands isolated behind the wall.", center: [31.940, 35.130], zoom: 14, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] },
-    { title: "Scene 3: Water Resources", text: "Wells near settlements and quarries face sustainability risks.", center: [31.880, 35.230], zoom: 14, visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"] }
+    { title: "Scene 2: Wall & Isolation", text: "High Agricultural lands isolated behind the wall.", center: [31.940, 35.130], zoom: 14, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] }
 ];
 function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
 function updateStoryScene() {
@@ -238,7 +250,7 @@ function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; 
 function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
 function closeStory() { $("#story-panel").fadeOut(); clearAnalysis(); }
 
-// --- دوال مساعدة ---
+// --- Helpers ---
 function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]); }
 function clearAnalysis() {
     analysisGroup.clearLayers(); $("#story-panel").hide();
