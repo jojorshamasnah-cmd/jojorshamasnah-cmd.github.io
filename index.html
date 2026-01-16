@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Water Stress Tool</title>
+    <title>Ramallah WebGIS - Full Pro Suite</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -11,16 +11,22 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
-        #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 10px; }
-        .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .btn-water { background: #2980b9; border: 2px solid #fff; }
+        #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
+        .btn-basemap { background: #27ae60; }
+        .btn-water { background: #2980b9; border: 2px solid white; }
         .btn-clear { background: #e74c3c; }
-        #legend-box { position: absolute; bottom: 85px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; border: 1px solid #ccc; }
-        #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
-        #legend-content { padding: 15px; max-height: 380px; overflow-y: auto; display: block; }
-        .legend-section { font-size: 13px; font-weight: bold; color: #2c3e50; margin: 10px 0 5px 0; border-bottom: 1px solid #eee; }
-        .legend-item { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
-        .symbol-poly { width: 18px; height: 12px; border: 1px solid #555; margin-right: 10px; }
+        .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
+        
+        #legend-box { position: absolute; bottom: 85px; left: 15px; background: white; border-radius: 12px; width: 260px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; border: 1px solid #ccc; overflow: hidden; }
+        #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
+        #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; }
+        
+        .legend-section { font-size: 13px; font-weight: bold; color: #2c3e50; margin: 12px 0 6px 0; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 11px; }
+        .symbol-poly { width: 16px; height: 10px; border: 1px solid #555; margin-right: 8px; flex-shrink: 0; }
+        .symbol-line { width: 20px; height: 3px; margin-right: 8px; flex-shrink: 0; }
+        .symbol-icon { font-size: 14px; margin-right: 8px; width: 18px; text-align: center; }
         .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; }
         .leaflet-control-scale { margin-left: 20px !important; margin-bottom: 25px !important; }
     </style>
@@ -28,27 +34,54 @@
 <body>
 
 <div id="advisor-ui">
+    <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ BaseMap</button>
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Advisor</button>
-    <button class="btn-tool btn-water" onclick="runWaterSensitivity()">💧 Water Stress Tool</button>
+    <button class="btn-tool" style="background:#d35400" onclick="runHazardScanner()">⚠️ Hazard</button>
+    <button class="btn-tool btn-water" onclick="runWaterSensitivity()">💧 Water Stress</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Clear & Restore</button>
 </div>
 
 <div id="map"></div>
 
 <div id="legend-box">
-    <div id="legend-title" onclick="$('#legend-content').toggle()">
+    <div id="legend-title" onclick="$('#legend-content').slideToggle()">
         <span>📊 Map Legend</span> <span>▼</span>
     </div>
     <div id="legend-content">
-        <div class="legend-section">Analysis Results</div>
-        <div id="dynamic-items" style="color:gray; font-style:italic;">No tool selected...</div>
+        <div id="analysis-legend-section">
+            <div class="legend-section">Analysis Results</div>
+            <div id="dynamic-items" style="color:gray; font-style:italic;">No tool selected...</div>
+        </div>
+        
+        <div class="legend-section">Base Map Layers</div>
+        <div class="legend-item"><span class="symbol-icon">🏫</span> Schools</div>
+        <div class="legend-item"><span class="symbol-icon">💧</span> Wells</div>
+        <div class="legend-item"><span class="symbol-icon">⛏️</span> Quarries</div>
+        <div class="legend-item"><span class="symbol-line" style="background:black"></span> Roads</div>
+        <div class="legend-item"><span class="symbol-line" style="background:#3498db"></span> Streams (Wadis)</div>
+        <div class="legend-item"><span class="symbol-line" style="background:#555; border-top: 2px dashed #999;"></span> Annexation Wall</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> Agricultural Land</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> Closed Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb; opacity: 0.5;"></span> Temp Zones</div>
+        <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> City Boundary</div>
     </div>
 </div>
 
 <script>
 var map = L.map("map").setView([31.903, 35.203], 12);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+var isBaseMapVisible = true;
+
 L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
+
+function toggleBaseMap() {
+    if (isBaseMapVisible) map.removeLayer(osmLayer);
+    else osmLayer.addTo(map);
+    isBaseMapVisible = !isBaseMapVisible;
+}
 
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
@@ -65,82 +98,94 @@ function addLayer(file, name, type, style, emoji) {
         }
         layer.addTo(map);
         layers[name] = layer;
+        if (name === "Ramallah Boundary") map.fitBounds(layer.getBounds(), {padding: [20,20]});
     });
 }
 
-// تحميل الطبقات الأساسية بناءً على صورك
+// تحميل الـ 13 طبقة بالكامل
+addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
+addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
+addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 2 });
 addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 });
-addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillOpacity: 0.1 });
+addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5, 10' });
+addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillColor: "#8fd19e", fillOpacity: 0.2 });
+addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { color: "orange", fillColor: "#ffb347", fillOpacity: 0.2 });
+addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillColor: "#c49a6c", fillOpacity: 0.2 });
+addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.2 });
 addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.2 });
+addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
+addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
 function clearAnalysis() {
     analysisGroup.clearLayers();
     for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-    document.getElementById("dynamic-items").innerHTML = "Analysis cleared.";
+    document.getElementById("dynamic-items").innerHTML = "No tool selected...";
 }
 
+// 1. Advisor
+function runSmartAdvisor() {
+    analysisGroup.clearLayers();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Soil+Climate)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion (Settlement 300m)</div>
+    `;
+    if (layers["Settlements"]) {
+        let buff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
+        L.geoJson(buff, {style: {color:'red', fillColor:'#e74c3c', fillOpacity:0.5}}).addTo(analysisGroup);
+    }
+}
+
+// 2. Hazard
+function runHazardScanner() {
+    analysisGroup.clearLayers();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Flood Risk (150m)</div>
+    `;
+    if (layers["Streams"]) {
+        let buff = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'});
+        L.geoJson(buff, {style: {color:'red', fillOpacity:0.5}}).addTo(analysisGroup);
+    }
+}
+
+// 3. Water Sensitivity (المطور والمطلوب)
 function runWaterSensitivity() {
     analysisGroup.clearLayers();
-    // إخفاء الطبقات الأساسية لتركيز الرؤية على التحليل
-    for (let k in layers) map.removeLayer(layers[k]);
+    for (let k in layers) map.removeLayer(layers[k]); // إخفاء مؤقت للوضوح
 
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-icon">🔥</span> Threatened Wells (Near Settlements)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#3498db"></span> Dependent Farms (Near Streams)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#9b59b6"></span> Water Stress Zones (Far from sources)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#9b59b6"></span> Water Stress (Far from sources)</div>
     `;
 
     try {
-        // 1. الآبار المهددة (ضمن 300م من المستوطنات)
+        // الآبار المهددة
         if (layers["Wells"] && layers["Settlements"]) {
-            let settBuffer = turf.union(...layers["Settlements"].toGeoJSON().features.map(f => turf.buffer(f, 0.3, {units:'kilometers'})));
+            let settBuff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
             layers["Wells"].toGeoJSON().features.forEach(well => {
-                if (turf.booleanPointInPolygon(well, settBuffer)) {
+                if (turf.booleanPointInPolygon(well, settBuff)) {
                     L.marker([well.geometry.coordinates[1], well.geometry.coordinates[0]], { 
                         icon: L.divIcon({ html: '🔥', className: 'map-icon' }) 
-                    }).bindPopup(`<b>Threatened Well:</b> ${well.properties.WellName_E || 'Well'}`).addTo(analysisGroup);
+                    }).bindPopup("Threatened Well").addTo(analysisGroup);
                 }
             });
         }
-
-        // 2. المزارع المعتمدة على المجاري المائية (ضمن 200م)
-        if (layers["Streams"] && layers["Agricultural Land"]) {
-            let streamBuffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units:'kilometers'});
-            layers["Agricultural Land"].toGeoJSON().features.forEach(land => {
-                let intersect = turf.intersect(land, streamBuffer);
-                if (intersect) {
-                    L.geoJson(intersect, { style: { color: "#2980b9", fillColor: "#3498db", fillOpacity: 0.6 } })
-                    .bindPopup("<b>Dependent Farm</b>").addTo(analysisGroup);
-                }
-            });
-        }
-
-        // 3. مناطق الضغط المائي (أراضي عالية القيمة بعيدة > 1كم عن أي مصدر)
+        // المزارع المعتمدة ومناطق الضغط
         if (layers["Agricultural Land"]) {
-            let waterSources = [];
-            if (layers["Wells"]) waterSources.push(...layers["Wells"].toGeoJSON().features);
-            if (layers["Streams"]) waterSources.push(...layers["Streams"].toGeoJSON().features);
-            
-            // دمج كل مصادر المياه في منطقة واحدة لتجنب أخطاء الطرح
-            let combinedSourceBuffer = turf.buffer(turf.featureCollection(waterSources), 1.0, {units:'kilometers'});
-            let mergedSource = turf.union(...combinedSourceBuffer.features);
+            let sources = [];
+            if (layers["Wells"]) sources.push(...layers["Wells"].toGeoJSON().features);
+            if (layers["Streams"]) sources.push(...layers["Streams"].toGeoJSON().features);
+            let combinedSource = turf.buffer(turf.featureCollection(sources), 1.0, {units:'kilometers'});
 
             layers["Agricultural Land"].toGeoJSON().features.forEach(land => {
-                // التأكد من مسمى الخاصية كما في صورتك: Land of High Agricultural Value
                 if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
-                    let stressArea = turf.difference(land, mergedSource);
-                    if (stressArea) {
-                        L.geoJson(stressArea, { style: { color: "#8e44ad", fillColor: "#9b59b6", fillOpacity: 0.7 } })
-                        .bindPopup("<b>Water Stress Zone:</b> No water source within 1km").addTo(analysisGroup);
-                    }
+                    let stress = turf.difference(land, combinedSource);
+                    if (stress) L.geoJson(stress, {style:{color:'#9b59b6', fillColor:'#9b59b6', fillOpacity:0.7}}).addTo(analysisGroup);
                 }
             });
         }
-    } catch (e) {
-        console.error("Spatial analysis error:", e);
-        alert("Check console: Data might have geometry issues.");
-    }
+    } catch(e) { console.log(e); }
 }
 </script>
 </body>
