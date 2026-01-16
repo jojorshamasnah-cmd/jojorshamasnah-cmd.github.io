@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Full View Launch</title>
+    <title>Ramallah WebGIS - Professional Suite</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 8px; flex-wrap: wrap; }
         .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
@@ -17,18 +17,15 @@
         .btn-hazard { background: #d35400; }
         .btn-clear { background: #e74c3c; }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
-        
         #legend-box { position: absolute; bottom: 85px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; border: 1px solid #ccc; overflow: hidden; }
         #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
         #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; }
-        
         .legend-section { font-size: 13px; font-weight: bold; color: #2c3e50; margin: 12px 0 6px 0; border-bottom: 1px solid #eee; padding-bottom: 3px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 11px; }
         .symbol-poly { width: 16px; height: 10px; border: 1px solid #555; margin-right: 8px; flex-shrink: 0; }
         .symbol-line { width: 20px; height: 3px; margin-right: 8px; flex-shrink: 0; }
         .symbol-icon { font-size: 14px; margin-right: 8px; width: 18px; text-align: center; }
         .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; }
-        .leaflet-control-scale { margin-left: 20px !important; margin-bottom: 25px !important; }
     </style>
 </head>
 <body>
@@ -51,7 +48,6 @@
             <div class="legend-section">Analysis Results</div>
             <div id="dynamic-items" style="color:gray; font-style:italic;">No tool selected...</div>
         </div>
-        
         <div class="legend-section">Base Map Layers</div>
         <div class="legend-item"><span class="symbol-icon">🏫</span> Schools</div>
         <div class="legend-item"><span class="symbol-icon">💧</span> Wells</div>
@@ -70,7 +66,6 @@
 </div>
 
 <script>
-// تحديد مركز أولي، سيتم تعديله أوتوماتيكياً فور تحميل الطبقات
 var map = L.map("map").setView([31.903, 35.203], 11);
 var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 var isBaseMapVisible = true;
@@ -97,15 +92,11 @@ function addLayer(file, name, type, style, emoji) {
         }
         layer.addTo(map);
         layers[name] = layer;
-
-        // ميزة ذكية: بمجرد تحميل حدود رام الله، اجعل الخريطة تحتضن كامل النطاق
-        if (name === "Ramallah Boundary") {
-            map.fitBounds(layer.getBounds(), { padding: [30, 30] });
-        }
+        if (name === "Ramallah Boundary") map.fitBounds(layer.getBounds(), { padding: [30, 30] });
     });
 }
 
-// تحميل الـ 13 طبقة
+// تحميل الطبقات
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -121,22 +112,17 @@ addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fi
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
 function hideExceptBoundary() {
-    for (let k in layers) {
-        if (k !== "Ramallah Boundary") map.removeLayer(layers[k]);
-    }
+    for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]);
 }
 
 function clearAnalysis() {
     analysisGroup.clearLayers();
-    for (let k in layers) {
-        if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-    }
-    // إعادة ضبط الرؤية لتشمل كل الخريطة عند التنظيف
+    for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
     if (layers["Ramallah Boundary"]) map.fitBounds(layers["Ramallah Boundary"].getBounds());
     document.getElementById("dynamic-items").innerHTML = "No tool selected...";
 }
 
-// أداة المستشار
+// تشغيل المستشار الذكي
 function runSmartAdvisor() {
     clearAnalysis();
     hideExceptBoundary();
@@ -145,18 +131,54 @@ function runSmartAdvisor() {
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential (Yellow)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zone (Red)</div>
     `;
-    // ... باقي منطق التحليل ...
+
+    if (layers["Settlements"]) {
+        let buff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
+        L.geoJson(buff, {style: {color:'#c0392b', fillColor:'#e74c3c', fillOpacity:0.7}}).bindPopup("<b>Exclusion Zone:</b> Near Settlements").addTo(analysisGroup);
+    }
+
+    if (layers["Agricultural Land"]) {
+        let agri = layers["Agricultural Land"].toGeoJSON();
+        let temp = layers["Temperature Zones"] ? layers["Temperature Zones"].toGeoJSON() : null;
+        agri.features.forEach(land => {
+            if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
+                let isGreen = false;
+                if (temp) {
+                    temp.features.forEach(t => {
+                        if (t.properties.MEAN_ANNUA === "19 - 21") {
+                            let inter = turf.intersect(land, t);
+                            if (inter) {
+                                L.geoJson(inter, {style:{color:'#1d8348', fillColor:'#2ecc71', fillOpacity:0.8}}).bindPopup("<b>High Potential:</b> Perfect Climate & Soil").addTo(analysisGroup);
+                                isGreen = true;
+                            }
+                        }
+                    });
+                }
+                if (!isGreen) {
+                    L.geoJson(land, {style:{color:'#d4ac0d', fillColor:'#f1c40f', fillOpacity:0.6}}).bindPopup("<b>Moderate Potential:</b> Good Soil").addTo(analysisGroup);
+                }
+            }
+        });
+    }
 }
 
-// أداة الخطر
+// تشغيل ماسح الخطر
 function runHazardScanner() {
     clearAnalysis();
     hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Flood Danger Zone (150m)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact Zone (500m)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Flood Danger Zone</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact Zone</div>
     `;
-    // ... باقي منطق التحليل ...
+
+    if (layers["Streams"]) {
+        let fBuff = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'});
+        L.geoJson(fBuff, {style:{color:'#922b21', fillColor:'#e74c3c', fillOpacity:0.6}}).bindPopup("<b>Flood Risk</b>").addTo(analysisGroup);
+    }
+    if (layers["Quarries"]) {
+        let qBuff = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units:'kilometers'});
+        L.geoJson(qBuff, {style:{color:'#d35400', fillColor:'#e67e22', fillOpacity:0.5}}).bindPopup("<b>Health Hazard Zone</b>").addTo(analysisGroup);
+    }
 }
 </script>
 </body>
