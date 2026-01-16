@@ -17,7 +17,8 @@
         .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
         .btn-basemap { background: #27ae60; }
         .btn-hazard { background: #d35400; }
-        .btn-story { background: #2980b9; } /* لون أزرق لزر القصص */
+        .btn-isolation { background: #8e44ad; } /* لون بنفسجي لأداة العزل */
+        .btn-story { background: #2980b9; } 
         .btn-clear { background: #e74c3c; }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
@@ -27,7 +28,7 @@
             background: rgba(255, 255, 255, 0.95); border-radius: 15px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 3000; 
             display: none; padding: 20px; border-top: 5px solid #2980b9;
-            direction: rtl; /* ليكون النص متناسقاً مع اللغة العربية */
+            direction: rtl; 
         }
         .story-nav { display: flex; justify-content: space-between; margin-top: 15px; }
         .btn-nav { background: #34495e; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
@@ -50,8 +51,9 @@
     <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ BaseMap</button>
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard</button>
+    <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation</button>
     <button class="btn-tool btn-story" onclick="startStory()">📖 Story Mode</button>
-    <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Clear & Restore</button>
+    <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Restore</button>
 </div>
 
 <div id="story-panel">
@@ -139,8 +141,7 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- الأداة الثالثة: وضع القصص الخرائطية ---
-
+// --- أداة وضع القصص الخرائطية ---
 const storySteps = [
     {
         title: "المشهد 1: التوسع والمستوطنات",
@@ -176,10 +177,7 @@ function updateStoryScene() {
     const step = storySteps[currentStep];
     $("#story-title").text(step.title);
     $("#story-text").text(step.text);
-    
     map.flyTo(step.center, step.zoom, { duration: 2 });
-    
-    // التحكم في ظهور الطبقات حسب المشهد
     for (let k in layers) {
         if (step.visibleLayers.includes(k)) {
             if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
@@ -190,17 +188,11 @@ function updateStoryScene() {
 }
 
 function nextStep() {
-    if (currentStep < storySteps.length - 1) {
-        currentStep++;
-        updateStoryScene();
-    }
+    if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); }
 }
 
 function prevStep() {
-    if (currentStep > 0) {
-        currentStep--;
-        updateStoryScene();
-    }
+    if (currentStep > 0) { currentStep--; updateStoryScene(); }
 }
 
 function closeStory() {
@@ -209,7 +201,6 @@ function closeStory() {
 }
 
 // --- الدوال المساعدة الأخرى ---
-
 function hideExceptBoundary() {
     for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]);
 }
@@ -222,6 +213,7 @@ function clearAnalysis() {
     document.getElementById("dynamic-items").innerHTML = "No tool selected...";
 }
 
+// --- الأداة الأولى: المستشار الذكي ---
 function runSmartAdvisor() {
     clearAnalysis();
     hideExceptBoundary();
@@ -261,6 +253,7 @@ function runSmartAdvisor() {
     }
 }
 
+// --- الأداة الثانية: ماسح المخاطر ---
 function runHazardScanner() {
     clearAnalysis();
     hideExceptBoundary();
@@ -278,7 +271,49 @@ function runHazardScanner() {
         L.geoJson(qBuff, {style:{color:'#d35400', fillColor:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
     }
 }
+
+// --- الأداة الرابعة: ماسح العزل (ما خلف الجدار) ---
+function runIsolationScanner() {
+    clearAnalysis();
+    hideExceptBoundary();
+    
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> Isolated Lands ( خلف الجدار)</div>
+    `;
+
+    // تعتمد هذه الأداة على إظهار طبقة المناطق المغلقة بتركيز عالي وحساب المساحة
+    if (layers["Closed Areas"]) {
+        let closedData = layers["Closed Areas"].toGeoJSON();
+        let totalArea = 0;
+
+        L.geoJson(closedData, {
+            style: {
+                color: '#4a235a',
+                fillColor: '#8e44ad',
+                fillOpacity: 0.7,
+                weight: 2
+            },
+            onEachFeature: function(feature, layer) {
+                let area = turf.area(feature) / 1000000; // تحويل لمتر مربع ثم كلم مربع
+                totalArea += area;
+                layer.bindPopup("<b>منطقة معزولة</b><br>المساحة: " + area.toFixed(2) + " كم²");
+            }
+        }).addTo(analysisGroup);
+
+        // تحديث الليجند لعرض المساحة الإجمالية المعزولة
+        document.getElementById("dynamic-items").innerHTML += `
+            <div style="font-size:10px; margin-top:5px; color:#4a235a; font-weight:bold;">
+                إجمالي المساحة المعزولة: ${totalArea.toFixed(2)} كم²
+            </div>
+        `;
+        
+        // زووم على المناطق المعزولة
+        map.fitBounds(analysisGroup.getBounds(), {padding: [50, 50]});
+    } else {
+        alert("طبقة المناطق المغلقة غير متوفرة حالياً.");
+    }
+}
+
 </script>
 </body>
 </html>
-
