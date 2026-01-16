@@ -23,7 +23,7 @@
         .btn-clear { background: #e74c3c; }
         .btn-tool:hover { opacity: 0.9; transform: translateY(-1px); }
         
-        #legend-box { position: absolute; bottom: 80px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
+        #legend-box { position: absolute; bottom: 85px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
         #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
         #legend-content { padding: 15px; max-height: 380px; overflow-y: auto; display: none; }
         
@@ -34,6 +34,10 @@
         .symbol-icon { font-size: 16px; margin-right: 10px; width: 20px; text-align: center; }
         
         .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; line-height: 18px; }
+
+        /* تنسيق السكيل بار ليظهر بوضوح تحت الليجند */
+        .leaflet-control-scale { margin-left: 20px !important; margin-bottom: 25px !important; border: none !important; }
+        .leaflet-control-scale-line { background: rgba(255,255,255,0.7) !important; color: #333 !important; font-weight: bold !important; }
     </style>
 </head>
 
@@ -83,6 +87,9 @@ var map = L.map("map").setView([31.903, 35.203], 12);
 var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 var isBaseMapVisible = true;
 
+// إضافة السكيل بار (Scale Bar)
+L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
+
 function toggleBaseMap() {
     if (isBaseMapVisible) map.removeLayer(osmLayer);
     else osmLayer.addTo(map);
@@ -113,7 +120,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الـ 13 طبقة بالكامل
+// تحميل الطبقات
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -138,7 +145,7 @@ function showBaseLayers() {
     document.getElementById("base-layers-legend").style.display = "block";
 }
 
-// --- 1. Smart Advisor (أخضر، أصفر، أحمر) ---
+// --- 1. Advisor ---
 function runSmartAdvisor() {
     clearAnalysis();
     hideBaseLayers();
@@ -151,7 +158,7 @@ function runSmartAdvisor() {
     if (layers["Settlements"]) {
         let buffer = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, { units: 'kilometers' });
         L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.7 } })
-        .bindPopup("<b>Red Zone:</b> Settlement Proximity Hazard.").addTo(analysisGroup);
+        .bindPopup("<b>Red Zone:</b> Proximity Hazard.").addTo(analysisGroup);
     }
 
     if (layers["Agricultural Land"]) {
@@ -167,7 +174,7 @@ function runSmartAdvisor() {
                             let intersect = turf.intersect(land, t);
                             if (intersect) {
                                 L.geoJson(intersect, { style: { color: "#1d8348", fillColor: "#2ecc71", fillOpacity: 0.85 } })
-                                .bindPopup("<b>Green Zone:</b> Perfect Investment Condition.").addTo(analysisGroup);
+                                .bindPopup("<b>Green Zone:</b> Ideal Condition.").addTo(analysisGroup);
                                 isGolden = true;
                             }
                         }
@@ -175,14 +182,14 @@ function runSmartAdvisor() {
                 }
                 if (!isGolden) {
                     L.geoJson(land, { style: { color: "#d4ac0d", fillColor: "#f1c40f", fillOpacity: 0.6 } })
-                    .bindPopup("<b>Yellow Zone:</b> High Quality Agricultural Soil.").addTo(analysisGroup);
+                    .bindPopup("<b>Yellow Zone:</b> Quality Soil.").addTo(analysisGroup);
                 }
             }
         });
     }
 }
 
-// --- 2. Hazard Scanner ---
+// --- 2. Hazard ---
 function runHazardScanner() {
     clearAnalysis();
     hideBaseLayers();
@@ -194,45 +201,62 @@ function runHazardScanner() {
     if (layers["Streams"]) {
         let flood = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
         L.geoJson(flood, { style: { color: "#922b21", fillColor: "#e74c3c", fillOpacity: 0.6 } })
-        .bindPopup("<b>Flood Risk:</b> Within 150m of Stream.").addTo(analysisGroup);
-    }
-    if (layers["Quarries"]) {
-        let qImpact = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
-        L.geoJson(qImpact, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.5 } })
-        .bindPopup("<b>Environmental Risk:</b> Quarry Impact Zone.").addTo(analysisGroup);
+        .bindPopup("<b>Flood Risk</b>").addTo(analysisGroup);
     }
 }
 
-// --- 3. Water Sensitivity ---
+// --- 3. Improved Water Sensitivity Analyzer ---
 function runWaterSensitivity() {
     clearAnalysis();
     hideBaseLayers();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> Irrigation Zone</div>
-        <div class="legend-item"><span class="symbol-icon">⚠️</span> Critical Well</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#0e6251"></span> Critical Irrigation (300m)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> Potential Irrigation (600m)</div>
+        <div class="legend-item"><span class="symbol-icon">💧</span> Agri Well Location</div>
     `;
 
     let waterSources = [];
     if (layers["Wells"]) {
         let wellsJSON = layers["Wells"].toGeoJSON();
-        wellsJSON.features.filter(f => f.properties.WaterUse_E === "Agricultural").forEach(well => {
+        // تصفية الآبار المخصصة للزراعة فقط
+        let agriWells = wellsJSON.features.filter(f => f.properties.WaterUse_E === "Agricultural");
+        agriWells.forEach(well => {
             L.marker([well.geometry.coordinates[1], well.geometry.coordinates[0]], { 
-                icon: L.divIcon({ html: '⚠️', className: 'map-icon' }) 
-            }).bindPopup(`<b>Agri Well:</b> ${well.properties.WellName_E}`).addTo(analysisGroup);
+                icon: L.divIcon({ html: '💧', className: 'map-icon' }) 
+            }).bindPopup(`<b>Agricultural Well:</b> ${well.properties.WellName_E}`).addTo(analysisGroup);
             waterSources.push(well);
         });
     }
-    if (layers["Streams"]) waterSources.push(...layers["Streams"].toGeoJSON().features);
+    
+    // إضافة الجداول كمصادر مياه سطحية
+    if (layers["Streams"]) {
+        waterSources.push(...layers["Streams"].toGeoJSON().features);
+    }
 
     if (layers["Agricultural Land"] && waterSources.length > 0) {
-        let buff = turf.buffer(turf.featureCollection(waterSources), 0.3, { units: 'kilometers' });
-        let agri = layers["Agricultural Land"].toGeoJSON();
-        agri.features.forEach(land => {
+        let agriJSON = layers["Agricultural Land"].toGeoJSON();
+        let sourceCollection = turf.featureCollection(waterSources);
+        
+        // المنطقة ذات الأولوية القصوى (300 متر)
+        let buff300 = turf.buffer(sourceCollection, 0.3, { units: 'kilometers' });
+        // المنطقة ذات الأولوية المتوسطة (600 متر)
+        let buff600 = turf.buffer(sourceCollection, 0.6, { units: 'kilometers' });
+
+        agriJSON.features.forEach(land => {
             if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
-                let intersect = turf.intersect(land, buff);
-                if (intersect) {
-                    L.geoJson(intersect, { style: { color: "#16a085", fillColor: "#1abc9c", fillOpacity: 0.7 } })
-                    .bindPopup("<b>Priority Irrigation Zone</b>").addTo(analysisGroup);
+                
+                // تقاطع الأولوية المتوسطة أولاً
+                let inter600 = turf.intersect(land, buff600);
+                if (inter600) {
+                    L.geoJson(inter600, { style: { color: "#1abc9c", fillColor: "#1abc9c", fillOpacity: 0.4, weight: 1 } })
+                    .bindPopup("<b>Potential Irrigation Zone:</b> Moderate access to water sources (600m).").addTo(analysisGroup);
+                }
+
+                // تقاطع الأولوية القصوى (يغطي فوق المتوسطة ليعطي لوناً أغمق)
+                let inter300 = turf.intersect(land, buff300);
+                if (inter300) {
+                    L.geoJson(inter300, { style: { color: "#0b5345", fillColor: "#0e6251", fillOpacity: 0.75, weight: 1.5 } })
+                    .bindPopup("<b>Critical Irrigation Zone:</b> Direct access to water sources (300m).").addTo(analysisGroup);
                 }
             }
         });
