@@ -17,7 +17,7 @@
         .btn-hazard { background: #d35400; }
         .btn-story { background: #2980b9; } 
         .btn-isolation { background: #8e44ad; }
-        .btn-clear { background: #e74c3c; }
+        .btn-clear { background: #e74c3c; border: 2px solid white; }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
         #story-panel { position: absolute; top: 80px; right: 20px; width: 320px; background: rgba(255, 255, 255, 0.95); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 3000; display: none; padding: 20px; border-top: 5px solid #2980b9; direction: rtl; }
         .story-nav { display: flex; justify-content: space-between; margin-top: 15px; }
@@ -37,11 +37,11 @@
 
 <div id="advisor-ui">
     <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ BaseMap</button>
-    <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Advisor</button>
+    <button class="btn-tool" style="background:#f39c12;" onclick="runSmartAdvisor()">🧠 Run Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard</button>
     <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation System</button>
     <button class="btn-tool btn-story" onclick="startStory()">📖 Story Mode</button>
-    <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Clear & Restore</button>
+    <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Restore Layers</button>
 </div>
 
 <div id="story-panel">
@@ -108,7 +108,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الطبقات
+// تحميل الطبقات الـ 13
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -123,38 +123,59 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- الأداة 1: المستشار الذكي ---
+// --- الأداة 1: المستشار الذكي (المحدثة بالألوان والبوب اب) ---
 function runSmartAdvisor() {
     clearAnalysis();
     hideExceptBoundary();
+    
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Safe)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zone (Settlement Buffer)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zone (High Risk)</div>
     `;
 
-    if (layers["Settlements"]) {
+    if (layers["Settlements"] && layers["Agricultural Land"]) {
         let settlements = layers["Settlements"].toGeoJSON();
-        let dangerZone = turf.buffer(settlements, 0.5, {units: 'kilometers'});
-        L.geoJson(dangerZone, {style: {color: 'none', fillColor: '#e74c3c', fillOpacity: 0.6}})
-        .bindPopup("<b>Advisor Alert:</b><br>High Conflict Risk Zone (Settlement Buffer)").addTo(analysisGroup);
+        
+        // رسم منطقة خطر حمراء (Buffer 500m) حول المستوطنات
+        let dangerBuffer = turf.buffer(settlements, 0.5, {units: 'kilometers'});
+        L.geoJson(dangerBuffer, {
+            style: { color: 'none', fillColor: '#e74c3c', fillOpacity: 0.5 }
+        }).bindPopup("<b>Advisor Alert:</b><br>Red Zone: High risk/Settlement proximity.").addTo(analysisGroup);
 
-        if (layers["Agricultural Land"]) {
-            layers["Agricultural Land"].eachLayer(function(layer) {
-                let center = turf.centroid(layer.feature);
-                let nearest = turf.nearestPoint(center, settlements);
-                let dist = turf.distance(center, nearest, {units: 'kilometers'});
-                let color, status;
-                
-                if (dist < 0.6) { color = "#e74c3c"; status = "Conflict Risk (Near Settlement)"; }
-                else if (layer.feature.properties.Agricult_1 && layer.feature.properties.Agricult_1.includes("High")) { color = "#2ecc71"; status = "Optimal for Development"; }
-                else { color = "#f1c40f"; status = "Moderate Potential"; }
+        // تحليل الأراضي الزراعية قطعة قطعة
+        layers["Agricultural Land"].eachLayer(function(layer) {
+            let center = turf.centroid(layer.feature);
+            let nearest = turf.nearestPoint(center, settlements);
+            let dist = turf.distance(center, nearest, {units: 'kilometers'});
+            
+            let color, status, recommendation;
+            
+            if (dist < 0.6) { 
+                color = "#e74c3c"; 
+                status = "High Risk / Conflict Zone";
+                recommendation = "Development not recommended.";
+            } else if (layer.feature.properties.Agricult_1 && layer.feature.properties.Agricult_1.includes("High") && dist > 1.2) { 
+                color = "#2ecc71"; 
+                status = "Optimal Site"; 
+                recommendation = "Highly suitable for investment.";
+            } else { 
+                color = "#f1c40f"; 
+                status = "Moderate Potential"; 
+                recommendation = "Safe area with average soil value.";
+            }
 
-                L.geoJson(layer.feature, {style: {fillColor: color, fillOpacity: 0.7, weight: 1, color: 'white'}})
-                .bindPopup(`<b>Site Advisor:</b><br>Status: ${status}<br>Distance to Settlement: ${dist.toFixed(2)} km`)
-                .addTo(analysisGroup);
-            });
-        }
+            L.geoJson(layer.feature, {
+                style: { fillColor: color, fillOpacity: 0.8, weight: 1, color: 'white' }
+            }).bindPopup(`
+                <div style="font-family: Arial">
+                    <b style="color:${color}">Advisor Report</b><br>
+                    <b>Status:</b> ${status}<br>
+                    <b>Distance to Settlement:</b> ${dist.toFixed(2)} km<br>
+                    <b>Recommendation:</b> ${recommendation}
+                </div>
+            `).addTo(analysisGroup);
+        });
     }
 }
 
