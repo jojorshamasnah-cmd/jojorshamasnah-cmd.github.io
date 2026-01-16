@@ -55,8 +55,10 @@
         <span>📊 Map Legend</span> <span id="arrow">▼</span>
     </div>
     <div id="legend-content">
-        <div class="legend-section">Analysis Results</div>
-        <div id="dynamic-items" style="color:gray; font-style:italic; margin-bottom:10px;">No tool selected...</div>
+        <div id="analysis-legend-part">
+            <div class="legend-section">Analysis Results</div>
+            <div id="dynamic-items" style="color:gray; font-style:italic; margin-bottom:10px;">No tool selected...</div>
+        </div>
         
         <div id="base-layers-legend">
             <div class="legend-section">Base Map Layers</div>
@@ -120,7 +122,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الـ 13 طبقة الأساسية
+// تحميل الطبقات الـ 13 الأساسية
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -135,21 +137,21 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// دالات إدارة ظهور الطبقات
-function hideBaseLayers() {
-    for (let key in layers) { map.removeLayer(layers[key]); }
+// --- دالات التحكم في الظهور ---
+function hideAllBaseLayers() {
+    for (let key in layers) { if (map.hasLayer(layers[key])) map.removeLayer(layers[key]); }
     document.getElementById("base-layers-legend").style.display = "none";
 }
 
-function showBaseLayers() {
-    for (let key in layers) { map.addLayer(layers[key]); }
+function showAllBaseLayers() {
+    for (let key in layers) { if (!map.hasLayer(layers[key])) map.addLayer(layers[key]); }
     document.getElementById("base-layers-legend").style.display = "block";
 }
 
 // --- 1. Smart Advisor ---
 function runSmartAdvisor() {
     clearAnalysis();
-    hideBaseLayers();
+    hideAllBaseLayers();
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential</div>
         <div class="legend-item"><span class="symbol-poly" style="background:red"></span> Exclusion Zone (300m)</div>
@@ -164,9 +166,9 @@ function runSmartAdvisor() {
 // --- 2. Hazard Scanner ---
 function runHazardScanner() {
     clearAnalysis();
-    hideBaseLayers();
+    hideAllBaseLayers();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> Flood Risk Area</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> Flood Risk (150m)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Buffer (500m)</div>
     `;
 
@@ -174,24 +176,21 @@ function runHazardScanner() {
         let buffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, { units: 'kilometers' });
         L.geoJson(buffer, { style: { color: "#c0392b", fillColor: "#e74c3c", fillOpacity: 0.6 } }).addTo(analysisGroup);
     }
-    if (layers["Quarries"]) {
-        let qBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
-        L.geoJson(qBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.5 } }).addTo(analysisGroup);
-    }
 }
 
-// --- 3. Water Sensitivity Analyzer (الميزة المطلوبة) ---
+// --- 3. Water Sensitivity Analyzer (الميزة الثالثة) ---
 function runWaterSensitivity() {
     clearAnalysis();
-    hideBaseLayers();
+    hideAllBaseLayers();
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> Irrigation Priority Zone</div>
         <div class="legend-item"><span class="symbol-icon">⚠️</span> Critical Agri-Well</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#3498db; opacity:0.2;"></span> Water Buffer (300m)</div>
     `;
 
     let waterSources = [];
 
-    // تحديد الآبار الزراعية
+    // جلب الآبار الزراعية
     if (layers["Wells"]) {
         let wellsJSON = layers["Wells"].toGeoJSON();
         let agriWells = wellsJSON.features.filter(f => f.properties.WaterUse_E === "Agricultural");
@@ -203,32 +202,40 @@ function runWaterSensitivity() {
         });
     }
 
-    // إضافة الجداول المائية
+    // جلب الجداول
     if (layers["Streams"]) {
         waterSources.push(...layers["Streams"].toGeoJSON().features);
     }
 
-    // تقاطع الأراضي عالية القيمة مع نطاق المياه
+    // تحليل التقاطع مع الأراضي الزراعية عالية القيمة
     if (layers["Agricultural Land"] && waterSources.length > 0) {
-        let waterBuffer = turf.buffer(turf.featureCollection(waterSources), 0.3, { units: 'kilometers' });
-        let agriJSON = layers["Agricultural Land"].toGeoJSON();
+        let waterCollection = turf.featureCollection(waterSources);
+        let waterBuffer = turf.buffer(waterCollection, 0.3, { units: 'kilometers' });
         
+        // رسم الـ Buffer للتوضيح
+        L.geoJson(waterBuffer, { style: { color: "#3498db", fillOpacity: 0.1, weight: 1, dashArray: '5,5' } }).addTo(analysisGroup);
+
+        let agriJSON = layers["Agricultural Land"].toGeoJSON();
         agriJSON.features.forEach(land => {
             if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
                 let intersect = turf.intersect(land, waterBuffer);
                 if (intersect) {
-                    L.geoJson(intersect, { style: { color: "#16a085", fillColor: "#1abc9c", fillOpacity: 0.7, weight: 2 } })
-                    .bindPopup("<b>Irrigation Priority</b><br>High value land near water.").addTo(analysisGroup);
+                    L.geoJson(intersect, {
+                        style: { color: "#16a085", fillColor: "#1abc9c", fillOpacity: 0.7, weight: 2 }
+                    }).bindPopup("<b>Irrigation Priority Zone</b>").addTo(analysisGroup);
                 }
             }
         });
     }
 }
 
-// وظيفة المسح وإعادة الطبقات والـ Legend
+// وظيفة المسح الشامل وإعادة كل شيء
 function clearAnalysis() {
+    // 1. مسح التحليل من الخريطة
     analysisGroup.clearLayers();
-    showBaseLayers();
+    // 2. إظهار الطبقات الأساسية الـ 13
+    showAllBaseLayers();
+    // 3. تصفير الـ Legend الديناميكي
     document.getElementById("dynamic-items").innerHTML = "No tool selected...";
 }
 </script>
