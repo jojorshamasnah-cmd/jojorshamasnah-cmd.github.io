@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Professional Decision Support System</title>
+    <title>Ramallah WebGIS - Professional Suite</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -11,19 +11,31 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
+        
+        /* قائمة الأزرار العلوية */
         #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 8px; flex-wrap: wrap; }
         .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
         .btn-basemap { background: #27ae60; }
         .btn-hazard { background: #d35400; }
         .btn-story { background: #2980b9; } 
-        .btn-isolation { background: #8e44ad; }
-        .btn-clear { background: #e74c3c; border: 2px solid white; }
+        .btn-isolation { background: #8e44ad; } /* لون أرجواني لأداة العزل */
+        .btn-clear { background: #e74c3c; }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
-        #story-panel { position: absolute; top: 80px; right: 20px; width: 320px; background: rgba(255, 255, 255, 0.95); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 3000; display: none; padding: 20px; border-top: 5px solid #2980b9; direction: rtl; }
+
+        /* لوحة القصص الخرائطية */
+        #story-panel { 
+            position: absolute; top: 80px; right: 20px; width: 320px; 
+            background: rgba(255, 255, 255, 0.95); border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 3000; 
+            display: none; padding: 20px; border-top: 5px solid #2980b9;
+            direction: rtl; 
+        }
         .story-nav { display: flex; justify-content: space-between; margin-top: 15px; }
         .btn-nav { background: #34495e; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+
+        /* الليجند */
         #legend-box { position: absolute; bottom: 85px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; border: 1px solid #ccc; overflow: hidden; }
-        #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; }
+        #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
         #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; }
         .legend-section { font-size: 13px; font-weight: bold; color: #2c3e50; margin: 12px 0 6px 0; border-bottom: 1px solid #eee; padding-bottom: 3px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 11px; }
@@ -36,22 +48,22 @@
 <body>
 
 <div id="advisor-ui">
-    <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">Basemap</button>
-    <button class="btn-tool" onclick="runSmartAdvisor()">Decision Advisor</button>
-    <button class="btn-tool btn-hazard" onclick="runHazardScanner()">Hazard Scanner</button>
-    <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">Isolation Analysis</button>
-    <button class="btn-tool btn-story" onclick="startStory()">Story Mode</button>
-    <button class="btn-tool btn-clear" onclick="clearAnalysis()">Restore All Layers</button>
+    <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ BaseMap</button>
+    <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Advisor</button>
+    <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard</button>
+    <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation System</button>
+    <button class="btn-tool btn-story" onclick="startStory()">📖 Story Mode</button>
+    <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Clear & Restore</button>
 </div>
 
 <div id="story-panel">
-    <h3 id="story-title"></h3>
-    <p id="story-text"></p>
+    <h3 id="story-title" style="margin-top:0; color:#2c3e50;"></h3>
+    <p id="story-text" style="font-size: 14px; line-height: 1.6; color: #444;"></p>
     <div class="story-nav">
         <button onclick="prevStep()" class="btn-nav">السابق</button>
         <button onclick="nextStep()" class="btn-nav">التالي</button>
     </div>
-    <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold;">Exit Story Mode</button>
+    <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold;">إنهاء الجولة</button>
 </div>
 
 <div id="map"></div>
@@ -63,9 +75,8 @@
     <div id="legend-content">
         <div id="analysis-legend-section">
             <div class="legend-section">Analysis Results</div>
-            <div id="dynamic-items" style="color:gray; font-style:italic;">No active analysis...</div>
+            <div id="dynamic-items" style="color:gray; font-style:italic;">No tool selected...</div>
         </div>
-        
         <div class="legend-section">Base Map Layers</div>
         <div class="legend-item"><span class="symbol-icon">🏫</span> Schools</div>
         <div class="legend-item"><span class="symbol-icon">💧</span> Wells</div>
@@ -79,7 +90,7 @@
         <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb; opacity: 0.5;"></span> Temp Zones</div>
-        <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> Boundary</div>
+        <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> City Boundary</div>
     </div>
 </div>
 
@@ -91,7 +102,13 @@ var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
 var currentStep = 0;
 
-function toggleBaseMap() { if (isBaseMapVisible) map.removeLayer(osmLayer); else osmLayer.addTo(map); isBaseMapVisible = !isBaseMapVisible; }
+L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
+
+function toggleBaseMap() {
+    if (isBaseMapVisible) map.removeLayer(osmLayer);
+    else osmLayer.addTo(map);
+    isBaseMapVisible = !isBaseMapVisible;
+}
 
 function addLayer(file, name, type, style, emoji) {
     $.getJSON(file, function(data) {
@@ -105,14 +122,15 @@ function addLayer(file, name, type, style, emoji) {
         }
         layer.addTo(map);
         layers[name] = layer;
+        if (name === "Ramallah Boundary") map.fitBounds(layer.getBounds(), { padding: [30, 30] });
     });
 }
 
-// Loading all 13 Layers
+// تحميل الطبقات
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
-addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 1 });
+addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 1.5 });
 addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 });
 addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5, 10' });
 addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillColor: "#8fd19e", fillOpacity: 0.2 });
@@ -123,105 +141,174 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- Analysis Functions (Smart Advisor, Hazard, Isolation) ---
+// --- الأداة الثالثة: وضع القصص الخرائطية ---
 
-function runSmartAdvisor() {
-    clearAnalysis(); hideExceptBoundary();
-    document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Safe)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zone (Settlement Buffer)</div>
-    `;
+const storySteps = [
+    {
+        title: "المشهد 1: التوسع والمستوطنات",
+        text: "نلاحظ هنا تداخلاً بين المخططات الهيكلية والمستوطنات. مستوطنة 'Ahavat Hayim' المقامة منذ عام 1999 تفرض قيداً مكانياً يمنع توسع السكن الطبيعي في هذه المناطق.",
+        center: [31.910, 35.260],
+        zoom: 14,
+        visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"]
+    },
+    {
+        title: "المشهد 2: الجدار والأراضي المعزولة",
+        text: "هنا يظهر الجدار القائم (Constructed). تم عزل مساحات شاسعة من الأراضي المصنفة 'عالية القيمة الزراعية' (High Agricultural Value) خلف هذا الجدار كاملاً.",
+        center: [31.940, 35.130],
+        zoom: 14,
+        visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"]
+    },
+    {
+        title: "المشهد 3: الموارد المائية",
+        text: "تنتشر آبار المياه في المحافظة، ولكن وقوعها بالقرب من البؤر الاستيطانية (Outposts) والكسارات يهدد استدامتها وجودة المياه فيها.",
+        center: [31.880, 35.230],
+        zoom: 14,
+        visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"]
+    }
+];
 
-    if (layers["Settlements"]) {
-        let settlements = layers["Settlements"].toGeoJSON();
-        let dangerBuffer = turf.buffer(settlements, 0.5, {units: 'kilometers'});
-        L.geoJson(dangerBuffer, {style: {color: 'none', fillColor: '#e74c3c', fillOpacity: 0.6}})
-        .bindPopup("<b>Exclusion Zone</b><br>Proximity to settlements (Buffer: 500m)").addTo(analysisGroup);
+function startStory() {
+    clearAnalysis();
+    currentStep = 0;
+    $("#story-panel").fadeIn();
+    updateStoryScene();
+}
 
-        if (layers["Agricultural Land"]) {
-            layers["Agricultural Land"].eachLayer(function(layer) {
-                let center = turf.centroid(layer.feature);
-                let nearest = turf.nearestPoint(center, settlements);
-                let dist = turf.distance(center, nearest, {units: 'kilometers'});
-                
-                let color, rank;
-                if (dist < 0.6) { color = "#e74c3c"; rank = "High Conflict Risk"; }
-                else if (layer.feature.properties.Agricult_1 && layer.feature.properties.Agricult_1.includes("High")) { color = "#2ecc71"; rank = "Optimal Development Potential"; }
-                else { color = "#f1c40f"; rank = "Moderate Development Potential"; }
-
-                L.geoJson(layer.feature, {style: {fillColor: color, fillOpacity: 0.7, weight: 1, color: 'white'}})
-                .bindPopup(`<b>Advisor Report</b><br>Result: ${rank}<br>Distance to Settlement: ${dist.toFixed(2)} km`)
-                .addTo(analysisGroup);
-            });
+function updateStoryScene() {
+    const step = storySteps[currentStep];
+    $("#story-title").text(step.title);
+    $("#story-text").text(step.text);
+    
+    map.flyTo(step.center, step.zoom, { duration: 2 });
+    
+    // التحكم في ظهور الطبقات حسب المشهد
+    for (let k in layers) {
+        if (step.visibleLayers.includes(k)) {
+            if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+        } else {
+            map.removeLayer(layers[k]);
         }
     }
 }
 
-function runHazardScanner() {
-    clearAnalysis(); hideExceptBoundary();
-    document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#3498db"></span> Flood Zone</div>
-    `;
-    if (layers["Quarries"]) {
-        let qBuff = turf.buffer(layers["Quarries"].toGeoJSON(), 0.7, {units: 'kilometers'});
-        L.geoJson(qBuff, {style: {fillColor: '#e67e22', fillOpacity: 0.5, color: '#d35400'}})
-        .bindPopup("<b>Environmental Hazard</b><br>Impact zone from active quarrying").addTo(analysisGroup);
-    }
-    if (layers["Streams"]) {
-        let sBuff = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units: 'kilometers'});
-        L.geoJson(sBuff, {style: {fillColor: '#3498db', fillOpacity: 0.5, color: '#2980b9'}})
-        .bindPopup("<b>Flood Alert</b><br>Buffer zone for seasonal water streams").addTo(analysisGroup);
+function nextStep() {
+    if (currentStep < storySteps.length - 1) {
+        currentStep++;
+        updateStoryScene();
     }
 }
 
-function runIsolationScanner() {
-    clearAnalysis(); hideExceptBoundary();
-    let total = 0;
-    if (layers["Closed Areas"]) {
-        layers["Closed Areas"].eachLayer(function(layer) {
-            let props = layer.feature.properties;
-            if (props.Key_ && props.Key_.includes("معزولة")) {
-                let area = props.Shape_Area / 1000000;
-                total += area;
-                L.geoJson(layer.feature, {style:{color:'#4a235a', fillColor:'#8e44ad', fillOpacity:0.7}})
-                .bindPopup(`<b>Isolation Report</b><br>Status: Fully Closed<br>Area: ${area.toFixed(2)} km²`).addTo(analysisGroup);
-            }
-        });
-        document.getElementById("dynamic-items").innerHTML = `<b>Total Isolated Area:</b> ${total.toFixed(2)} km²`;
+function prevStep() {
+    if (currentStep > 0) {
+        currentStep--;
+        updateStoryScene();
     }
 }
 
-// --- Story Mode ---
-const storySteps = [
-    { title: "Scene 1: Urban Constraints", text: "Intersection between Master Plans and Settlements. Notice how expansion is blocked.", center: [31.910, 35.260], zoom: 14, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
-    { title: "Scene 2: Wall & Isolation", text: "The constructed wall isolates vast 'High Agricultural Value' lands.", center: [31.940, 35.130], zoom: 14, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] },
-    { title: "Scene 3: Water Resources", text: "Wells near outposts are threatened by environmental hazards.", center: [31.880, 35.230], zoom: 14, visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"] }
-];
-function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
-function updateStoryScene() {
-    const step = storySteps[currentStep]; $("#story-title").text(step.title); $("#story-text").text(step.text);
-    map.flyTo(step.center, step.zoom, {duration: 2});
-    for (let k in layers) { if (step.visibleLayers.includes(k)) { if(!map.hasLayer(layers[k])) map.addLayer(layers[k]); } else { map.removeLayer(layers[k]); } }
+function closeStory() {
+    $("#story-panel").fadeOut();
+    clearAnalysis();
 }
-function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); } }
-function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
-function closeStory() { $("#story-panel").fadeOut(); clearAnalysis(); }
 
-// --- Restoration and Utility ---
-function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]); }
+// --- الدوال المساعدة الأخرى ---
+
+function hideExceptBoundary() {
+    for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]);
+}
 
 function clearAnalysis() {
     analysisGroup.clearLayers();
-    $("#story-panel").fadeOut();
-    // Restoring all layers to map
-    for (let k in layers) {
-        if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-    }
-    document.getElementById("dynamic-items").innerHTML = "All 13 layers restored.";
+    $("#story-panel").hide();
+    for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
     if (layers["Ramallah Boundary"]) map.fitBounds(layers["Ramallah Boundary"].getBounds());
+    document.getElementById("dynamic-items").innerHTML = "No tool selected...";
 }
+
+function runSmartAdvisor() {
+    clearAnalysis();
+    hideExceptBoundary();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Green)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential (Yellow)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Exclusion Zone (Red)</div>
+    `;
+
+    if (layers["Settlements"]) {
+        let buff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
+        L.geoJson(buff, {style: {color:'#c0392b', fillColor:'#e74c3c', fillOpacity:0.7}}).bindPopup("<b>Exclusion Zone</b>").addTo(analysisGroup);
+    }
+
+    if (layers["Agricultural Land"]) {
+        let agri = layers["Agricultural Land"].toGeoJSON();
+        let temp = layers["Temperature Zones"] ? layers["Temperature Zones"].toGeoJSON() : null;
+        agri.features.forEach(land => {
+            if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
+                let isGreen = false;
+                if (temp) {
+                    temp.features.forEach(t => {
+                        if (t.properties.MEAN_ANNUA === "19 - 21") {
+                            let inter = turf.intersect(land, t);
+                            if (inter) {
+                                L.geoJson(inter, {style:{color:'#1d8348', fillColor:'#2ecc71', fillOpacity:0.8}}).addTo(analysisGroup);
+                                isGreen = true;
+                            }
+                        }
+                    });
+                }
+                if (!isGreen) {
+                    L.geoJson(land, {style:{color:'#d4ac0d', fillColor:'#f1c40f', fillOpacity:0.6}}).addTo(analysisGroup);
+                }
+            }
+        });
+    }
+}
+
+function runHazardScanner() {
+    clearAnalysis();
+    hideExceptBoundary();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Flood Danger Zone</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact Zone</div>
+    `;
+
+    if (layers["Streams"]) {
+        let fBuff = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'});
+        L.geoJson(fBuff, {style:{color:'#922b21', fillColor:'#e74c3c', fillOpacity:0.6}}).addTo(analysisGroup);
+    }
+    if (layers["Quarries"]) {
+        let qBuff = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units:'kilometers'});
+        L.geoJson(qBuff, {style:{color:'#d35400', fillColor:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
+    }
+}
+
+// --- الأداة الرابعة المضافة: نظام كشف العزل (Isolation Scanner) ---
+
+function runIsolationScanner() {
+    clearAnalysis();
+    hideExceptBoundary();
+    let totalIsolatedArea = 0;
+
+    if (layers["Closed Areas"]) {
+        layers["Closed Areas"].eachLayer(function(layer) {
+            let props = layer.feature.properties;
+            // التحقق من الحقول التي تدل على العزل (تعدل حسب أسماء الحقول في بياناتك)
+            if (props.Key_ && props.Key_.includes("معزولة")) {
+                let area = props.Shape_Area ? (props.Shape_Area / 1000000).toFixed(2) : "Unknown";
+                if (area !== "Unknown") totalIsolatedArea += parseFloat(area);
+
+                L.geoJson(layer.feature, {
+                    style: { color: '#4a235a', fillColor: '#8e44ad', fillOpacity: 0.7 }
+                }).bindPopup(`<b>منطقة معزولة</b><br>المساحة: ${area} كم²`).addTo(analysisGroup);
+            }
+        });
+    }
+
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> Isolated Areas (Behind Wall)</div>
+        <div style="margin-top:5px; font-weight:bold; font-size:10px;">Total Area: ${totalIsolatedArea.toFixed(2)} km²</div>
+    `;
+}
+
 </script>
 </body>
 </html>
