@@ -20,6 +20,8 @@
         .btn-basemap { background: #27ae60; } 
         .btn-hazard { background: #d35400; }
         .btn-clear { background: #7f8c8d; }
+        /* لون مخصص للأداة الجديدة */
+        .btn-water { background: #2980b9; }
         .btn-tool:hover { opacity: 0.9; transform: translateY(-1px); }
         
         #legend-box { position: absolute; bottom: 80px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #ccc; }
@@ -43,6 +45,7 @@
     <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ Toggle BaseMap</button>
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Smart Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard Scanner</button>
+    <button class="btn-tool btn-water" onclick="runWaterSensitivity()">💧 Water Sensitivity</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Clear</button>
 </div>
 
@@ -131,7 +134,7 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- Smart Advisor (Popups Back!) ---
+// --- Smart Advisor ---
 function runSmartAdvisor() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
@@ -174,7 +177,7 @@ function runSmartAdvisor() {
     }
 }
 
-// --- Hazard Scanner (Popups Back!) ---
+// --- Hazard Scanner ---
 function runHazardScanner() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
@@ -192,6 +195,54 @@ function runHazardScanner() {
         let qBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, { units: 'kilometers' });
         L.geoJson(qBuffer, { style: { color: "#d35400", fillColor: "#e67e22", fillOpacity: 0.5 } })
         .bindPopup("<b>Quarry Impact Zone</b><br>Environmental hazard within 500m of quarry site.").addTo(analysisGroup);
+    }
+}
+
+// --- الميزة الثالثة: Water Source Sensitivity Analyzer ---
+function runWaterSensitivity() {
+    clearAnalysis();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#3498db; opacity: 0.5;"></span> Water Buffer (500m)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> Irrigation Priority Zone</div>
+        <div class="legend-item"><span class="symbol-icon">⚠️</span> Critical Agricultural Well</div>
+    `;
+
+    if (layers["Wells"]) {
+        let wellsJSON = layers["Wells"].toGeoJSON();
+        // تصفية الآبار الزراعية بناءً على عمود WaterUse_E
+        let agriWells = wellsJSON.features.filter(f => f.properties.WaterUse_E === "Agricultural");
+        
+        agriWells.forEach(well => {
+            L.marker([well.geometry.coordinates[1], well.geometry.coordinates[0]], {
+                icon: L.divIcon({ html: '<div class="map-icon">⚠️</div>', className: 'custom-div-icon', iconSize: [20, 20] })
+            }).bindPopup(`<b>Critical Well:</b> ${well.properties.WellName_E}<br>Usage: ${well.properties.WaterUse_E}`).addTo(analysisGroup);
+        });
+
+        if (agriWells.length > 0) {
+            let wellBuffer = turf.buffer(turf.featureCollection(agriWells), 0.5, { units: 'kilometers' });
+            L.geoJson(wellBuffer, { style: { color: "#3498db", fillColor: "#3498db", fillOpacity: 0.2, weight: 1 } }).addTo(analysisGroup);
+        }
+    }
+
+    if (layers["Agricultural Land"] && (layers["Wells"] || layers["Streams"])) {
+        let agriJSON = layers["Agricultural Land"].toGeoJSON();
+        let waterPoints = layers["Wells"] ? layers["Wells"].toGeoJSON().features : [];
+        let waterLines = layers["Streams"] ? layers["Streams"].toGeoJSON().features : [];
+        let allWater = turf.featureCollection([...waterPoints, ...waterLines]);
+
+        let waterBuffer = turf.buffer(allWater, 0.3, { units: 'kilometers' });
+
+        agriJSON.features.forEach(land => {
+            // التحقق من جودة الأرض بناءً على حقل Agricult_1
+            if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
+                let intersect = turf.intersect(land, waterBuffer);
+                if (intersect) {
+                    L.geoJson(intersect, {
+                        style: { color: "#16a085", fillColor: "#1abc9c", fillOpacity: 0.7, weight: 2 }
+                    }).bindPopup("<b>Irrigation Priority Zone</b><br>High-value agricultural land near water source.").addTo(analysisGroup);
+                }
+            }
+        });
     }
 }
 
