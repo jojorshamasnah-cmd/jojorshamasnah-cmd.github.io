@@ -37,21 +37,21 @@
 
 <div id="advisor-ui">
     <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ BaseMap</button>
-    <button class="btn-tool" style="background:#f39c12;" onclick="runSmartAdvisor()">🧠 Smart Advisor</button>
-    <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard Scanner</button>
-    <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation System</button>
+    <button class="btn-tool" style="background:#f39c12;" onclick="runSmartAdvisor()">🧠 Advisor</button>
+    <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard</button>
+    <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation</button>
     <button class="btn-tool btn-story" onclick="startStory()">📖 Story Mode</button>
-    <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Restore Layers</button>
+    <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Restore</button>
 </div>
 
 <div id="story-panel">
-    <h3 id="story-title" style="margin-top:0; color:#2c3e50;"></h3>
-    <p id="story-text" style="font-size: 14px; line-height: 1.6; color:#444;"></p>
+    <h3 id="story-title" style="margin-top:0;"></h3>
+    <p id="story-text" style="font-size: 14px; line-height: 1.6;"></p>
     <div class="story-nav">
         <button onclick="prevStep()" class="btn-nav">Back</button>
         <button onclick="nextStep()" class="btn-nav">Next</button>
     </div>
-    <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold;">Exit Story Mode</button>
+    <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold;">Exit Story</button>
 </div>
 
 <div id="map"></div>
@@ -87,7 +87,7 @@ var map = L.map("map").setView([31.903, 35.203], 11);
 var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 var isBaseMapVisible = true;
 var layers = {};
-var geoData = {}; // تخزين البيانات الخام لضمان عمل الأدوات
+var rawData = {}; // تخزين البيانات الخام للأدوات
 var analysisGroup = L.layerGroup().addTo(map);
 var currentStep = 0;
 
@@ -95,7 +95,7 @@ function toggleBaseMap() { if (isBaseMapVisible) map.removeLayer(osmLayer); else
 
 function addLayer(file, name, type, style, emoji) {
     $.getJSON(file, function(data) {
-        geoData[name] = data; // تخزين البيانات الخام
+        rawData[name] = data; // حفظ البيانات هنا
         let layer;
         if (type === "point") {
             layer = L.geoJson(data, { 
@@ -110,7 +110,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الطبقات
+// تحميل الطبقات الـ 13
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -125,94 +125,75 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
 
-// --- 1. المستشار الذكي (إصلاح شامل للنتائج) ---
+// --- الأداة 1: المستشار الذكي (إصلاح التشغيل) ---
 function runSmartAdvisor() {
     clearAnalysis();
     hideExceptBoundary();
+    
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> Green: High Potential Land</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Yellow: Moderate Condition</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Red: High Risk / Restricted</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> High Risk</div>
     `;
 
-    if (geoData["Settlements"] && geoData["Agricultural Land"]) {
-        let settlements = geoData["Settlements"];
-        
-        L.geoJson(geoData["Agricultural Land"], {
+    if (rawData["Settlements"] && rawData["Agricultural Land"]) {
+        L.geoJson(rawData["Agricultural Land"], {
             style: function(feature) {
                 let center = turf.centroid(feature);
-                let nearest = turf.nearestPoint(center, settlements);
+                let nearest = turf.nearestPoint(center, rawData["Settlements"]);
                 let dist = turf.distance(center, nearest, {units: 'kilometers'});
                 
-                if (dist < 0.7) return { fillColor: "#e74c3c", fillOpacity: 0.8, color: "white", weight: 1 };
-                if (feature.properties.Agricult_1 && feature.properties.Agricult_1.includes("High")) return { fillColor: "#2ecc71", fillOpacity: 0.8, color: "white", weight: 1 };
-                return { fillColor: "#f1c40f", fillOpacity: 0.8, color: "white", weight: 1 };
+                if (dist < 0.6) return { fillColor: "#e74c3c", fillOpacity: 0.7, color: "white", weight: 1 };
+                if (feature.properties.Agricult_1 && feature.properties.Agricult_1.includes("High")) return { fillColor: "#2ecc71", fillOpacity: 0.7, color: "white", weight: 1 };
+                return { fillColor: "#f1c40f", fillOpacity: 0.7, color: "white", weight: 1 };
             },
             onEachFeature: function(feature, layer) {
                 let center = turf.centroid(feature);
-                let nearest = turf.nearestPoint(center, settlements);
+                let nearest = turf.nearestPoint(center, rawData["Settlements"]);
                 let dist = turf.distance(center, nearest, {units: 'kilometers'});
-                let status = (dist < 0.7) ? "High Risk (Settlement Proximity)" : "Safe for Development";
-                layer.bindPopup(`<b>Advisor Status:</b> ${status}<br><b>Distance:</b> ${dist.toFixed(2)} km`);
+                layer.bindPopup(`<b>Advisor Note:</b><br>Distance to Settlement: ${dist.toFixed(2)} km`);
             }
         }).addTo(analysisGroup);
-    } else {
-        alert("Data layers still loading, please wait 2 seconds.");
     }
 }
 
-// --- 2. الماسح مع بوب اب ---
+// --- الأداة 2: الماسح (مع بوب اب) ---
 function runHazardScanner() {
     clearAnalysis();
     hideExceptBoundary();
-    if (geoData["Streams"]) {
-        let fBuff = turf.buffer(geoData["Streams"], 0.15, {units:'kilometers'});
+    if (rawData["Streams"]) {
+        let fBuff = turf.buffer(rawData["Streams"], 0.15, {units:'kilometers'});
         L.geoJson(fBuff, {style:{color:'#922b21', fillColor:'#e74c3c', fillOpacity:0.6}})
-        .bindPopup("<b>Hazard Alert:</b> Potential Flood Risk Zone").addTo(analysisGroup);
+        .bindPopup("<b>Hazard:</b> Flood Risk Zone").addTo(analysisGroup);
     }
-    if (geoData["Quarries"]) {
-        let qBuff = turf.buffer(geoData["Quarries"], 0.5, {units:'kilometers'});
+    if (rawData["Quarries"]) {
+        let qBuff = turf.buffer(rawData["Quarries"], 0.5, {units:'kilometers'});
         L.geoJson(qBuff, {style:{color:'#d35400', fillColor:'#e67e22', fillOpacity:0.5}})
-        .bindPopup("<b>Hazard Alert:</b> Industrial Impact Zone (Quarries)").addTo(analysisGroup);
+        .bindPopup("<b>Hazard:</b> Noise & Dust Impact").addTo(analysisGroup);
     }
 }
 
-// --- 3. ما وراء الجدار مع بوب اب ---
+// --- الأداة 3: نظام العزل (مع بوب اب) ---
 function runIsolationScanner() {
     clearAnalysis();
     hideExceptBoundary();
-    if (geoData["Closed Areas"]) {
-        L.geoJson(geoData["Closed Areas"], {
+    if (rawData["Closed Areas"]) {
+        L.geoJson(rawData["Closed Areas"], {
             filter: (f) => f.properties.Key_ && f.properties.Key_.includes("معزولة"),
             style: { color: '#4a235a', fillColor: '#8e44ad', fillOpacity: 0.7 },
-            onEachFeature: function(feature, layer) {
-                let area = feature.properties.Shape_Area ? (feature.properties.Shape_Area/1000000).toFixed(2) : "N/A";
-                layer.bindPopup(`<b>Isolation Report:</b><br>Area: ${area} km²<br>Access: Restricted`);
+            onEachFeature: function(f, l) {
+                let area = f.properties.Shape_Area ? (f.properties.Shape_Area/1000000).toFixed(2) : "N/A";
+                l.bindPopup(`<b>Isolation Zone</b><br>Isolated Area: ${area} km²`);
             }
         }).addTo(analysisGroup);
     }
 }
 
-// --- 4. القصة بالإنجليزية (3 مشاهد) ---
+// --- الأداة 4: القصة (3 مشاهد إنجليزي) ---
 const storySteps = [
-    { 
-        title: "Scene 1: Urban Expansion Barriers", 
-        text: "Israeli settlements create a physical barrier to the natural expansion of Palestinian urban master plans, leading to high population density in isolated pockets.", 
-        center: [31.910, 35.260], zoom: 14, 
-        visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] 
-    },
-    { 
-        title: "Scene 2: Detached Livelihoods", 
-        text: "The Annexation Wall isolates thousands of dunums of high-quality agricultural land, severing the link between Palestinian farmers and their primary source of income.", 
-        center: [31.940, 35.130], zoom: 14, 
-        visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] 
-    },
-    { 
-        title: "Scene 3: Environmental Challenges", 
-        text: "The proximity of quarries and settlements to strategic water wells threatens the long-term sustainability of the region's water resources.", 
-        center: [31.880, 35.230], zoom: 14, 
-        visibleLayers: ["Wells", "Quarries", "Settlements", "Ramallah Boundary"] 
-    }
+    { title: "Scene 1: Urban Constraints", text: "Settlements create a spatial barrier for the expansion of master plans.", center: [31.910, 35.260], zoom: 14, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
+    { title: "Scene 2: Land Isolation", text: "High-value agricultural land is detached by the Annexation Wall.", center: [31.940, 35.130], zoom: 14, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] },
+    { title: "Scene 3: Water Safety", text: "Wells near quarries face contamination and access risks.", center: [31.880, 35.230], zoom: 14, visibleLayers: ["Wells", "Quarries", "Settlements", "Ramallah Boundary"] }
 ];
 
 function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
