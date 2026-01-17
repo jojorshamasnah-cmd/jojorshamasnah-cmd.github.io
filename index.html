@@ -28,7 +28,7 @@
             background: rgba(255, 255, 255, 0.95); border-radius: 15px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 3000; 
             display: none; padding: 20px; border-top: 5px solid #2980b9;
-            direction: ltr; /* Changed to Left-to-Right for English */
+            direction: ltr;
         }
         .story-nav { display: flex; justify-content: space-between; margin-top: 15px; }
         .btn-nav { background: #34495e; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
@@ -118,7 +118,23 @@ function addLayer(file, name, type, style, emoji) {
                 pointToLayer: (f, latlng) => L.marker(latlng, { icon: L.divIcon({ html: emoji, className: 'map-icon', iconSize: [18,18] }) }) 
             });
         } else {
-            layer = L.geoJson(data, { style: style });
+            layer = L.geoJson(data, { 
+                style: style,
+                onEachFeature: function(feature, layer) {
+                    // Specific logic for Community Pop-ups
+                    if (name === "Ramallah Boundary") {
+                        let nameAr = feature.properties.CommunityN || "غير معروف";
+                        let nameEn = feature.properties.Communit_1 || "Unknown";
+                        layer.bindPopup(`
+                            <div style="text-align:center;">
+                                <b style="font-size:14px; color:#2c3e50;">${nameEn}</b><br>
+                                <b style="font-size:14px; color:#2c3e50;">${nameAr}</b><hr style="margin:5px 0;">
+                                <span style="font-size:11px;">Governorate: Ramallah & Al-Bireh</span>
+                            </div>
+                        `);
+                    }
+                }
+            });
         }
         layer.addTo(map);
         layers[name] = layer;
@@ -139,9 +155,9 @@ addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillCol
 addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.2 });
 addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.2 });
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
-addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 });
+addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0.1 });
 
-// --- Tool 1: Smart Advisor (English Popups) ---
+// --- Tool Functions ---
 function runSmartAdvisor() {
     clearAnalysis();
     hideExceptBoundary();
@@ -187,7 +203,6 @@ function runSmartAdvisor() {
     }
 }
 
-// --- Tool 2: Hazard Scanner (English Popups) ---
 function runHazardScanner() {
     clearAnalysis();
     hideExceptBoundary();
@@ -210,7 +225,6 @@ function runHazardScanner() {
     }
 }
 
-// --- Tool 3: Isolation Scanner (English Popups) ---
 function runIsolationScanner() {
     clearAnalysis();
     hideExceptBoundary();
@@ -239,7 +253,7 @@ function runIsolationScanner() {
     }
 }
 
-// --- Story Mode (English Text) ---
+// --- Story Mode ---
 const storySteps = [
     {
         title: "Scene 1: Urban Expansion & Settlements",
