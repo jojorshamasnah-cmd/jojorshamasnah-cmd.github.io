@@ -18,6 +18,7 @@
         .btn-basemap { background: #27ae60; }
         .btn-hazard { background: #d35400; }
         .btn-isolation { background: #8e44ad; }
+        .btn-equity { background: #16a085; } /* لون مخصص للأداة 11 */
         .btn-story { background: #2980b9; } 
         .btn-clear { background: #e74c3c; }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
@@ -52,6 +53,7 @@
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard</button>
     <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation</button>
+    <button class="btn-tool btn-equity" onclick="runServiceEquity()">⚖️ Equity (11)</button>
     <button class="btn-tool btn-story" onclick="startStory()">📖 Story Mode</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Restore</button>
 </div>
@@ -121,7 +123,6 @@ function addLayer(file, name, type, style, emoji) {
             layer = L.geoJson(data, { 
                 style: style,
                 onEachFeature: function(feature, layer) {
-                    // Specific logic for Community Pop-ups
                     if (name === "Ramallah Boundary") {
                         let nameAr = feature.properties.CommunityN || "غير معروف";
                         let nameEn = feature.properties.Communit_1 || "Unknown";
@@ -158,6 +159,52 @@ addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fi
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0.1 });
 
 // --- Tool Functions ---
+
+// أداة رقم 11: مخطط عدم المساواة في الخدمات
+function runServiceEquity() {
+    clearAnalysis();
+    hideExceptBoundary();
+    
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:rgba(231, 76, 60, 0.6)"></span> مناطق فجوة خدمية (>1.5km)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:rgba(46, 204, 113, 0.2)"></span> نطاق التغطية الحالية</div>
+    `;
+
+    let servicePoints = [];
+    if (layers["Schools"]) servicePoints.push(...layers["Schools"].toGeoJSON().features);
+    
+    // تصفية الآبار المنزلية بناءً على الأتريبيوت WaterUse_E
+    if (layers["Wells"]) {
+        let domestic = layers["Wells"].toGeoJSON().features.filter(f => 
+            f.properties.WaterUse_E === "Domestic" || f.properties.WaterUse_E === "Domestic/WD"
+        );
+        servicePoints.push(...domestic);
+    }
+
+    if (servicePoints.length > 0) {
+        let collection = turf.featureCollection(servicePoints);
+        let buffer = turf.buffer(collection, 1.5, {units: 'kilometers'});
+        let dissolved = turf.dissolve(buffer);
+
+        // رسم نطاق التغطية
+        L.geoJson(dissolved, {
+            style: { color: '#27ae60', fillColor: '#2ecc71', fillOpacity: 0.2, weight: 1 }
+        }).addTo(analysisGroup);
+
+        // حساب مناطق الفجوة (المساحات خارج النطاق)
+        if (layers["Ramallah Boundary"]) {
+            let boundary = layers["Ramallah Boundary"].toGeoJSON().features[0];
+            let gap = turf.difference(boundary, dissolved);
+            
+            L.geoJson(gap, {
+                style: { color: '#c0392b', fillColor: '#e74c3c', fillOpacity: 0.6, weight: 2 }
+            }).bindPopup("<b>مخطط عدم المساواة</b><br>هذه المنطقة تفتقر للوصول السريع للمدارس أو الآبار المنزلية (أبعد من 1.5 كم).")
+            .addTo(analysisGroup);
+        }
+        map.fitBounds(analysisGroup.getBounds());
+    }
+}
+
 function runSmartAdvisor() {
     clearAnalysis();
     hideExceptBoundary();
