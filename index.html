@@ -11,12 +11,12 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
+        /* شريط الأدوات العلوي */
         #advisor-ui { 
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%); 
             z-index: 1000; display: flex; gap: 8px; flex-wrap: nowrap; 
@@ -25,28 +25,27 @@
         }
 
         .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 11px; transition: 0.3s; white-space: nowrap; }
-        .btn-basemap { background: #27ae60; }
         .btn-hazard { background: #d35400; }
         .btn-measure { background: #f39c12 !important; }
+        .btn-story { background: #2980b9; }
         .btn-clear { background: #e74c3c !important; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
-        .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
-        /* تعديل أداة القياس لتظهر فوق الليجند بالعرض */
+        /* أداة القياس: فوق الليجند وبالعرض */
         #measure-output { 
             position: absolute; bottom: 440px; right: 20px; z-index: 2000; 
-            background: white; padding: 12px; border-radius: 8px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: none; 
-            width: 295px; border-top: 5px solid #f39c12; direction: rtl; font-size: 13px;
+            background: white; padding: 15px; border-radius: 10px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none; 
+            width: 290px; border-right: 6px solid #f39c12; direction: rtl; 
         }
 
-        /* تحريك أزرار الرسم لتكون بجانب الليجند وليس تحته */
+        /* تحريك أيقونات الرسم لليسار قليلاً لعدم التداخل مع الليجند */
         .leaflet-right.leaflet-bottom { margin-bottom: 25px !important; margin-right: 335px !important; }
 
         #layer-control {
             position: absolute; top: 80px; left: 10px; z-index: 1000;
             background: white; padding: 12px; border-radius: 8px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); direction: rtl; width: 180px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); direction: rtl; width: 170px;
         }
 
         #story-panel { 
@@ -57,12 +56,11 @@
 
         #legend-box { 
             position: absolute; bottom: 25px; right: 20px; background: white; 
-            border-radius: 12px; width: 300px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            border-radius: 12px; width: 310px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
             z-index: 2000; border: 1px solid #ccc; direction: rtl; 
         }
-        #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-radius: 12px 12px 0 0; }
+        #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; }
         #legend-content { padding: 12px; max-height: 380px; overflow-y: auto; }
-        .legend-section { font-size: 14px; font-weight: bold; color: #2c3e50; margin-top: 10px; border-bottom: 1px solid #eee; }
         .legend-item { display: flex; align-items: center; margin: 6px 0; font-size: 12px; }
         .symbol-poly { width: 16px; height: 12px; border: 1px solid #555; margin-left: 8px; }
         .symbol-line { width: 20px; height: 3px; margin-left: 8px; }
@@ -71,31 +69,31 @@
 <body>
 
 <div id="advisor-ui">
-    <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ الخريطة</button>
+    <button class="btn-tool" style="background:#27ae60" onclick="toggleBaseMap()">🗺️ الخريطة</button>
     <button class="btn-tool btn-measure" onclick="toggleMeasureTool()">📏 القياس</button>
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 المستشار</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ مخاطر</button>
     <button class="btn-tool" style="background:#8e44ad" onclick="runIsolationScanner()">🔍 عزل</button>
     <button class="btn-tool" style="background:#1abc9c" onclick="runEcoBuffer()">🌳 بيئة</button>
-    <button class="btn-tool" style="background:#2980b9" onclick="startStory()">📖 قصة</button>
+    <button class="btn-tool btn-story" onclick="startStory()">📖 قصة</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 استعادة</button>
 </div>
 
 <div id="layer-control">
-    <h4 style="margin:0 0 10px 0; font-size:13px; border-bottom:2px solid #3498db;">الطبقات</h4>
+    <h4 style="margin:0 0 8px 0; font-size:13px; border-bottom:2px solid #3498db;">الطبقات</h4>
     <div id="layers-list"></div>
 </div>
 
-<div id="measure-output">القياس الحالي: <span id="measure-res" style="color:#d35400; font-weight:bold;">اختر أداة الرسم</span></div>
+<div id="measure-output">القياس: <span id="measure-res" style="color:#d35400; font-weight:bold;">حدد أداة الرسم بالأسفل</span></div>
 
 <div id="story-panel">
     <h3 id="story-title" style="margin:0; color:#2980b9;"></h3>
-    <p id="story-text" style="line-height:1.7; font-size:14px; color:#333;"></p>
-    <div style="display:flex; justify-content:space-between; margin-top:15px;">
+    <p id="story-text" style="line-height:1.7; font-size:14px; margin:15px 0;"></p>
+    <div style="display:flex; justify-content:space-between;">
         <button class="btn-tool" style="background:#34495e" onclick="prevStep()">السابق</button>
         <button class="btn-tool" style="background:#34495e" onclick="nextStep()">التالي</button>
     </div>
-    <button onclick="closeStory()" style="margin-top:15px; width:100%; color:red; border:none; background:none; cursor:pointer; font-weight:bold;">إغلاق القصة</button>
+    <button onclick="closeStory()" style="margin-top:15px; width:100%; color:red; border:none; background:none; cursor:pointer;">إغلاق القصة</button>
 </div>
 
 <div id="map"></div>
@@ -105,20 +103,20 @@
         <span>📊 مفتاح الخريطة</span> <span>▼</span>
     </div>
     <div id="legend-content">
-        <div class="legend-section">التحليل النشط</div>
-        <div id="dynamic-items" style="color:gray; font-style:italic; font-size:11px;">لا توجد أدوات تعمل...</div>
-        <div class="legend-section">الرموز</div>
+        <div class="legend-section" style="font-weight:bold; color:#2c3e50; margin-bottom:5px;">نتائج التحليل</div>
+        <div id="dynamic-items" style="color:gray; font-style:italic; font-size:11px; margin-bottom:10px;">اختر أداة لتفعيلها...</div>
+        <hr>
         <div id="base-layers-legend"></div>
     </div>
 </div>
 
 <script>
-// ضبط الخريطة لرؤية رام الله كاملة عند التشغيل
-var map = L.map("map").setView([31.920, 35.210], 11.5); 
+// 1. تشغيل الخريطة برؤية كاملة لمدينة رام الله
+var map = L.map("map").setView([31.920, 35.210], 11.5);
 var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 var layers = {}, analysisGroup = L.layerGroup().addTo(map), measureGroup = new L.FeatureGroup().addTo(map);
 
-// إعداد أداة القياس
+// 2. تفعيل أدوات القياس (بالعرض فوق الليجند)
 var drawControl = new L.Control.Draw({
     position: 'bottomright',
     draw: { polygon: true, polyline: true, rectangle: true, circle: false, marker: false, circlemarker: false }
@@ -133,25 +131,19 @@ function toggleMeasureTool() {
 
 map.on(L.Draw.Event.CREATED, function (e) {
     measureGroup.addLayer(e.layer);
-    let out = "";
-    if (e.layerType === 'polyline') {
-        let d = 0, c = e.layer.getLatLngs();
-        for (let i=0; i<c.length-1; i++) d += c[i].distanceTo(c[i+1]);
-        out = `${(d/1000).toFixed(2)} كم`;
-    } else {
-        let a = L.GeometryUtil.geodesicArea(e.layer.getLatLngs()[0]);
-        out = `${(a/1000).toFixed(1)} دونم`;
-    }
+    let out = e.layerType === 'polyline' ? 
+        `الطول: ${(L.GeometryUtil.accumulatedLengths(e.layer.getLatLngs())/1000).toFixed(2)} كم` : 
+        `المساحة: ${(L.GeometryUtil.geodesicArea(e.layer.getLatLngs()[0])/1000).toFixed(1)} دونم`;
     $("#measure-res").text(out);
 });
 
-// تحميل الطبقات
+// 3. تحميل الـ 13 طبقة
 function addLayer(file, name, type, style, emoji, arabicName) {
     $.getJSON(file, function(data) {
         let layer = L.geoJson(data, { 
             style: style,
             pointToLayer: (f, latlng) => type === "point" ? L.marker(latlng, { icon: L.divIcon({ html: emoji, className: 'map-icon', iconSize: [18,18] }) }) : null,
-            onEachFeature: (f, l) => l.bindPopup(`<div style="direction:rtl; text-align:right;"><b>${arabicName}</b></div>`)
+            onEachFeature: (f, l) => l.bindPopup(`<b>${arabicName}</b>`)
         }).addTo(map);
         layers[name] = layer;
         $("#layers-list").append(`<div style="font-size:11px; margin-bottom:4px;"><input type="checkbox" checked onchange="toggleLayer('${name}', this.checked)"> ${arabicName}</div>`);
@@ -162,7 +154,6 @@ function addLayer(file, name, type, style, emoji, arabicName) {
 
 function toggleLayer(n, v) { if(v) map.addLayer(layers[n]); else map.removeLayer(layers[n]); }
 
-// الطبقات الـ 13
 addLayer("Schools.geojson", "Schools", "point", null, "🏫", "المدارس");
 addLayer("Wells.geojson", "Wells", "point", null, "💧", "الآبار");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️", "الكسارات");
@@ -170,29 +161,27 @@ addLayer("Roads.geojson", "Roads", "line", { color: "#333", weight: 1 }, null, "
 addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 }, null, "الأودية");
 addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5,10' }, null, "جدار الضم والتوسع");
 addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillOpacity: 0.2 }, null, "أراضي زراعية");
-addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { color: "orange", fillOpacity: 0.2 }, null, "مناطق مغلقة بالجدار");
+addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { color: "orange", fillOpacity: 0.2 }, null, "مناطق معزولة");
 addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillOpacity: 0.2 }, null, "مناطق مبنية");
 addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillOpacity: 0.2 }, null, "مخططات هيكلية");
 addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillOpacity: 0.2 }, null, "مستوطنات");
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillOpacity: 0.1 }, null, "نطاقات الحرارة");
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0 }, null, "حدود المدينة");
 
-// تفعيل الأدوات
+// 4. تشغيل الأدوات التحليلية
 function runSmartAdvisor() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> استثمار زراعي ناجح</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> خطر اقتراب أمني</div>`;
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> تربة ومناخ مثالي</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> خطر أمني</div>`;
     if (layers["Settlements"]) L.geoJson(turf.buffer(layers["Settlements"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#e74c3c', fillOpacity:0.4}}).addTo(analysisGroup);
     if (layers["Agricultural Land"]) {
         layers["Agricultural Land"].eachLayer(l => {
-            let style = {color: '#f1c40f', fillOpacity: 0.5};
+            let col = '#f1c40f';
             if (layers["Temperature Zones"]) {
-                layers["Temperature Zones"].eachLayer(t => { 
-                    if (t.feature.properties.MEAN_ANNUA === "19 - 21" && turf.intersect(l.feature, t.feature)) style = {color: '#2ecc71', fillOpacity: 0.7};
-                });
+                layers["Temperature Zones"].eachLayer(t => { if (t.feature.properties.MEAN_ANNUA === "19 - 21" && turf.intersect(l.feature, t.feature)) col = '#2ecc71'; });
             }
-            L.geoJson(l.feature, style).addTo(analysisGroup);
+            L.geoJson(l.feature, {style:{color:col, fillOpacity:0.6}}).addTo(analysisGroup);
         });
     }
 }
@@ -200,32 +189,32 @@ function runSmartAdvisor() {
 function runHazardScanner() {
     clearAnalysis();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#d35400"></span> حرم وادي (خطر فيضان)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#7f8c8d"></span> تلوث غباري (كسارات)</div>`;
+        <div class="legend-item"><span class="symbol-poly" style="background:#d35400"></span> خطر فيضان (200م)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#7f8c8d"></span> تلوث كسارات (600م)</div>`;
     if (layers["Streams"]) L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units:'kilometers'}), {style:{color:'#d35400', fillOpacity:0.5}}).addTo(analysisGroup);
     if (layers["Quarries"]) L.geoJson(turf.buffer(layers["Quarries"].toGeoJSON(), 0.6, {units:'kilometers'}), {style:{color:'#7f8c8d', fillOpacity:0.4}}).addTo(analysisGroup);
 }
 
 function runIsolationScanner() {
     clearAnalysis();
-    document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> أراضي معزولة خلف الجدار</div>`;
+    document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> مناطق خلف الجدار</div>`;
     if (layers["Closed Areas"]) L.geoJson(layers["Closed Areas"].toGeoJSON(), {style:{color:'#8e44ad', fillOpacity:0.6}}).addTo(analysisGroup);
 }
 
 function runEcoBuffer() {
     clearAnalysis();
-    document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> نطاق حماية بيئية 200م</div>`;
+    document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> حماية بيئية للأودية</div>`;
     if (layers["Streams"]) L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units:'kilometers'}), {style:{color:'#1abc9c', fillOpacity:0.4}}).addTo(analysisGroup);
 }
 
-// قصة الخريطة المطورة
+// 5. قصة الخريطة (تفاصيل أكثر)
 var currentStep = 0;
 const storySteps = [
-    { title: "قلب رام الله", text: "مدينة رام الله والبيرة تمثل المركز الإداري والاقتصادي، نلاحظ كثافة المناطق المبنية (بالبني) وصعوبة التوسع العمراني نتيجة الحدود المفروضة.", center: [31.903, 35.203], zoom: 14 },
-    { title: "الجدار الفاصل والعزل", text: "يمتد الجدار الفاصل ليقتطع مساحات واسعة من أراضي المحافظة، المناطق الملونة بالبرتقالي هي أراضي فلسطينية خلف الجدار يصعب على أصحابها الوصول إليها.", center: [31.940, 35.130], zoom: 13 },
-    { title: "خطر الكسارات", text: "الكسارات (⛏️) تقع بالقرب من المناطق السكنية، مما يسبب تلوثاً بيئياً وهائياً. أداة الماسح تساعدنا في تحديد النطاق المتأثر بهذا التلوث.", center: [31.970, 35.150], zoom: 13 },
-    { title: "الزراعة والمناخ", text: "تمتلك رام الله تنوعاً مناخياً فريداً. الأراضي الزراعية (بالأخضر) هي الرئة التي تتنفس منها المدينة، وحمايتها من الزحف العمراني ضرورة قصوى.", center: [31.920, 35.250], zoom: 13 },
-    { title: "تحدي المستوطنات", text: "تحاط رام الله بسلسلة من المستوطنات (بالأحمر) التي تعيق التواصل الجغرافي بين القرى والمدن الفلسطينية وتلتهم الموارد الطبيعية.", center: [31.915, 35.265], zoom: 13 }
+    { title: "رام الله: المركز والقلب", text: "تعتبر رام الله المركز الإداري لدولة فلسطين. نلاحظ الكثافة العمرانية العالية (البني) التي تتركز في المركز وتواجه صعوبات في التوسع الأفقي.", center: [31.903, 35.203], zoom: 14 },
+    { title: "الجدار الفاصل", text: "الجدار (المنقط) يحيط بالمدينة من جهات عدة، مما يعزل آلاف الدونمات من الأراضي الزراعية (بالبرتقالي) ويمنع أصحابها من الوصول إليها بحرية.", center: [31.940, 35.130], zoom: 13 },
+    { title: "خطر الكسارات والتلوث", text: "الكسارات (⛏️) تسبب تلوثاً هوائياً كبيراً وضجيجاً يؤثر على الأحياء السكنية القريبة. أداة الماسح تحدد مناطق الخطر البيئي حولها.", center: [31.970, 35.150], zoom: 13 },
+    { title: "الأراضي الزراعية والمناخ", text: "تمتلك رام الله أراضي خصبة ومناخاً معتدلاً (نطاقات الحرارة). حماية هذه الأراضي من الزحف العمراني هو التحدي الأكبر للمخطط الفلسطيني.", center: [31.920, 35.250], zoom: 13 },
+    { title: "طوق المستوطنات", text: "تحاط المدينة بمستوطنات (بالأحمر) تسيطر على التلال والموارد المائية، وتمنع التواصل الجغرافي الطبيعي بين رام الله والقدس وباقي المحافظات.", center: [31.915, 35.265], zoom: 13 }
 ];
 function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStory(); }
 function updateStory() { let s = storySteps[currentStep]; $("#story-title").text(s.title); $("#story-text").text(s.text); map.flyTo(s.center, s.zoom); }
@@ -237,7 +226,7 @@ function clearAnalysis() {
     analysisGroup.clearLayers(); measureGroup.clearLayers();
     if (map.hasControl(drawControl)) map.removeControl(drawControl);
     $("#measure-output, #story-panel").fadeOut();
-    document.getElementById("dynamic-items").innerHTML = "لا توجد أدوات تعمل...";
+    document.getElementById("dynamic-items").innerHTML = "اختر أداة لتفعيلها...";
 }
 
 function restoreAll() { for (let k in layers) map.addLayer(layers[k]); }
