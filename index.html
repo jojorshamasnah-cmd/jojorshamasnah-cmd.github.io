@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ramallah WebGIS - Professional Suite</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
@@ -20,8 +24,18 @@
         .btn-isolation { background: #8e44ad; }
         .btn-equity { background: #16a085; } 
         .btn-story { background: #2980b9; } 
+        .btn-measure { background: #f39c12; } /* New Color for Measurement */
         .btn-clear { background: #e74c3c; }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
+
+        /* Measurement Display */
+        #measure-output {
+            position: absolute; top: 15px; right: 20px; z-index: 2000;
+            background: rgba(255, 255, 255, 0.95); padding: 12px 18px;
+            border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: none; border-left: 5px solid #f39c12; font-weight: bold;
+            min-width: 150px; text-align: center;
+        }
 
         /* Story Panel */
         #story-panel { 
@@ -50,6 +64,7 @@
 
 <div id="advisor-ui">
     <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ BaseMap</button>
+    <button class="btn-tool btn-measure" onclick="toggleMeasureTool()">📏 Measure</button>
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard</button>
     <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation</button>
@@ -57,6 +72,8 @@
     <button class="btn-tool btn-story" onclick="startStory()">📖 Story Mode</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Restore</button>
 </div>
+
+<div id="measure-output">Result: <span id="measure-val">0</span></div>
 
 <div id="story-panel">
     <h3 id="story-title" style="margin-top:0; color:#2c3e50;"></h3>
@@ -103,6 +120,11 @@ var isBaseMapVisible = true;
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
 var currentStep = 0;
+
+// Measurement variables
+var measureLayer = new L.FeatureGroup().addTo(map);
+var drawControl;
+var isMeasureActive = false;
 
 L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
@@ -158,9 +180,52 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0.1 });
 
-// --- Tool Functions ---
+// --- NEW FEATURE: MEASUREMENT TOOL ---
+function toggleMeasureTool() {
+    if (!isMeasureActive) {
+        isMeasureActive = true;
+        $("#measure-output").fadeIn();
+        $(".btn-measure").css("border", "2px solid white");
+        
+        drawControl = new L.Control.Draw({
+            draw: {
+                polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#f39c12', weight: 4 } },
+                polyline: { shapeOptions: { color: '#f39c12', weight: 4 } },
+                circle: false, rectangle: false, marker: false, circlemarker: false
+            },
+            edit: { featureGroup: measureLayer }
+        });
+        map.addControl(drawControl);
+    } else {
+        isMeasureActive = false;
+        $("#measure-output").fadeOut();
+        $(".btn-measure").css("border", "none");
+        map.removeControl(drawControl);
+        measureLayer.clearLayers();
+        $("#measure-val").text("0");
+    }
+}
 
-// أداة رقم 11: مخطط عدم المساواة في الخدمات (Updated to English)
+map.on(L.Draw.Event.CREATED, function (e) {
+    var layer = e.layer;
+    measureLayer.addLayer(layer);
+    var result = "";
+    if (e.layerType === 'polyline') {
+        var distance = 0;
+        var latlngs = layer.getLatLngs();
+        for (var i = 0; i < latlngs.length - 1; i++) {
+            distance += latlngs[i].distanceTo(latlngs[i+1]);
+        }
+        result = (distance / 1000).toFixed(2) + " km";
+    } else if (e.layerType === 'polygon') {
+        var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+        result = (area / 1000000).toFixed(2) + " sq km";
+    }
+    $("#measure-val").text(result);
+});
+
+// --- EXISTING TOOL FUNCTIONS ---
+
 function runServiceEquity() {
     clearAnalysis();
     hideExceptBoundary();
@@ -185,12 +250,10 @@ function runServiceEquity() {
         let buffer = turf.buffer(collection, 1.5, {units: 'kilometers'});
         let dissolved = turf.dissolve(buffer);
 
-        // Draw Coverage
         L.geoJson(dissolved, {
             style: { color: '#27ae60', fillColor: '#2ecc71', fillOpacity: 0.2, weight: 1 }
         }).addTo(analysisGroup);
 
-        // Draw Service Gap Areas (Turf Difference)
         if (layers["Ramallah Boundary"]) {
             let boundary = layers["Ramallah Boundary"].toGeoJSON().features[0];
             let gap = turf.difference(boundary, dissolved);
@@ -303,31 +366,6 @@ function runIsolationScanner() {
     }
 }
 
-// --- Story Mode ---
-const storySteps = [
-    {
-        title: "Scene 1: Urban Expansion & Settlements",
-        text: "Notice the conflict between Master Plans and Settlements. Settlements create spatial constraints that block natural urban growth.",
-        center: [31.910, 35.260],
-        zoom: 14,
-        visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"]
-    },
-    {
-        title: "Scene 2: The Wall & Isolated Lands",
-        text: "This view shows the Annexation Wall. Vast areas of 'High Agricultural Value' land are completely isolated behind this barrier.",
-        center: [31.940, 35.130],
-        zoom: 14,
-        visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"]
-    },
-    {
-        title: "Scene 3: Water Resources at Risk",
-        text: "Water wells are vital, but their proximity to Outposts and Quarries threatens their sustainability.",
-        center: [31.880, 35.230],
-        zoom: 14,
-        visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"]
-    }
-];
-
 function startStory() {
     clearAnalysis();
     currentStep = 0;
@@ -336,20 +374,22 @@ function startStory() {
 }
 
 function updateStoryScene() {
+    const storySteps = [
+        { title: "Scene 1: Urban Expansion & Settlements", text: "Notice the conflict...", center: [31.910, 35.260], zoom: 14, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
+        { title: "Scene 2: The Wall & Isolated Lands", text: "This view shows the Annexation Wall...", center: [31.940, 35.130], zoom: 14, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] },
+        { title: "Scene 3: Water Resources at Risk", text: "Water wells are vital...", center: [31.880, 35.230], zoom: 14, visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"] }
+    ];
     const step = storySteps[currentStep];
     $("#story-title").text(step.title);
     $("#story-text").text(step.text);
     map.flyTo(step.center, step.zoom, { duration: 2 });
     for (let k in layers) {
-        if (step.visibleLayers.includes(k)) {
-            if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-        } else {
-            map.removeLayer(layers[k]);
-        }
+        if (step.visibleLayers.includes(k)) { if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); } 
+        else { map.removeLayer(layers[k]); }
     }
 }
 
-function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); } }
+function nextStep() { if (currentStep < 2) { currentStep++; updateStoryScene(); } }
 function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
 function closeStory() { $("#story-panel").fadeOut(); clearAnalysis(); }
 
@@ -357,6 +397,7 @@ function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Bounda
 
 function clearAnalysis() {
     analysisGroup.clearLayers();
+    measureLayer.clearLayers();
     $("#story-panel").hide();
     for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
     if (layers["Ramallah Boundary"]) map.fitBounds(layers["Ramallah Boundary"].getBounds());
