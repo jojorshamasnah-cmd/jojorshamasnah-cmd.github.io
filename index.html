@@ -18,7 +18,7 @@
         .btn-basemap { background: #27ae60; }
         .btn-hazard { background: #d35400; }
         .btn-isolation { background: #8e44ad; }
-        .btn-equity { background: #16a085; } /* لون مخصص للأداة 11 */
+        .btn-equity { background: #16a085; } 
         .btn-story { background: #2980b9; } 
         .btn-clear { background: #e74c3c; }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
@@ -53,7 +53,7 @@
     <button class="btn-tool" onclick="runSmartAdvisor()">🧠 Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard</button>
     <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation</button>
-    <button class="btn-tool btn-equity" onclick="runServiceEquity()">⚖️ Equity (11)</button>
+    <button class="btn-tool btn-equity" onclick="runServiceEquity()">⚖️ Service Equity</button>
     <button class="btn-tool btn-story" onclick="startStory()">📖 Story Mode</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 Restore</button>
 </div>
@@ -160,20 +160,19 @@ addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weig
 
 // --- Tool Functions ---
 
-// أداة رقم 11: مخطط عدم المساواة في الخدمات
+// أداة رقم 11: مخطط عدم المساواة في الخدمات (Updated to English)
 function runServiceEquity() {
     clearAnalysis();
     hideExceptBoundary();
     
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:rgba(231, 76, 60, 0.6)"></span> مناطق فجوة خدمية (>1.5km)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:rgba(46, 204, 113, 0.2)"></span> نطاق التغطية الحالية</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:rgba(231, 76, 60, 0.6)"></span> Service Gap (>1.5km)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:rgba(46, 204, 113, 0.2)"></span> Current Coverage</div>
     `;
 
     let servicePoints = [];
     if (layers["Schools"]) servicePoints.push(...layers["Schools"].toGeoJSON().features);
     
-    // تصفية الآبار المنزلية بناءً على الأتريبيوت WaterUse_E
     if (layers["Wells"]) {
         let domestic = layers["Wells"].toGeoJSON().features.filter(f => 
             f.properties.WaterUse_E === "Domestic" || f.properties.WaterUse_E === "Domestic/WD"
@@ -186,20 +185,24 @@ function runServiceEquity() {
         let buffer = turf.buffer(collection, 1.5, {units: 'kilometers'});
         let dissolved = turf.dissolve(buffer);
 
-        // رسم نطاق التغطية
+        // Draw Coverage
         L.geoJson(dissolved, {
             style: { color: '#27ae60', fillColor: '#2ecc71', fillOpacity: 0.2, weight: 1 }
         }).addTo(analysisGroup);
 
-        // حساب مناطق الفجوة (المساحات خارج النطاق)
+        // Draw Service Gap Areas (Turf Difference)
         if (layers["Ramallah Boundary"]) {
             let boundary = layers["Ramallah Boundary"].toGeoJSON().features[0];
             let gap = turf.difference(boundary, dissolved);
             
             L.geoJson(gap, {
                 style: { color: '#c0392b', fillColor: '#e74c3c', fillOpacity: 0.6, weight: 2 }
-            }).bindPopup("<b>مخطط عدم المساواة</b><br>هذه المنطقة تفتقر للوصول السريع للمدارس أو الآبار المنزلية (أبعد من 1.5 كم).")
-            .addTo(analysisGroup);
+            }).bindPopup(`
+                <div style="text-align:center;">
+                    <b style="color:#c0392b; font-size:14px;">Service Inequality Zone</b><hr style="margin:5px 0;">
+                    This area is underserved. It is located more than <b>1.5 km</b> away from schools or domestic water wells.
+                </div>
+            `).addTo(analysisGroup);
         }
         map.fitBounds(analysisGroup.getBounds());
     }
@@ -304,21 +307,21 @@ function runIsolationScanner() {
 const storySteps = [
     {
         title: "Scene 1: Urban Expansion & Settlements",
-        text: "Notice the conflict between Master Plans and Settlements. Settlements like 'Ahavat Hayim' (Est. 1999) create spatial constraints that block natural urban growth.",
+        text: "Notice the conflict between Master Plans and Settlements. Settlements create spatial constraints that block natural urban growth.",
         center: [31.910, 35.260],
         zoom: 14,
         visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"]
     },
     {
         title: "Scene 2: The Wall & Isolated Lands",
-        text: "This view shows the 'Constructed' Annexation Wall. Vast areas of 'High Agricultural Value' land are completely isolated behind this barrier.",
+        text: "This view shows the Annexation Wall. Vast areas of 'High Agricultural Value' land are completely isolated behind this barrier.",
         center: [31.940, 35.130],
         zoom: 14,
         visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"]
     },
     {
         title: "Scene 3: Water Resources at Risk",
-        text: "Water wells are vital, but their proximity to Outposts and Quarries threatens their sustainability and water quality.",
+        text: "Water wells are vital, but their proximity to Outposts and Quarries threatens their sustainability.",
         center: [31.880, 35.230],
         zoom: 14,
         visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"]
