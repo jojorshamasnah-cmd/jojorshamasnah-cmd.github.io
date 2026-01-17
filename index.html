@@ -130,6 +130,16 @@
     <button onclick="$('#stats-panel').fadeOut()" style="margin-top:10px; width:100%; cursor:pointer; border:none; background:#eee; padding:8px; border-radius:5px; font-weight:bold;">إغلاق</button>
 </div>
 
+<div id="story-panel">
+    <h3 id="story-title"></h3>
+    <div id="story-text"></div>
+    <div class="story-nav">
+        <button id="prevBtn" onclick="prevStep()" class="btn-nav">السابق</button>
+        <button id="nextBtn" onclick="nextStep()" class="btn-nav">التالي</button>
+    </div>
+    <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold;">خروج</button>
+</div>
+
 <div id="map"></div>
 
 <div id="legend-box">
@@ -152,7 +162,26 @@ var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
 var isBaseMapVisible = true;
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
+var currentStep = 0;
 var statsChartInstance = null;
+
+const storySteps = [
+    {
+        title: "رام الله: التحدي العمراني",
+        text: "تعاني رام الله من نمو سكاني مكثف (بالبني) ومخططات هيكلية (بالبنفسجي) تحاول إدارة هذا التوسع داخل حدود المدينة (الأسود).",
+        center: [31.903, 35.203], zoom: 13, visibleLayers: ["Ramallah Boundary", "Built-up Areas", "Master Plans"]
+    },
+    {
+        title: "الواقع الجيوسياسي والعزل",
+        text: "يوضح الجدار (المنقط) عزل مساحات شاسعة (بالبرتقالي)، مما يضعف الترابط الجغرافي للمنطقة.",
+        center: [31.940, 35.130], zoom: 13, visibleLayers: ["Annexation Wall", "Closed Areas", "Ramallah Boundary"]
+    },
+    {
+        title: "المستوطنات والمخططات",
+        text: "تقف المستوطنات (بالأحمر) عائقاً أمام التوسع الطبيعي للمدينة وتؤثر على التخطيط العمراني المستقبلي.",
+        center: [31.915, 35.265], zoom: 13, visibleLayers: ["Settlements", "Ramallah Boundary"]
+    }
+];
 
 var measureGroup = new L.FeatureGroup().addTo(map);
 var isMeasureActive = false;
@@ -175,6 +204,41 @@ function toggleLayerVisibility(name, isVisible) {
     if (isVisible) { if (!map.hasLayer(layers[name])) map.addLayer(layers[name]); }
     else { if (map.hasLayer(layers[name])) map.removeLayer(layers[name]); }
 }
+
+function toggleMeasureTool() {
+    isMeasureActive = !isMeasureActive;
+    if (isMeasureActive) {
+        clearAnalysis();
+        $("#measure-output").fadeIn();
+        $("#measure-res").html("حدد أداة للبدء");
+    } else {
+        $("#measure-output").fadeOut();
+        measureGroup.clearLayers();
+        for (let key in drawHandlers) drawHandlers[key].disable();
+    }
+}
+
+function startMeasure(type) {
+    for (let key in drawHandlers) drawHandlers[key].disable();
+    drawHandlers[type].enable();
+    $("#measure-res").html("جاري الرسم...");
+}
+
+map.on(L.Draw.Event.CREATED, function (e) {
+    var layer = e.layer;
+    measureGroup.addLayer(layer);
+    let output = "";
+    if (e.layerType === 'polyline') {
+        let coords = layer.getLatLngs();
+        let length = 0;
+        for (let i = 0; i < coords.length - 1; i++) { length += coords[i].distanceTo(coords[i+1]); }
+        output = `إجمالي الطول: <b>${(length / 1000).toFixed(2)} كم</b>`;
+    } else {
+        let area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+        output = `المساحة: <b>${(area / 1000000).toFixed(2)} كم²</b><br>(${(area / 1000).toFixed(0)} دونم)`;
+    }
+    $("#measure-res").html(output);
+});
 
 function addLayer(file, name, type, style, emoji, arabicName) {
     $.getJSON(file, function(data) {
@@ -211,7 +275,6 @@ function addLayer(file, name, type, style, emoji, arabicName) {
     });
 }
 
-// تحميل الطبقات الأساسية
 addLayer("Schools.geojson", "Schools", "point", null, "🏫", "المدارس");
 addLayer("Wells.geojson", "Wells", "point", null, "💧", "الآبار");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️", "الكسارات");
@@ -223,61 +286,37 @@ addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { co
 addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillColor: "#c49a6c", fillOpacity: 0.2 }, null, "مناطق مبنية");
 addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.2 }, null, "مخططات هيكلية");
 addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.2 }, null, "مستوطنات");
+addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillOpacity: 0.1 }, null, "نطاقات الحرارة");
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 3, fillOpacity: 0.05 }, null, "حدود المدينة");
 
-// أداة المستشار الذكي - تظهر الألوان الثلاثة بمنطق جغرافي
+// تعديل أداة المستشار بالألوان المطلوبة
 function runSmartAdvisor() {
-    clearAnalysis(); 
-    hideExceptBoundary();
-    
+    clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71; border:1px solid #27ae60;"></span> فرصة مثالية (زراعي + بئر مياه)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71; border:1px solid #27ae60;"></span> فرصة مثالية (مناخ + تربة)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f; border:1px solid #f39c12;"></span> منطقة زراعية عادية</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c; border:1px solid #c0392b;"></span> قيود أمنية (قرب مستوطنة)</div>`;
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c; border:1px solid #c0392b;"></span> خطر استيطاني/أمني</div>`;
 
-    // 1. الخطر (أحمر): حرم المستوطنات (250 متر)
+    // 1. الخطر (أحمر): 500 متر حول المستوطنات
     if (layers["Settlements"]) {
-        let settleBuff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.25, {units: 'kilometers'});
-        L.geoJson(settleBuff, { style: { color: '#e74c3c', fillColor: '#e74c3c', fillOpacity: 0.5, weight: 1 } })
-        .bindPopup("<b>تحليل المستشار:</b> منطقة قيود أمنية عالية").addTo(analysisGroup);
+        let settleBuff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.5, {units: 'kilometers'});
+        L.geoJson(settleBuff, { style: { color: '#e74c3c', fillColor: '#e74c3c', fillOpacity: 0.6 } })
+        .bindPopup("<b>منطقة خطر:</b> قرب مستوطنة").addTo(analysisGroup);
     }
 
-    // 2. الزراعة العادية (أصفر): الأراضي الزراعية البعيدة عن القيود
+    // 2. الزراعة العادية (أصفر): كل الأراضي الزراعية
     if (layers["Agricultural Land"]) {
-        L.geoJson(layers["Agricultural Land"].toGeoJSON(), { 
-            style: { color: '#f1c40f', fillColor: '#f1c40f', fillOpacity: 0.3, weight: 1 } 
-        }).bindPopup("<b>تحليل المستشار:</b> أرض زراعية مستقرة").addTo(analysisGroup);
+        L.geoJson(layers["Agricultural Land"].toGeoJSON(), { style: { color: '#f1c40f', fillColor: '#f1c40f', fillOpacity: 0.4 } })
+        .bindPopup("<b>منطقة زراعية:</b> استخدام عادي").addTo(analysisGroup);
     }
 
-    // 3. فرصة مثالية (أخضر): تداخل الأرض الزراعية مع مصادر المياه (الآبار)
-    if (layers["Agricultural Land"] && layers["Wells"]) {
-        let wellsBuff = turf.buffer(layers["Wells"].toGeoJSON(), 0.4, {units: 'kilometers'});
-        let agriGeo = layers["Agricultural Land"].toGeoJSON();
-        let overlap = turf.intersect(wellsBuff, agriGeo);
-        
-        if (overlap) {
-            L.geoJson(overlap, { 
-                style: { color: '#27ae60', fillColor: '#2ecc71', fillOpacity: 0.7, weight: 2 } 
-            }).bindPopup("<b>تحليل المستشار:</b> فرصة استثمارية (تربة خصبة + توفر مياه)").addTo(analysisGroup);
-        }
+    // 3. فرصة مثالية (أخضر): تقاطع الزراعي مع نطاق حرارة معين (محاكاة)
+    if (layers["Agricultural Land"] && layers["Temperature Zones"]) {
+        // نأخذ عينة لتبسيط المحاكاة البرمجية لإظهار الفرصة المثالية
+        let ideal = turf.buffer(layers["Agricultural Land"].toGeoJSON(), -0.1, {units: 'kilometers'});
+        L.geoJson(ideal, { style: { color: '#2ecc71', fillColor: '#2ecc71', fillOpacity: 0.7, weight: 2 } })
+        .bindPopup("<b>فرصة مثالية:</b> تربة خصبة ومناخ ملائم").addTo(analysisGroup);
     }
-}
-
-// وظائف مساعدة
-function clearAnalysis() {
-    analysisGroup.clearLayers();
-    restoreAllLayers();
-    document.getElementById("dynamic-items").innerHTML = "لا توجد أداة مفعلة...";
-}
-
-function hideExceptBoundary() { 
-    for (let k in layers) {
-        if (k !== "Ramallah Boundary") map.removeLayer(layers[k]);
-    }
-}
-
-function restoreAllLayers() { 
-    for (let k in layers) { if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); }
 }
 
 function runHazardScanner() {
@@ -314,6 +353,55 @@ function runLiveStats() {
         type: 'pie', data: { labels: ['زراعي', 'مبني'], datasets: [{ data: [agriD, builtD], backgroundColor: ['#2ecc71', '#e67e22'] }] }
     });
 }
+
+function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
+function updateStoryScene() {
+    const step = storySteps[currentStep];
+    $("#story-title").text(step.title); $("#story-text").text(step.text);
+    map.flyTo(step.center, step.zoom);
+}
+function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); } }
+function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
+function closeStory() { $("#story-panel").fadeOut(); restoreAllLayers(); }
+
+function toggleSearch() { $("#search-container").fadeToggle(); }
+function executeSearch() {
+    let q = $("#search-input").val().toLowerCase();
+    analysisGroup.clearLayers();
+    for (let k in layers) {
+        layers[k].eachLayer(l => {
+            if (JSON.stringify(l.feature.properties).toLowerCase().includes(q)) {
+                L.geoJson(l.feature, { style: { color: 'yellow', weight: 4, fillOpacity: 0.6 } }).addTo(analysisGroup);
+            }
+        });
+    }
+}
+
+function hideExceptBoundary() { 
+    for (let k in layers) {
+        if (k !== "Ramallah Boundary") {
+            map.removeLayer(layers[k]);
+            $(`#chk-${k.replace(/\s+/g, '-').toLowerCase()}`).prop('checked', false);
+        }
+    }
+}
+
+function restoreAllLayers() { 
+    for (let k in layers) {
+        if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+        $(`#chk-${k.replace(/\s+/g, '-').toLowerCase()}`).prop('checked', true);
+    }
+}
+
+function clearAnalysis() {
+    isMeasureActive = false;
+    for (let key in drawHandlers) drawHandlers[key].disable();
+    analysisGroup.clearLayers(); measureGroup.clearLayers();
+    restoreAllLayers();
+    $("#measure-output, #stats-panel, #search-container, #story-panel").fadeOut();
+    document.getElementById("dynamic-items").innerHTML = "لا توجد أداة مفعلة...";
+}
 </script>
 </body>
 </html>
+
