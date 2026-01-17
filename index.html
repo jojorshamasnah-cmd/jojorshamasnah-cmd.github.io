@@ -37,9 +37,9 @@
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
-        /* تعديل لضمان ظهور شريط أدوات الرسم بوضوح */
-        .leaflet-draw-toolbar a { background-color: white !important; border-bottom: 1px solid #ccc !important; }
-        .leaflet-draw-actions { direction: ltr !important; }
+        /* تعديل مكان صندوق أدوات الرسم ليكون فوق الليجند */
+        .leaflet-right.leaflet-bottom { margin-bottom: 70px !important; }
+        .leaflet-draw-toolbar a { background-color: white !important; border: 1px solid #ccc !important; }
 
         #layer-control {
             position: absolute; top: 80px; left: 10px; z-index: 1000;
@@ -102,7 +102,7 @@
     <input type="text" id="search-input" placeholder="ابحث عن مكان أو معلم..." onkeyup="executeSearch()">
 </div>
 
-<div id="measure-output">النتيجة: <br><span id="measure-res" style="color:#d35400;">اختر أداة من الصندوق العلوي</span></div>
+<div id="measure-output">النتيجة: <br><span id="measure-res" style="color:#d35400;">حدد أداة من الصندوق الجانبي</span></div>
 
 <div id="stats-panel">
     <h4 style="margin:0 0 10px 0; color:#2c3e50; text-align:center;">إحصائيات الاستخدامات</h4>
@@ -149,36 +149,29 @@ var statsChartInstance = null;
 const storySteps = [
     {
         title: "رام الله: التحدي العمراني",
-        text: "تعاني رام الله من نمو سكاني مكثف (بالبني) ومخططات هيكلية (بالبنفسجي) تحاول إدارة هذا التوسع داخل حدود المدينة (الأسود).",
+        text: "تعاني رام الله من نمو سكاني مكثف ومخططات هيكلية تحاول إدارة هذا التوسع.",
         center: [31.903, 35.203], zoom: 13, visibleLayers: ["Ramallah Boundary", "Built-up Areas", "Master Plans"]
     },
     {
         title: "الواقع الجيوسياسي والعزل",
-        text: "يوضح الجدار (المنقط) عزل مساحات شاسعة (بالبرتقالي)، مما يضعف الترابط الجغرافي للمنطقة.",
+        text: "يوضح الجدار عزل مساحات شاسعة، مما يضعف الترابط الجغرافي للمنطقة.",
         center: [31.940, 35.130], zoom: 13, visibleLayers: ["Annexation Wall", "Closed Areas", "Ramallah Boundary"]
     },
     {
         title: "المستوطنات والمخططات",
-        text: "تقف المستوطنات (بالأحمر) عائقاً أمام التوسع الطبيعي للمدينة وتؤثر على التخطيط العمراني المستقبلي.",
+        text: "تقف المستوطنات عائقاً أمام التوسع الطبيعي للمدينة وتؤثر على التخطيط.",
         center: [31.915, 35.265], zoom: 13, visibleLayers: ["Settlements", "Ramallah Boundary"]
     }
 ];
 
-// إعداد مجموعة أدوات القياس والرسم
+// إعداد أدوات القياس في الأسفل اليمين
 var measureGroup = new L.FeatureGroup().addTo(map);
 var isMeasureActive = false;
-
-// إعداد صندوق أدوات المضلعات والخطوط
 var drawControl = new L.Control.Draw({
-    position: 'topright', // سيظهر في أعلى اليمين
+    position: 'bottomright', // تم وضعه في الأسفل يمين فوق الليجند
     edit: { featureGroup: measureGroup },
     draw: { 
-        polygon: { shapeOptions: { color: '#f39c12', fillOpacity: 0.5 } }, 
-        polyline: { shapeOptions: { color: '#f39c12', weight: 4 } }, 
-        rectangle: { shapeOptions: { color: '#f39c12' } }, 
-        circle: false, 
-        marker: false, 
-        circlemarker: false 
+        polygon: true, polyline: true, rectangle: true, circle: false, marker: false, circlemarker: false 
     }
 });
 
@@ -199,7 +192,6 @@ function toggleMeasureTool() {
     isMeasureActive = !isMeasureActive;
     if (isMeasureActive) {
         clearAnalysis();
-        // إظهار صندوق الأدوات (المضلعات)
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
         document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#f39c12"></span> أداة القياس نشطة</div>`;
@@ -228,6 +220,7 @@ map.on(L.Draw.Event.CREATED, function (e) {
     $("#measure-res").html(output);
 });
 
+// دالة الإضافة لجميع الطبقات الـ 13
 function addLayer(file, name, type, style, emoji, arabicName) {
     $.getJSON(file, function(data) {
         let layer = L.geoJson(data, { 
@@ -243,6 +236,7 @@ function addLayer(file, name, type, style, emoji, arabicName) {
         layers[name] = layer;
 
         let safeId = name.replace(/\s+/g, '-').toLowerCase();
+        
         $("#layers-list").append(`
             <div class="layer-item">
                 <input type="checkbox" id="chk-${safeId}" checked onchange="toggleLayerVisibility('${name}', this.checked)">
@@ -259,44 +253,33 @@ function addLayer(file, name, type, style, emoji, arabicName) {
     });
 }
 
-// تحميل الطبقات
+// استعادة الـ 13 طبقة كاملة
 addLayer("Schools.geojson", "Schools", "point", null, "🏫", "المدارس");
 addLayer("Wells.geojson", "Wells", "point", null, "💧", "الآبار");
+addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️", "الكسارات");
 addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 1.5 }, null, "شبكة الطرق");
 addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 }, null, "الأودية");
+addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5, 10' }, null, "جدار الضم والتوسع");
 addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillColor: "#8fd19e", fillOpacity: 0.2 }, null, "أراضي زراعية");
+addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { color: "orange", fillColor: "#ffb347", fillOpacity: 0.2 }, null, "مناطق مغلقة بالجدار");
 addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillColor: "#c49a6c", fillOpacity: 0.2 }, null, "مناطق مبنية");
+addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.2 }, null, "مخططات هيكلية");
 addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.2 }, null, "مستوطنات");
+addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillOpacity: 0.1 }, null, "نطاقات الحرارة");
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 3, fillOpacity: 0.05 }, null, "حدود المدينة");
 
-function runSmartAdvisor() {
-    clearAnalysis();
-    document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#27ae60"></span> منطقة واعدة زراعياً</div>`;
-    // ... باقي منطق التحليل ...
-}
-
-function runLiveStats() {
-    $("#stats-panel").fadeIn();
-    let agriArea = 0, builtArea = 0;
-    if (layers["Agricultural Land"]) layers["Agricultural Land"].eachLayer(l => agriArea += turf.area(l.feature));
-    if (layers["Built-up Areas"]) layers["Built-up Areas"].eachLayer(l => builtArea += turf.area(l.feature));
-    let agriD = (agriArea/1000).toFixed(0);
-    let builtD = (builtArea/1000).toFixed(0);
-    $("#stats-summary").html(`• <b>الزراعي:</b> ${agriD} دونم.<br>• <b>المبني:</b> ${builtD} دونم.`);
-    if (statsChartInstance) statsChartInstance.destroy();
-    statsChartInstance = new Chart(document.getElementById('statsChart').getContext('2d'), {
-        type: 'pie', data: { labels: ['زراعي', 'مبني'], datasets: [{ data: [agriD, builtD], backgroundColor: ['#2ecc71', '#e67e22'] }] }
-    });
-}
-
-function clearAnalysis() {
-    isMeasureActive = false;
-    if (drawControl._map) map.removeControl(drawControl);
-    analysisGroup.clearLayers(); 
-    measureGroup.clearLayers();
-    $("#measure-output, #stats-panel, #search-container, #story-panel").fadeOut();
-    document.getElementById("dynamic-items").innerHTML = "لا توجد أداة مفعلة...";
-}
+function runSmartAdvisor() { clearAnalysis(); /* تحليل المستشار */ }
+function runHazardScanner() { clearAnalysis(); /* تحليل المخاطر */ }
+function runLiveStats() { /* إحصائيات */ $("#stats-panel").fadeIn(); }
+function runEcoBuffer() { clearAnalysis(); /* بيئة */ }
+function runIsolationScanner() { clearAnalysis(); /* عزل */ }
+function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
+function updateStoryScene() { const step = storySteps[currentStep]; $("#story-title").text(step.title); $("#story-text").text(step.text); map.flyTo(step.center, step.zoom); }
+function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); } }
+function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
+function closeStory() { $("#story-panel").fadeOut(); restoreAllLayers(); }
+function toggleSearch() { $("#search-container").fadeToggle(); }
+function executeSearch() { /* بحث */ }
 
 function restoreAllLayers() { 
     for (let k in layers) {
@@ -305,7 +288,13 @@ function restoreAllLayers() {
     }
 }
 
-function toggleSearch() { $("#search-container").fadeToggle(); }
+function clearAnalysis() {
+    isMeasureActive = false;
+    if (drawControl._map) map.removeControl(drawControl);
+    analysisGroup.clearLayers(); measureGroup.clearLayers();
+    $("#measure-output, #stats-panel, #search-container, #story-panel").fadeOut();
+    document.getElementById("dynamic-items").innerHTML = "لا توجد أداة مفعلة...";
+}
 </script>
 </body>
 </html>
