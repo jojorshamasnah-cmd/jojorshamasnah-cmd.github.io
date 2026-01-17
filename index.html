@@ -52,6 +52,14 @@
         .symbol-line { width: 20px; height: 3px; margin-left: 8px; flex-shrink: 0; }
         .symbol-icon { font-size: 14px; margin-left: 8px; width: 18px; text-align: center; }
         .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; }
+
+        /* تنسيق إضافي لصندوق تحكم الطبقات لجعله متناسقاً مع التصميم */
+        .leaflet-control-layers { 
+            direction: rtl; 
+            text-align: right; 
+            border-radius: 8px !important; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        }
     </style>
 </head>
 <body>
@@ -122,6 +130,12 @@
 <script>
 var map = L.map("map").setView([31.903, 35.203], 11);
 var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+// إعداد صندوق تحكم الطبقات في أعلى اليمين
+var baseMaps = { "خريطة OSM": osmLayer };
+var overlayMaps = {};
+var layerControl = L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+
 var isBaseMapVisible = true;
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
@@ -216,6 +230,9 @@ function addLayer(file, name, type, style, emoji) {
         });
         layer.addTo(map);
         layers[name] = layer;
+        
+        // تحديث صندوق التحكم بالطبقات عند إضافة كل طبقة
+        layerControl.addOverlay(layer, name);
     });
 }
 
@@ -348,4 +365,3 @@ function clearAnalysis() {
 </script>
 </body>
 </html>
-
