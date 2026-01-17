@@ -17,7 +17,6 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
-        /* شريط الأدوات في المنتصف */
         #advisor-ui { 
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%); 
             z-index: 1000; display: flex; gap: 8px; flex-wrap: nowrap; 
@@ -38,32 +37,21 @@
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
-        /* صندوق التحكم بالطبقات - يسار علوي */
         #layer-control {
             position: absolute; top: 80px; left: 10px; z-index: 1000;
             background: white; padding: 12px; border-radius: 8px; 
             box-shadow: 0 2px 10px rgba(0,0,0,0.2); direction: rtl;
-            min-width: 160px; max-height: 50vh; overflow-y: auto; border: 1px solid #ccc;
+            min-width: 170px; max-height: 50vh; overflow-y: auto; border: 1px solid #ccc;
         }
         #layer-control h4 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #2c3e50; }
         .layer-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; cursor: pointer; }
 
-        /* صندوق البحث تحت الأدوات */
-        #search-container { 
-            position: absolute; top: 85px; left: 50%; transform: translateX(-50%); 
-            z-index: 1000; display: none; background: white; padding: 10px; 
-            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); width: 300px; 
-        }
+        #search-container { position: absolute; top: 85px; left: 50%; transform: translateX(-50%); z-index: 1000; display: none; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); width: 300px; }
         #search-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; text-align: right; }
 
         #measure-output { position: absolute; top: 15px; right: 20px; z-index: 2000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: none; border-left: 5px solid #f39c12; font-weight: bold; direction: rtl; max-width: 250px; }
         
-        #stats-panel { 
-            position: absolute; bottom: 30px; left: 20px; width: 300px; 
-            background: white; padding: 15px; border-radius: 12px; 
-            z-index: 3000; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
-            border-top: 5px solid #2ecc71; direction: rtl; 
-        }
+        #stats-panel { position: absolute; bottom: 30px; left: 20px; width: 300px; background: white; padding: 15px; border-radius: 12px; z-index: 3000; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.3); border-top: 5px solid #2ecc71; direction: rtl; }
         
         #story-panel { position: absolute; top: 80px; right: 20px; width: 350px; background: rgba(255, 255, 255, 0.98); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 3000; display: none; padding: 25px; border-top: 8px solid #2980b9; direction: rtl; }
         #story-title { margin-top:0; color:#2980b9; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
@@ -141,18 +129,7 @@
             <div id="dynamic-items" style="color:gray; font-style:italic;">لا توجد أداة مفعلة...</div>
         </div>
         <div class="legend-section">الطبقات الأساسية</div>
-        <div class="legend-item"><span class="symbol-icon">🏫</span> المدارس</div>
-        <div class="legend-item"><span class="symbol-icon">💧</span> الآبار</div>
-        <div class="legend-item"><span class="symbol-icon">⛏️</span> الكسارات</div>
-        <div class="legend-item"><span class="symbol-line" style="background:black"></span> الطرق</div>
-        <div class="legend-item"><span class="symbol-line" style="background:#3498db"></span> الأودية</div>
-        <div class="legend-item"><span class="symbol-line" style="background:#555; border-top: 2px dashed #999;"></span> جدار الضم والتوسع</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#8fd19e"></span> أراضي زراعية</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ffb347"></span> مناطق مغلقة</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> مناطق مبنية</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> مخططات هيكلية</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> مستوطنات</div>
-        <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> حدود المدينة</div>
+        <div id="base-layers-legend"></div>
     </div>
 </div>
 
@@ -198,13 +175,9 @@ function toggleBaseMap() {
     isBaseMapVisible = !isBaseMapVisible;
 }
 
-// وظيفة لتشغيل وإطفاء الطبقات من الصندوق
 function toggleLayerVisibility(name, isVisible) {
-    if (isVisible) {
-        if (!map.hasLayer(layers[name])) map.addLayer(layers[name]);
-    } else {
-        if (map.hasLayer(layers[name])) map.removeLayer(layers[name]);
-    }
+    if (isVisible) { if (!map.hasLayer(layers[name])) map.addLayer(layers[name]); }
+    else { if (map.hasLayer(layers[name])) map.removeLayer(layers[name]); }
 }
 
 function toggleMeasureTool() {
@@ -214,12 +187,9 @@ function toggleMeasureTool() {
         for (let k in layers) {
             if (k !== "Ramallah Boundary" && k !== "Roads") {
                 map.removeLayer(layers[k]);
-                // تحديث حالة الصندوق عند الإخفاء
                 let safeId = k.replace(/\s+/g, '-').toLowerCase();
                 $(`#chk-${safeId}`).prop('checked', false);
-            } else {
-                if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-            }
+            } else { if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); }
         }
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
@@ -248,45 +218,59 @@ map.on(L.Draw.Event.CREATED, function (e) {
     $("#measure-res").html(output);
 });
 
-function addLayer(file, name, type, style, emoji) {
+// دالة الإضافة المحدثة التي تدعم التعريب والليجند التلقائي
+function addLayer(file, name, type, style, emoji, arabicName) {
     $.getJSON(file, function(data) {
         let layer = L.geoJson(data, { 
             pointToLayer: (f, latlng) => type === "point" ? L.marker(latlng, { icon: L.divIcon({ html: emoji, className: 'map-icon', iconSize: [18,18] }) }) : null,
             style: type !== "point" ? style : null,
             onEachFeature: function(f, l) {
-                let props = f.properties;
-                let content = `<div style='direction:rtl; text-align:right;'><b>${name}</b><hr>`;
-                for (let key in props) { content += `<b>${key}:</b> ${props[key]}<br>`; }
+                let content = `<div style='direction:rtl; text-align:right;'><b>${arabicName}</b><hr>`;
+                for (let key in f.properties) { content += `<b>${key}:</b> ${f.properties[key]}<br>`; }
                 l.bindPopup(content + "</div>");
             }
         });
         layer.addTo(map);
         layers[name] = layer;
 
-        // إضافة الطبقة تلقائياً للصندوق عند تحميلها
         let safeId = name.replace(/\s+/g, '-').toLowerCase();
+        
+        // إضافة لصندوق التحكم (بالعربي)
         $("#layers-list").append(`
             <div class="layer-item">
                 <input type="checkbox" id="chk-${safeId}" checked onchange="toggleLayerVisibility('${name}', this.checked)">
-                <label for="chk-${safeId}">${name}</label>
+                <label for="chk-${safeId}">${arabicName}</label>
             </div>
         `);
+
+        // إضافة لليجند تلقائياً
+        let sym = "";
+        if (type === "point") sym = `<span class="symbol-icon">${emoji}</span>`;
+        else if (type === "line") {
+            let dash = style.dashArray ? "border-top: 2px dashed #999;" : "";
+            sym = `<span class="symbol-line" style="background:${style.color}; ${dash}"></span>`;
+        } else if (type === "poly") {
+            let border = (style.weight && style.weight > 2) ? "border: 2px solid black; background:none;" : `background:${style.fillColor || style.color}`;
+            sym = `<span class="symbol-poly" style="${border}"></span>`;
+        }
+        $("#base-layers-legend").append(`<div class="legend-item">${sym} ${arabicName}</div>`);
     });
 }
 
-addLayer("Schools.geojson", "Schools", "point", null, "🏫");
-addLayer("Wells.geojson", "Wells", "point", null, "💧");
-addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
-addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 1.5 });
-addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 });
-addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5, 10' });
-addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillColor: "#8fd19e", fillOpacity: 0.2 });
-addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { color: "orange", fillColor: "#ffb347", fillOpacity: 0.2 });
-addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillColor: "#c49a6c", fillOpacity: 0.2 });
-addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.2 });
-addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.2 });
-addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillOpacity: 0.1 });
-addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 3, fillOpacity: 0.05 });
+// تحميل الطبقات بالأسماء العربية والرموز
+addLayer("Schools.geojson", "Schools", "point", null, "🏫", "المدارس");
+addLayer("Wells.geojson", "Wells", "point", null, "💧", "الآبار");
+addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️", "الكسارات");
+addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 1.5 }, null, "شبكة الطرق");
+addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 }, null, "الأودية");
+addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5, 10' }, null, "جدار الضم والتوسع");
+addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillColor: "#8fd19e", fillOpacity: 0.2 }, null, "أراضي زراعية");
+addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { color: "orange", fillColor: "#ffb347", fillOpacity: 0.2 }, null, "مناطق مغلقة بالجدار");
+addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillColor: "#c49a6c", fillOpacity: 0.2 }, null, "مناطق مبنية");
+addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.2 }, null, "مخططات هيكلية");
+addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.2 }, null, "مستوطنات");
+addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillOpacity: 0.1 }, null, "نطاقات الحرارة");
+addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 3, fillOpacity: 0.05 }, null, "حدود المدينة");
 
 function runSmartAdvisor() {
     clearAnalysis(); hideExceptBoundary();
@@ -306,15 +290,10 @@ function runSmartAdvisor() {
             tempGeo.features.forEach(temp => {
                 if (temp.properties.MEAN_ANNUA === "19 - 21") {
                     let inter = turf.intersect(land, temp);
-                    if (inter) {
-                        L.geoJson(inter, { style: { color: '#27ae60', fillOpacity: 0.8 } }).bindPopup("<b>تحليل المستشار:</b> منطقة مثالية").addTo(analysisGroup);
-                        intersected = true;
-                    }
+                    if (inter) { L.geoJson(inter, { style: { color: '#27ae60', fillOpacity: 0.8 } }).bindPopup("<b>تحليل المستشار:</b> منطقة مثالية").addTo(analysisGroup); intersected = true; }
                 }
             });
-            if (!intersected) {
-                L.geoJson(land, { style: { color: '#f1c40f', fillOpacity: 0.4 } }).bindPopup("إمكانية متوسطة").addTo(analysisGroup);
-            }
+            if (!intersected) { L.geoJson(land, { style: { color: '#f1c40f', fillOpacity: 0.4 } }).bindPopup("إمكانية متوسطة").addTo(analysisGroup); }
         });
     }
 }
@@ -324,12 +303,8 @@ function runHazardScanner() {
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> خطر فيضان</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> أثر بيئي للكسارات</div>`;
-    if (layers["Streams"]) {
-        L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'}), {style:{color:'#e74c3c', fillOpacity:0.6}}).addTo(analysisGroup);
-    }
-    if (layers["Quarries"]) {
-        L.geoJson(turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
-    }
+    if (layers["Streams"]) L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'}), {style:{color:'#e74c3c', fillOpacity:0.6}}).addTo(analysisGroup);
+    if (layers["Quarries"]) L.geoJson(turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
 }
 
 function runLiveStats() {
@@ -349,17 +324,13 @@ function runLiveStats() {
 function runEcoBuffer() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> حماية بيئية</div>`;
-    if (layers["Streams"]) {
-        L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).addTo(analysisGroup);
-    }
+    if (layers["Streams"]) L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).addTo(analysisGroup);
 }
 
 function runIsolationScanner() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> عزل الجدار</div>`;
-    if (layers["Closed Areas"]) {
-        L.geoJson(layers["Closed Areas"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 } }).addTo(analysisGroup);
-    }
+    if (layers["Closed Areas"]) L.geoJson(layers["Closed Areas"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 } }).addTo(analysisGroup);
 }
 
 function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
@@ -389,8 +360,7 @@ function hideExceptBoundary() {
     for (let k in layers) {
         if (k !== "Ramallah Boundary") {
             map.removeLayer(layers[k]);
-            let safeId = k.replace(/\s+/g, '-').toLowerCase();
-            $(`#chk-${safeId}`).prop('checked', false);
+            $(`#chk-${k.replace(/\s+/g, '-').toLowerCase()}`).prop('checked', false);
         }
     }
 }
@@ -398,21 +368,16 @@ function hideExceptBoundary() {
 function restoreAllLayers() { 
     for (let k in layers) {
         if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-        let safeId = k.replace(/\s+/g, '-').toLowerCase();
-        $(`#chk-${safeId}`).prop('checked', true);
+        $(`#chk-${k.replace(/\s+/g, '-').toLowerCase()}`).prop('checked', true);
     }
 }
 
 function clearAnalysis() {
     isMeasureActive = false;
     if (drawControl._map) map.removeControl(drawControl);
-    analysisGroup.clearLayers(); 
-    measureGroup.clearLayers();
+    analysisGroup.clearLayers(); measureGroup.clearLayers();
     restoreAllLayers();
-    $("#measure-output").fadeOut();
-    $("#stats-panel").fadeOut();
-    $("#search-container").fadeOut();
-    $("#story-panel").fadeOut();
+    $("#measure-output, #stats-panel, #search-container, #story-panel").fadeOut();
     document.getElementById("dynamic-items").innerHTML = "لا توجد أداة مفعلة...";
 }
 </script>
