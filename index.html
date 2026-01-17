@@ -143,13 +143,24 @@ function toggleBaseMap() {
     isBaseMapVisible = !isBaseMapVisible;
 }
 
-// Measure Tool Functions
+// التعديل هنا: وظيفة القياس تخفي كل شيء ما عدا الحدود والطرق
 function toggleMeasureTool() {
     isMeasureActive = !isMeasureActive;
     if (isMeasureActive) {
+        // إخفاء كافة الطبقات
+        for (let k in layers) {
+            if (k !== "Ramallah Boundary" && k !== "Roads") {
+                map.removeLayer(layers[k]);
+            }
+        }
+        analysisGroup.clearLayers();
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
     } else {
+        // إعادة كافة الطبقات عند الإغلاق
+        for (let k in layers) {
+            if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+        }
         map.removeControl(drawControl);
         $("#measure-output").fadeOut();
         measureGroup.clearLayers();
