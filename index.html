@@ -289,33 +289,46 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillOpacity: 0.1 }, null, "نطاقات الحرارة");
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 3, fillOpacity: 0.05 }, null, "حدود المدينة");
 
-// تعديل أداة المستشار بالألوان المطلوبة
+// أداة المستشار الذكي المحدثة لتكون أكثر واقعية
 function runSmartAdvisor() {
-    clearAnalysis(); hideExceptBoundary();
+    clearAnalysis(); 
+    hideExceptBoundary();
+    
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71; border:1px solid #27ae60;"></span> فرصة مثالية (مناخ + تربة)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f; border:1px solid #f39c12;"></span> منطقة زراعية عادية</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71; border:1px solid #27ae60;"></span> فرصة مثالية (تربة + مياه)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f; border:1px solid #f39c12;"></span> منطقة زراعية مستقرة</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c; border:1px solid #c0392b;"></span> خطر استيطاني/أمني</div>`;
 
-    // 1. الخطر (أحمر): 500 متر حول المستوطنات
+    // 1. خطر (أحمر): منطقة عازلة حقيقية 200 متر فقط حول المستوطنات
     if (layers["Settlements"]) {
-        let settleBuff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.5, {units: 'kilometers'});
-        L.geoJson(settleBuff, { style: { color: '#e74c3c', fillColor: '#e74c3c', fillOpacity: 0.6 } })
-        .bindPopup("<b>منطقة خطر:</b> قرب مستوطنة").addTo(analysisGroup);
+        let settleBuff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.2, {units: 'kilometers'});
+        L.geoJson(settleBuff, { 
+            style: { color: '#e74c3c', fillColor: '#e74c3c', fillOpacity: 0.5, weight: 1 } 
+        }).bindPopup("<b>منطقة خطر:</b> قرب مستوطنة").addTo(analysisGroup);
     }
 
-    // 2. الزراعة العادية (أصفر): كل الأراضي الزراعية
+    // 2. زراعة عادية (أصفر): تلوين أجزاء فقط من الأراضي الزراعية لتقليل الزحمة
     if (layers["Agricultural Land"]) {
-        L.geoJson(layers["Agricultural Land"].toGeoJSON(), { style: { color: '#f1c40f', fillColor: '#f1c40f', fillOpacity: 0.4 } })
-        .bindPopup("<b>منطقة زراعية:</b> استخدام عادي").addTo(analysisGroup);
+        L.geoJson(layers["Agricultural Land"].toGeoJSON(), { 
+            filter: function(feature, index) { return index % 2 === 0; }, 
+            style: { color: '#f1c40f', fillColor: '#f1c40f', fillOpacity: 0.3, weight: 1 } 
+        }).bindPopup("<b>منطقة زراعية:</b> استخدام عادي").addTo(analysisGroup);
     }
 
-    // 3. فرصة مثالية (أخضر): تقاطع الزراعي مع نطاق حرارة معين (محاكاة)
-    if (layers["Agricultural Land"] && layers["Temperature Zones"]) {
-        // نأخذ عينة لتبسيط المحاكاة البرمجية لإظهار الفرصة المثالية
-        let ideal = turf.buffer(layers["Agricultural Land"].toGeoJSON(), -0.1, {units: 'kilometers'});
-        L.geoJson(ideal, { style: { color: '#2ecc71', fillColor: '#2ecc71', fillOpacity: 0.7, weight: 2 } })
-        .bindPopup("<b>فرصة مثالية:</b> تربة خصبة ومناخ ملائم").addTo(analysisGroup);
+    // 3. فرصة مثالية (أخضر): تقاطع منطقي بين الأراضي الزراعية ومصادر المياه (الآبار)
+    if (layers["Agricultural Land"] && layers["Wells"]) {
+        let wellsBuffer = turf.buffer(layers["Wells"].toGeoJSON(), 0.4, {units: 'kilometers'});
+        let agriGeo = layers["Agricultural Land"].toGeoJSON();
+        
+        // حساب التقاطع لإظهار المناطق الزراعية التي بها آبار فقط
+        try {
+            let idealSpots = turf.intersect(wellsBuffer, agriGeo);
+            if (idealSpots) {
+                L.geoJson(idealSpots, { 
+                    style: { color: '#27ae60', fillColor: '#2ecc71', fillOpacity: 0.8, weight: 2 } 
+                }).bindPopup("<b>فرصة مثالية:</b> تداخل تربة خصبة مع مصدر مياه").addTo(analysisGroup);
+            }
+        } catch(e) { console.log("تحليل التقاطع يتطلب مضلعات صالحة"); }
     }
 }
 
