@@ -28,7 +28,8 @@
         .btn-stats { background: #2ecc71 !important; }
         .btn-eco { background: #27ae60 !important; }
         .btn-search { background: #34495e !important; }
-        
+        .btn-advisor { background: #f39c12 !important; border: 2px solid white; }
+
         #search-container { position: absolute; top: 70px; left: 60px; z-index: 1000; display: none; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); width: 250px; }
         #search-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
 
@@ -36,9 +37,7 @@
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
         #measure-output { position: absolute; top: 15px; right: 20px; z-index: 2000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: none; border-left: 5px solid #f39c12; font-weight: bold; }
-        
         #stats-panel { position: absolute; bottom: 30px; right: 20px; width: 300px; background: white; padding: 15px; border-radius: 12px; z-index: 3000; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.3); border-top: 5px solid #2ecc71; }
-
         #story-panel { position: absolute; top: 80px; right: 20px; width: 320px; background: rgba(255, 255, 255, 0.95); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 3000; display: none; padding: 20px; border-top: 5px solid #2980b9; }
         .story-nav { display: flex; justify-content: space-between; margin-top: 15px; }
         .btn-nav { background: #34495e; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
@@ -61,7 +60,7 @@
     <button class="btn-tool btn-measure" onclick="toggleMeasureTool()">📏 Measure</button>
     <button class="btn-tool btn-stats" onclick="runLiveStats()">📊 Statistics</button>
     <button class="btn-tool btn-search" onclick="toggleSearch()">🔍 Search</button>
-    <button class="btn-tool" style="background:#f39c12;" onclick="runSmartAdvisor()">🧠 Advisor</button>
+    <button class="btn-tool btn-advisor" onclick="runSmartAdvisor()">🧠 Advisor</button>
     <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ Hazard</button>
     <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 Isolation</button>
     <button class="btn-tool btn-equity" onclick="runServiceEquity()">⚖️ Service Equity</button>
@@ -91,7 +90,7 @@
         <button id="prevBtn" onclick="prevStep()" class="btn-nav">← Back</button>
         <button id="nextBtn" onclick="nextStep()" class="btn-nav">Next →</button>
     </div>
-    <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold; font-size: 12px;">EXIT STORY</button>
+    <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold;">EXIT STORY</button>
 </div>
 
 <div id="map"></div>
@@ -117,7 +116,6 @@
         <div class="legend-item"><span class="symbol-poly" style="background:#c49a6c"></span> Built-up Areas</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#af7ac5"></span> Master Plans</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#ff6666"></span> Settlements</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#87ceeb; opacity: 0.5;"></span> Temp Zones</div>
         <div class="legend-item"><span class="symbol-poly" style="border: 2px solid black; background:none;"></span> City Boundary</div>
     </div>
 </div>
@@ -133,20 +131,18 @@ var statsChartInstance = null;
 
 // Story Steps
 const storySteps = [
-    { title: "Urban Expansion", text: "Notice the conflict between Master Plans (Purple) and Settlements (Red).", center: [31.910, 35.260], zoom: 13, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
-    { title: "Isolated Lands", text: "Vast areas are isolated behind the Wall (Dashed Line) in Closed Zones (Orange).", center: [31.940, 35.130], zoom: 13, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] },
-    { title: "Water Resources", text: "Water wells (Blue Icons) proximity to industrial zones needs monitoring.", center: [31.880, 35.230], zoom: 13, visibleLayers: ["Wells", "Quarries", "Ramallah Boundary"] }
+    { title: "Urban Conflict", text: "Notice the overlap between Master Plans and Settlements.", center: [31.910, 35.260], zoom: 13, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
+    { title: "Closed Zones", text: "Vast areas are isolated behind the Wall in Closed Zones.", center: [31.940, 35.130], zoom: 13, visibleLayers: ["Annexation Wall", "Closed Areas", "Ramallah Boundary"] },
+    { title: "Infrastructure", text: "Strategic wells and roads network in Ramallah region.", center: [31.880, 35.230], zoom: 13, visibleLayers: ["Wells", "Roads", "Ramallah Boundary"] }
 ];
 
-// Measure Tool Setup
+// Measure Tool
 var measureGroup = new L.FeatureGroup().addTo(map);
 var isMeasureActive = false;
 var drawControl = new L.Control.Draw({
     edit: { featureGroup: measureGroup },
     draw: { polygon: true, polyline: true, rectangle: false, circle: false, marker: false, circlemarker: false }
 });
-
-L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
 function toggleBaseMap() {
     if (isBaseMapVisible) map.removeLayer(osmLayer);
@@ -157,12 +153,12 @@ function toggleBaseMap() {
 function toggleMeasureTool() {
     isMeasureActive = !isMeasureActive;
     if (isMeasureActive) {
-        for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]);
-        analysisGroup.clearLayers();
+        clearAnalysis();
+        hideExceptBoundary();
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
     } else {
-        for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+        restoreAllLayers();
         map.removeControl(drawControl);
         $("#measure-output").fadeOut();
         measureGroup.clearLayers();
@@ -172,7 +168,7 @@ function toggleMeasureTool() {
 map.on(L.Draw.Event.CREATED, function (e) {
     var layer = e.layer; measureGroup.addLayer(layer);
     if (e.layerType === 'polyline') {
-        let coords = layer.getLatLngs(); let length = 0;
+        let length = 0; let coords = layer.getLatLngs();
         for (let i = 0; i < coords.length - 1; i++) length += coords[i].distanceTo(coords[i+1]);
         $("#measure-res").text((length / 1000).toFixed(2) + " km");
     } else if (e.layerType === 'polygon') {
@@ -180,24 +176,6 @@ map.on(L.Draw.Event.CREATED, function (e) {
         $("#measure-res").text((area / 1000000).toFixed(2) + " km²");
     }
 });
-
-function runLiveStats() {
-    $("#stats-panel").fadeIn();
-    let agriArea = 0, builtArea = 0, roadLength = 0;
-    if (layers["Agricultural Land"]) layers["Agricultural Land"].toGeoJSON().features.forEach(f => agriArea += turf.area(f));
-    if (layers["Built-up Areas"]) layers["Built-up Areas"].toGeoJSON().features.forEach(f => builtArea += turf.area(f));
-    if (layers["Roads"]) layers["Roads"].toGeoJSON().features.forEach(f => roadLength += turf.length(f, {units: 'kilometers'}));
-    agriArea = (agriArea / 1000000).toFixed(2);
-    builtArea = (builtArea / 1000000).toFixed(2);
-    const ctx = document.getElementById('statsChart').getContext('2d');
-    if (statsChartInstance) statsChartInstance.destroy();
-    statsChartInstance = new Chart(ctx, {
-        type: 'pie',
-        data: { labels: ['Agriculture (km²)', 'Built-up (km²)'], datasets: [{ data: [agriArea, builtArea], backgroundColor: ['#2ecc71', '#e67e22'] }] },
-        options: { responsive: true }
-    });
-    $("#stats-summary").html(`<b>Stats:</b> Roads: ${roadLength.toFixed(2)}km | Ag: ${agriArea}km²`);
-}
 
 function addLayer(file, name, type, style, emoji) {
     $.getJSON(file, function(data) {
@@ -209,13 +187,7 @@ function addLayer(file, name, type, style, emoji) {
         } else {
             layer = L.geoJson(data, { 
                 style: style,
-                onEachFeature: function(feature, layer) {
-                    if (name === "Ramallah Boundary") {
-                        let nameAr = feature.properties.CommunityN || "غير معروف";
-                        let nameEn = feature.properties.Communit_1 || "Unknown";
-                        layer.bindPopup(`<b style="font-size:14px;">${nameEn} / ${nameAr}</b>`);
-                    }
-                }
+                onEachFeature: (f, l) => { if(name === "Ramallah Boundary") l.bindPopup(`<b>${f.properties.Communit_1 || "Ramallah Area"}</b>`); }
             });
         }
         layer.addTo(map);
@@ -224,7 +196,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// Load Data
+// Initial Data Loading
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -239,7 +211,73 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0.1 });
 
-// Search Tool
+// --- SMART ADVISOR (RESTORED) ---
+function runSmartAdvisor() {
+    clearAnalysis(); hideExceptBoundary();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential Area</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Risk Zone (Settlements)</div>`;
+
+    if (layers["Settlements"]) {
+        let buff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
+        L.geoJson(buff, { style: {color:'#c0392b', fillColor:'#e74c3c', fillOpacity:0.7} })
+        .bindPopup("<b>⚠️ Exclusion Zone</b><br>High risk due to settlement proximity.")
+        .addTo(analysisGroup);
+    }
+    if (layers["Agricultural Land"]) {
+        let agri = layers["Agricultural Land"].toGeoJSON();
+        let temp = layers["Temperature Zones"] ? layers["Temperature Zones"].toGeoJSON() : null;
+        agri.features.forEach(land => {
+            if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
+                let isClimateMatch = false;
+                if (temp) {
+                    temp.features.forEach(t => {
+                        if (t.properties.MEAN_ANNUA === "19 - 21") {
+                            let inter = turf.intersect(land, t);
+                            if (inter) {
+                                L.geoJson(inter, {style:{color:'#1d8348', fillColor:'#2ecc71', fillOpacity:0.8}})
+                                .bindPopup("<b>🌟 Best Choice</b><br>High fertile soil + Perfect climate (19-21°C).")
+                                .addTo(analysisGroup);
+                                isClimateMatch = true;
+                            }
+                        }
+                    });
+                }
+                if (!isClimateMatch) {
+                    L.geoJson(land, {style:{color:'#d4ac0d', fillColor:'#f1c40f', fillOpacity:0.6}})
+                    .bindPopup("<b>🟡 Moderate Choice</b><br>Fertile soil but climate not optimal.")
+                    .addTo(analysisGroup);
+                }
+            }
+        });
+    }
+    if (analysisGroup.getLayers().length > 0) map.fitBounds(analysisGroup.getBounds());
+}
+
+// --- HAZARD SCANNER (RESTORED) ---
+function runHazardScanner() {
+    clearAnalysis(); hideExceptBoundary();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Flood Danger (150m)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact (500m)</div>`;
+
+    if (layers["Streams"]) {
+        let fBuff = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'});
+        L.geoJson(fBuff, { style:{color:'#922b21', fillColor:'#e74c3c', fillOpacity:0.6} })
+        .bindPopup("<b>⚠️ Flood Risk</b><br>150m safety buffer from stream bed.")
+        .addTo(analysisGroup);
+    }
+    if (layers["Quarries"]) {
+        let qBuff = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units:'kilometers'});
+        L.geoJson(qBuff, { style:{color:'#d35400', fillColor:'#e67e22', fillOpacity:0.5} })
+        .bindPopup("<b>⚠️ Quarry Hazard</b><br>500m dust and noise impact zone.")
+        .addTo(analysisGroup);
+    }
+    if (analysisGroup.getLayers().length > 0) map.fitBounds(analysisGroup.getBounds());
+}
+
+// --- SEARCH TOOL ---
 function toggleSearch() { $("#search-container").fadeToggle(); $("#search-input").val("").focus(); }
 function executeSearch() {
     let query = $("#search-input").val().toLowerCase();
@@ -251,91 +289,55 @@ function executeSearch() {
             let props = layer.feature.properties;
             if (JSON.stringify(props).toLowerCase().includes(query)) {
                 matchCount++;
-                let clone = L.geoJson(layer.feature, {
+                let result = L.geoJson(layer.feature, {
                     style: { color: 'yellow', weight: 4, fillOpacity: 0.7 },
-                    pointToLayer: (f, latlng) => L.circleMarker(latlng, { radius: 8, fillColor: 'yellow' })
+                    pointToLayer: (f, latlng) => L.circleMarker(latlng, { radius: 8, fillColor: 'yellow', color: 'black' })
                 }).addTo(analysisGroup);
-                clone.bindPopup(`<b>Result: ${k}</b><hr>${Object.keys(props).map(p => `<b>${p}:</b> ${props[p]}`).join('<br>')}`);
+                result.bindPopup(`<b>Found in: ${k}</b><hr>${Object.keys(props).map(p => `<b>${p}:</b> ${props[p]}`).join('<br>')}`);
             }
         });
     }
-    $("#search-results").text(`Found: ${matchCount}`);
+    $("#search-results").text(`Results: ${matchCount}`);
 }
 
-// Smart Advisor - Full Restore
-function runSmartAdvisor() {
-    clearAnalysis(); hideExceptBoundary();
-    document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> High Potential (Safe)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> Moderate Potential</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Risk Zone (Settlements)</div>`;
-
-    if (layers["Settlements"]) {
-        let buff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
-        L.geoJson(buff, { style: {color:'#c0392b', fillColor:'#e74c3c', fillOpacity:0.7} })
-        .bindPopup("<b>Exclusion Zone</b><br>Too close to settlements.")
-        .addTo(analysisGroup);
-    }
-    if (layers["Agricultural Land"]) {
-        let agri = layers["Agricultural Land"].toGeoJSON();
-        let temp = layers["Temperature Zones"] ? layers["Temperature Zones"].toGeoJSON() : null;
-        agri.features.forEach(land => {
-            let isHigh = land.properties.Agricult_1 && land.properties.Agricult_1.includes("High");
-            if (isHigh) {
-                let isGoodClimate = false;
-                if (temp) {
-                    temp.features.forEach(t => {
-                        if (t.properties.MEAN_ANNUA === "19 - 21") {
-                            let inter = turf.intersect(land, t);
-                            if (inter) {
-                                L.geoJson(inter, {style:{color:'#1d8348', fillColor:'#2ecc71', fillOpacity:0.8}})
-                                .bindPopup("<b>🌟 Best Choice</b><br>High fertile soil + Perfect climate.")
-                                .addTo(analysisGroup);
-                                isGoodClimate = true;
-                            }
-                        }
-                    });
-                }
-                if (!isGoodClimate) {
-                    L.geoJson(land, {style:{color:'#d4ac0d', fillColor:'#f1c40f', fillOpacity:0.6}})
-                    .bindPopup("<b>Moderate Choice</b><br>Fertile soil but climate varies.")
-                    .addTo(analysisGroup);
-                }
-            }
-        });
-    }
+// --- OTHER TOOLS ---
+function runLiveStats() {
+    $("#stats-panel").fadeIn();
+    let agri = 0, built = 0;
+    if (layers["Agricultural Land"]) layers["Agricultural Land"].eachLayer(l => agri += turf.area(l.feature));
+    if (layers["Built-up Areas"]) layers["Built-up Areas"].eachLayer(l => built += turf.area(l.feature));
+    const ctx = document.getElementById('statsChart').getContext('2d');
+    if (statsChartInstance) statsChartInstance.destroy();
+    statsChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: { labels: ['Agri', 'Urban'], datasets: [{ data: [(agri/1e6).toFixed(1), (built/1e6).toFixed(1)], backgroundColor: ['#2ecc71', '#e67e22'] }] }
+    });
 }
 
-// Other Analysis
-function runHazardScanner() {
-    clearAnalysis(); hideExceptBoundary();
-    if (layers["Streams"]) {
-        let fBuff = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'});
-        L.geoJson(fBuff, { style:{color:'#922b21', fillColor:'#e74c3c', fillOpacity:0.6} }).bindPopup("Flood Risk").addTo(analysisGroup);
-    }
-}
-function runIsolationScanner() {
-    clearAnalysis(); hideExceptBoundary();
-    if (layers["Closed Areas"]) {
-        L.geoJson(layers["Closed Areas"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 } }).addTo(analysisGroup);
-    }
-}
 function runEcoBuffer() {
     clearAnalysis(); hideExceptBoundary();
     if (layers["Streams"]) {
-        let sb = turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'});
-        L.geoJson(sb, { style: { color: '#27ae60', fillColor: '#27ae60', fillOpacity: 0.4, dashArray: '5,5' } }).addTo(analysisGroup);
+        let b = turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'});
+        L.geoJson(b, { style: { color: '#27ae60', dashArray: '5,5', fillOpacity: 0.2 } }).addTo(analysisGroup);
     }
 }
+
+function runIsolationScanner() {
+    clearAnalysis(); hideExceptBoundary();
+    if (layers["Closed Areas"]) {
+        L.geoJson(layers["Closed Areas"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.5 } }).addTo(analysisGroup);
+    }
+}
+
 function runServiceEquity() {
     clearAnalysis(); hideExceptBoundary();
     if (layers["Schools"]) {
         let b = turf.buffer(layers["Schools"].toGeoJSON(), 1.5, {units: 'kilometers'});
-        L.geoJson(b, { style: { color: '#16a085', fillColor: '#16a085', fillOpacity: 0.2 } }).addTo(analysisGroup);
+        L.geoJson(b, { style: { color: '#16a085', fillOpacity: 0.2 } }).addTo(analysisGroup);
     }
 }
 
-// Story Mode Control
+// --- STORY MODE ---
 function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
 function updateStoryScene() {
     const step = storySteps[currentStep];
@@ -350,11 +352,14 @@ function updateStoryScene() {
 }
 function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); } else { closeStory(); } }
 function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
-function closeStory() { $("#story-panel").fadeOut(); clearAnalysis(); }
+function closeStory() { $("#story-panel").fadeOut(); restoreAllLayers(); }
+
+// --- HELPERS ---
 function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]); }
+function restoreAllLayers() { for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); }
 function clearAnalysis() {
     analysisGroup.clearLayers(); $("#story-panel, #stats-panel, #search-container").hide();
-    for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+    restoreAllLayers();
     document.getElementById("dynamic-items").innerHTML = "No tool selected...";
 }
 </script>
