@@ -131,7 +131,7 @@ var statsChartInstance = null;
 var measureGroup = new L.FeatureGroup().addTo(map);
 var drawControl = new L.Control.Draw({
     edit: { featureGroup: measureGroup },
-    draw: { polygon: true, polyline: true, rectangle: false, circle: false, marker: false, circlemarker: false }
+    draw: { polygon: true, polyline: true, rectangle: true, circle: false, marker: false, circlemarker: false }
 });
 
 L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
@@ -142,14 +142,16 @@ function toggleBaseMap() {
     isBaseMapVisible = !isBaseMapVisible;
 }
 
+// التعديل هنا لتفعيل الأداة بشكل صحيح
 function toggleMeasureTool() {
     if (!map.hasControl(drawControl)) {
         clearAnalysis(); hideExceptBoundary();
-        map.addControl(drawControl);
+        map.addControl(drawControl); // إضافة شريط الأدوات للخريطة
         $("#measure-output").fadeIn();
+        $("#measure-res").text("Ready...");
     } else {
         restoreAllLayers();
-        map.removeControl(drawControl);
+        map.removeControl(drawControl); // إخفاء شريط الأدوات
         $("#measure-output").fadeOut();
         measureGroup.clearLayers();
     }
@@ -161,8 +163,9 @@ map.on(L.Draw.Event.CREATED, function (e) {
         let coords = layer.getLatLngs(); let length = 0;
         for (let i = 0; i < coords.length - 1; i++) length += coords[i].distanceTo(coords[i+1]);
         $("#measure-res").text((length / 1000).toFixed(2) + " km");
-    } else if (e.layerType === 'polygon') {
-        let area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+    } else if (e.layerType === 'polygon' || e.layerType === 'rectangle') {
+        let latlngs = layer.getLatLngs();
+        let area = L.GeometryUtil.geodesicArea(e.layerType === 'rectangle' ? latlngs[0] : latlngs[0]);
         $("#measure-res").text((area / 1000000).toFixed(2) + " km²");
     }
 });
@@ -405,7 +408,8 @@ function runEcoBuffer() {
 function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]); }
 function restoreAllLayers() { for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); }
 function clearAnalysis() {
-    analysisGroup.clearLayers(); $("#story-panel, #stats-panel, #search-container").hide();
+    analysisGroup.clearLayers(); 
+    $("#story-panel, #stats-panel, #search-container").hide();
     restoreAllLayers();
     document.getElementById("dynamic-items").innerHTML = "No tool selected...";
 }
