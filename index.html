@@ -206,7 +206,7 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0.1 });
 
-// --- استعادة المستشار الذكي الأصلي ---
+// --- المستشار الذكي الأصلي ---
 function runSmartAdvisor() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
@@ -260,6 +260,7 @@ function runIsolationScanner() {
     }
 }
 
+// --- أداة المخاطر ---
 function runHazardScanner() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
@@ -272,6 +273,24 @@ function runHazardScanner() {
     if (layers["Quarries"]) {
         L.geoJson(turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#d35400', fillColor:'#e67e22', fillOpacity:0.5}})
         .bindPopup("<b>أثر بيئي</b>").addTo(analysisGroup);
+    }
+}
+
+// --- أداة البيئة مع تحديث الليجند ---
+function runEcoBuffer() {
+    clearAnalysis(); 
+    hideExceptBoundary();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#1abc9c; opacity:0.6;"></span> نطاق حماية بيئية (حرم الوادي)</div>`;
+    
+    if (layers["Streams"]) {
+        let ecoBuffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'});
+        L.geoJson(ecoBuffer, { 
+            style: { color: '#16a085', fillColor: '#1abc9c', fillOpacity: 0.4 } 
+        })
+        .bindPopup("<b>منطقة حماية بيئية</b><br>نطاق 200م حول الأودية.")
+        .addTo(analysisGroup);
+        map.fitBounds(analysisGroup.getBounds());
     }
 }
 
@@ -292,13 +311,6 @@ function updateStoryScene() {
 function nextStep() { if (currentStep < 1) { currentStep++; updateStoryScene(); } }
 function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
 function closeStory() { $("#story-panel").fadeOut(); restoreAllLayers(); }
-
-function runEcoBuffer() {
-    clearAnalysis(); hideExceptBoundary();
-    if (layers["Streams"]) {
-        L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).addTo(analysisGroup);
-    }
-}
 
 function runLiveStats() {
     $("#stats-panel").fadeIn();
