@@ -157,7 +157,7 @@ function toggleMeasureTool() {
     }
 }
 
-// تعديل حدث القياس لإظهار تفاصيل كتابية مفصلة
+// 1. أداة القياس مع تفاصيل كتابية
 map.on(L.Draw.Event.CREATED, function (e) {
     var layer = e.layer; 
     measureGroup.addLayer(layer);
@@ -170,7 +170,7 @@ map.on(L.Draw.Event.CREATED, function (e) {
         let km = (length / 1000).toFixed(2);
         output = `إجمالي طول المسار المحدد هو: ${km} كيلومتر`;
     } else if (e.layerType === 'polygon' || e.layerType === 'rectangle') {
-        let latlngs = layer.getLatLngs()[0];
+        let latlngs = (e.layerType === 'rectangle') ? layer.getLatLngs()[0] : layer.getLatLngs()[0];
         let area = L.GeometryUtil.geodesicArea(latlngs);
         let km2 = (area / 1000000).toFixed(2);
         let dunum = (area / 1000).toFixed(1);
@@ -192,7 +192,6 @@ function addLayer(file, name, type, style, emoji) {
                 onEachFeature: function(feature, layer) {
                     if (name === "Ramallah Boundary") {
                         let nameAr = feature.properties.CommunityN || "غير معروف";
-                        let nameEn = feature.properties.Communit_1 || "Unknown";
                         layer.bindPopup(`<div style="text-align:center;"><b style="font-size:14px; color:#2c3e50;">${nameAr}</b><br><span style="font-size:11px;">محافظة رام الله والبيرة</span></div>`);
                     }
                 }
@@ -204,7 +203,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الطبقات
+// تحميل الطبقات الأساسية
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
@@ -219,50 +218,50 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0.1 });
 
-// --- تفعيل أداة عدالة الخدمات (Service Equity) ---
+// 2. تشغيل أداة الخدمة (Service Equity)
 function runServiceEquity() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:rgba(231, 76, 60, 0.6)"></span> فجوة الخدمات (أكثر من 1.5كم)</div>`;
+        <div class="legend-item"><span class="symbol-poly" style="background:rgba(231, 76, 60, 0.6)"></span> فجوة في الخدمات (نطاق غير مغطى)</div>`;
     
     let pts = [];
     if (layers["Schools"]) pts.push(...layers["Schools"].toGeoJSON().features);
     if (layers["Wells"]) pts.push(...layers["Wells"].toGeoJSON().features);
     
     if (pts.length > 0 && layers["Ramallah Boundary"]) {
-        let buffered = turf.buffer(turf.featureCollection(pts), 1.5, {units: 'kilometers'});
-        let dissolved = turf.dissolve(buffered);
+        let bufferedPoints = turf.buffer(turf.featureCollection(pts), 1.5, {units: 'kilometers'});
+        let dissolved = turf.dissolve(bufferedPoints);
         let boundary = layers["Ramallah Boundary"].toGeoJSON().features[0];
         
-        // حساب المناطق غير المغطاة
         let gap = turf.difference(boundary, dissolved);
         
         if (gap) {
             L.geoJson(gap, { 
-                style: { color: '#e74c3c', fillColor: '#e74c3c', fillOpacity: 0.5, weight: 1, dashArray: '5,5' } 
-            }).bindPopup("<b>فجوة خدماتية</b><br>هذه المنطقة تبعد أكثر من 1.5 كم عن المدارس أو الآبار.").addTo(analysisGroup);
+                style: { color: '#e74c3c', weight: 1, fillOpacity: 0.5, dashArray: '5,5' } 
+            }).bindPopup("<b>منطقة ضعف خدمات</b><br>هذه المنطقة تبعد أكثر من 1.5 كم عن أقرب مدرسة أو بئر مياه.")
+            .addTo(analysisGroup);
             map.fitBounds(analysisGroup.getBounds());
         }
     }
 }
 
-// --- تعريب وضع القصة (Story Mode) ---
+// 3. وضع القصة المعرب
 const storySteps = [
     { 
         title: "المشهد 1: التوسع العمراني والمستوطنات", 
-        text: "لاحظ التداخل بين المخططات الهيكلية والمستوطنات. التوسع العمراني يواجه قيوداً مكانية صعبة بسبب السياسات الجيوسياسية المحيطة بالمدينة.", 
+        text: "يوضح هذا المشهد الصراع المكاني بين المخططات الهيكلية الفلسطينية والتوسع الاستيطاني، حيث تشكل المستوطنات عائقاً أمام نمو مدينة رام الله الطبيعي.", 
         center: [31.910, 35.260], zoom: 14, 
         visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] 
     },
     { 
         title: "المشهد 2: الجدار والأراضي المعزولة", 
-        text: "يوضح هذا المنظر جدار الضم والتوسع الذي يعزل مساحات زراعية واسعة عن أصحابها، مما يؤدي إلى تدهور القطاع الزراعي في تلك المناطق.", 
+        text: "هنا يظهر مسار جدار الضم والتوسع. تلاحظون وجود مساحات شاسعة من الأراضي الزراعية التي أصبحت معزولة تماماً خلف هذا العائق.", 
         center: [31.940, 35.130], zoom: 14, 
         visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] 
     },
     { 
-        title: "المشهد 3: الموارد المائية تحت الخطر", 
-        text: "آبار المياه هي شريان الحياة، لكن قربها من الكسارات والنشاطات الصناعية الاستيطانية يهدد جودتها واستدامتها للأجيال القادمة.", 
+        title: "المشهد 3: الموارد المائية تحت التهديد", 
+        text: "آبار المياه ضرورية، لكن قربها من الكسارات أو المستوطنات يهدد استدامتها وجودتها.", 
         center: [31.880, 35.230], zoom: 14, 
         visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"] 
     }
@@ -285,28 +284,55 @@ function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; 
 function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
 function closeStory() { $("#story-panel").fadeOut(); restoreAllLayers(); }
 
-// --- المستشار الذكي ---
+// المستشار الذكي مع النوافذ المنبثقة بالعربي
 function runSmartAdvisor() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> إمكانيات عالية (آمنة)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#2ecc71"></span> إمكانيات زراعية عالية (آمنة)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> إمكانيات متوسطة</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> منطقة استبعاد (خطر)</div>`;
 
     if (layers["Settlements"]) {
         let buff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
         L.geoJson(buff, { style: {color:'#c0392b', fillColor:'#e74c3c', fillOpacity:0.7} })
-        .bindPopup("<b>منطقة استبعاد</b><br>مخاطر عالية بسبب القرب من المستوطنات.").addTo(analysisGroup);
+        .bindPopup("<b>منطقة استبعاد</b><br>مخاطر عالية بسبب القرب من المستوطنات (نطاق 300م).").addTo(analysisGroup);
     }
-    map.fitBounds(analysisGroup.getBounds());
+
+    if (layers["Agricultural Land"]) {
+        let agri = layers["Agricultural Land"].toGeoJSON();
+        let temp = layers["Temperature Zones"] ? layers["Temperature Zones"].toGeoJSON() : null;
+        agri.features.forEach(land => {
+            if (land.properties.Agricult_1 && land.properties.Agricult_1.includes("High")) {
+                let isGreen = false;
+                if (temp) {
+                    temp.features.forEach(t => {
+                        if (t.properties.MEAN_ANNUA === "19 - 21") {
+                            let inter = turf.intersect(land, t);
+                            if (inter) {
+                                L.geoJson(inter, {style:{color:'#1d8348', fillColor:'#2ecc71', fillOpacity:0.8}})
+                                .bindPopup("<b>فرصة زراعية مثالية</b><br>مناخ ممتاز وجودة تربة عالية بعيداً عن المخاطر.").addTo(analysisGroup);
+                                isGreen = true;
+                            }
+                        }
+                    });
+                }
+                if (!isGreen) {
+                    L.geoJson(land, {style:{color:'#d4ac0d', fillColor:'#f1c40f', fillOpacity:0.6}})
+                    .bindPopup("<b>إمكانيات متوسطة</b><br>أرض جيدة ولكن الظروف المناخية ليست الخيار الأول.").addTo(analysisGroup);
+                }
+            }
+        });
+    }
+    if (analysisGroup.getLayers().length > 0) map.fitBounds(analysisGroup.getBounds());
 }
 
+// أدوات إضافية
 function runHazardScanner() {
     clearAnalysis(); hideExceptBoundary();
     if (layers["Streams"]) {
         L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'}), {
             style:{color:'#922b21', fillColor:'#e74c3c', fillOpacity:0.6}
-        }).bindPopup("<b>خطر فيضان</b><br>منطقة ضمن حرم الوادي.").addTo(analysisGroup);
+        }).bindPopup("<b>تنبيه فيضان</b><br>منطقة ضمن مسار الوادي.").addTo(analysisGroup);
     }
 }
 
@@ -314,8 +340,11 @@ function runIsolationScanner() {
     clearAnalysis(); hideExceptBoundary();
     if (layers["Closed Areas"]) {
         L.geoJson(layers["Closed Areas"].toGeoJSON(), {
-            style: { color: '#8e44ad', fillOpacity: 0.7 },
-            onEachFeature: (f, l) => l.bindPopup(`<b>منطقة معزولة</b>`)
+            style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 },
+            onEachFeature: (f, l) => { 
+                let a = turf.area(f)/1000000;
+                l.bindPopup(`<b>منطقة معزولة</b><br>المساحة: ${a.toFixed(2)} كم²`);
+            }
         }).addTo(analysisGroup);
     }
 }
@@ -325,7 +354,7 @@ function runEcoBuffer() {
     if (layers["Streams"]) {
         L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'}), {
             style: { color: '#1abc9c', fillOpacity: 0.4 }
-        }).bindPopup("<b>حماية بيئية</b>").addTo(analysisGroup);
+        }).bindPopup("<b>نطاق حماية بيئية</b>").addTo(analysisGroup);
     }
 }
 
@@ -336,7 +365,7 @@ function runLiveStats() {
     if (layers["Built-up Areas"]) layers["Built-up Areas"].eachLayer(l => built += turf.area(l.feature));
     if (statsChartInstance) statsChartInstance.destroy();
     statsChartInstance = new Chart(document.getElementById('statsChart').getContext('2d'), {
-        type: 'pie', data: { labels: ['زراعي', 'مبني'], datasets: [{ data: [(agri/1e6).toFixed(1), (built/1e6).toFixed(1)], backgroundColor: ['#2ecc71', '#e67e22'] }] }
+        type: 'pie', data: { labels: ['زراعي', 'مبني'], datasets: [{ data: [(agri/1000000).toFixed(1), (built/1000000).toFixed(1)], backgroundColor: ['#2ecc71', '#e67e22'] }] }
     });
 }
 
