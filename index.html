@@ -162,16 +162,26 @@ function toggleBaseMap() {
     isBaseMapVisible = !isBaseMapVisible;
 }
 
+// أداة القياس المحدثة - إخفاء كل شيء عدا الطرق والحدود
 function toggleMeasureTool() {
     isMeasureActive = !isMeasureActive;
     if (isMeasureActive) {
         clearAnalysis();
+        // إخفاء كل الطبقات إلا الطرق والحدود
+        for (let k in layers) {
+            if (k !== "Ramallah Boundary" && k !== "Roads") {
+                map.removeLayer(layers[k]);
+            } else {
+                if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+            }
+        }
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
     } else {
         map.removeControl(drawControl);
         $("#measure-output").fadeOut();
         measureGroup.clearLayers();
+        restoreAllLayers();
         $("#measure-res").html("حدد نقطة للبدء");
     }
 }
@@ -212,7 +222,7 @@ function addLayer(file, name, type, style, emoji) {
 addLayer("Schools.geojson", "Schools", "point", null, "🏫");
 addLayer("Wells.geojson", "Wells", "point", null, "💧");
 addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️");
-addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 1 });
+addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 1.5 });
 addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 });
 addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5, 10' });
 addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillColor: "#8fd19e", fillOpacity: 0.2 });
@@ -221,42 +231,34 @@ addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillCol
 addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.2 });
 addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.2 });
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillOpacity: 0.1 });
-addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0.05 });
+addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 3, fillOpacity: 0.05 });
 
-// --- المستشار الذكي المطور (تقاطع مكاني حقيقي) ---
 function runSmartAdvisor() {
-    clearAnalysis(); 
-    hideExceptBoundary();
-    
+    clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#27ae60"></span> فرصة مثالية (مناخ + تربة)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> منطقة زراعية عادية</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> نطاق حماية مستوطنات</div>`;
-
     if (layers["Settlements"]) {
         let settleBuff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units: 'kilometers'});
         L.geoJson(settleBuff, { style: { color: '#c0392b', fillOpacity: 0.6 } }).bindPopup("نطاق استبعاد أمني").addTo(analysisGroup);
     }
-
     if (layers["Agricultural Land"] && layers["Temperature Zones"]) {
         let agriGeo = layers["Agricultural Land"].toGeoJSON();
         let tempGeo = layers["Temperature Zones"].toGeoJSON();
-
         agriGeo.features.forEach(land => {
             let intersected = false;
             tempGeo.features.forEach(temp => {
                 if (temp.properties.MEAN_ANNUA === "19 - 21") {
                     let inter = turf.intersect(land, temp);
                     if (inter) {
-                        L.geoJson(inter, { style: { color: '#27ae60', fillOpacity: 0.8 } })
-                        .bindPopup("<b>تحليل المستشار:</b> منطقة مثالية للزراعة (مناخ ممتاز)").addTo(analysisGroup);
+                        L.geoJson(inter, { style: { color: '#27ae60', fillOpacity: 0.8 } }).bindPopup("<b>تحليل المستشار:</b> منطقة مثالية").addTo(analysisGroup);
                         intersected = true;
                     }
                 }
             });
             if (!intersected) {
-                L.geoJson(land, { style: { color: '#f1c40f', fillOpacity: 0.4 } })
-                .bindPopup("<b>تحليل المستشار:</b> إمكانية زراعية متوسطة").addTo(analysisGroup);
+                L.geoJson(land, { style: { color: '#f1c40f', fillOpacity: 0.4 } }).bindPopup("إمكانية متوسطة").addTo(analysisGroup);
             }
         });
     }
@@ -331,8 +333,9 @@ function executeSearch() {
 function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]); }
 function restoreAllLayers() { for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); }
 
-// دالة الاستعادة المحدثة
 function clearAnalysis() {
+    isMeasureActive = false;
+    map.removeControl(drawControl);
     analysisGroup.clearLayers(); 
     measureGroup.clearLayers();
     restoreAllLayers();
