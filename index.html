@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Professional Suite</title>
+    <title>Ramallah Smart WebGIS Portal</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
     
@@ -14,376 +15,233 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
         /* شريط الأدوات العلوي */
         #advisor-ui { 
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%); 
-            z-index: 1000; display: flex; gap: 8px; flex-wrap: nowrap; 
-            background: rgba(255, 255, 255, 0.7); padding: 8px; border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000; display: flex; gap: 8px; align-items: center;
+            background: rgba(255, 255, 255, 0.9); padding: 8px 15px; border-radius: 50px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #ddd;
         }
 
-        .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; white-space: nowrap; }
+        /* حاوية أدوات القياس (تظهر بجانب الأزرار) */
+        #draw-tools-container {
+            display: none; 
+            background: #f8f9fa; border: 1px solid #ccc;
+            padding: 2px 8px; border-radius: 30px;
+            margin: 0 5px; align-items: center; gap: 5px;
+        }
+
+        /* تنسيق أزرار الرسم لتناسب الشريط */
+        .leaflet-draw-toolbar a {
+            background-color: transparent !important; border: none !important;
+            width: 30px !important; height: 30px !important; line-height: 30px !important;
+            display: inline-block !important; float: none !important;
+        }
+
+        .btn-tool { 
+            background: #2c3e50; color: white; border: none; padding: 8px 16px; 
+            border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 13px; 
+            transition: 0.3s; white-space: nowrap; display: flex; align-items: center; gap: 5px;
+        }
         .btn-basemap { background: #27ae60; }
-        .btn-hazard { background: #d35400; }
-        .btn-isolation { background: #8e44ad; }
-        .btn-story { background: #2980b9; } 
-        .btn-measure { background: #f39c12 !important; }
-        .btn-stats { background: #2ecc71 !important; }
-        .btn-search { background: #34495e !important; }
-        .btn-eco { background: #1abc9c !important; }
-        .btn-clear { background: #e74c3c !important; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
-        .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
+        .btn-measure { background: #f39c12; }
+        .btn-clear { background: #e74c3c; }
+        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
 
-        /* صندوق التحكم بالطبقات - يسار */
-        #layer-control {
-            position: absolute; top: 80px; left: 10px; z-index: 1000;
-            background: white; padding: 12px; border-radius: 8px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); direction: rtl;
-            min-width: 170px; max-height: 50vh; overflow-y: auto; border: 1px solid #ccc;
-        }
-        #layer-control h4 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #2c3e50; }
-        .layer-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; cursor: pointer; }
-
-        /* تعديل صندوق القياس ليكون بجانب صندوق التحكم */
+        /* صندوق النتائج أسفل شريط الأدوات */
         #measure-output { 
-            position: absolute; top: 80px; left: 200px; /* بجانب صندوق الطبقات مباشرة */
-            z-index: 2000; background: white; padding: 15px; border-radius: 8px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: none; 
-            border-right: 5px solid #f39c12; font-weight: bold; direction: rtl; min-width: 180px; 
+            position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; background: white; padding: 12px 25px; border-radius: 12px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); display: none; 
+            border-bottom: 5px solid #f39c12; text-align: center; min-width: 200px;
         }
 
-        #search-container { position: absolute; top: 85px; left: 50%; transform: translateX(-50%); z-index: 1000; display: none; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); width: 300px; }
-        #search-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; text-align: right; }
-        
-        #stats-panel { position: absolute; bottom: 30px; left: 20px; width: 300px; background: white; padding: 15px; border-radius: 12px; z-index: 3000; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.3); border-top: 5px solid #2ecc71; direction: rtl; }
-        
-        #story-panel { position: absolute; top: 80px; right: 20px; width: 350px; background: rgba(255, 255, 255, 0.98); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 3000; display: none; padding: 25px; border-top: 8px solid #2980b9; direction: rtl; }
-        #story-title { margin-top:0; color:#2980b9; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        #story-text { font-size: 14px; line-height: 1.7; color: #333; margin: 15px 0; }
-        .story-nav { display: flex; justify-content: space-between; margin-top: 15px; }
-        .btn-nav { background: #34495e; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        /* صندوق التحكم بالطبقات (يسار) */
+        #layer-control {
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 200px;
+            max-height: 70vh; overflow-y: auto; border: 1px solid #eee;
+        }
+        #layer-control h4 { margin: 0 0 12px 0; font-size: 15px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+        .layer-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; cursor: pointer; }
+        .layer-item input { margin-left: 10px; cursor: pointer; }
 
+        /* مفتاح الخريطة (يمين أسفل) */
         #legend-box { 
-            position: absolute; bottom: 25px; right: 20px; background: white; 
-            border-radius: 12px; width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
-            z-index: 2000; border: 1px solid #ccc; overflow: hidden; direction: rtl; 
+            position: absolute; bottom: 30px; right: 20px; background: white; 
+            border-radius: 12px; width: 260px; box-shadow: 0 8px 20px rgba(0,0,0,0.2); 
+            z-index: 1000; border: 1px solid #ddd; overflow: hidden;
         }
-        #legend-title { font-weight: bold; padding: 14px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; font-size: 16px; }
-        #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; }
-        .legend-section { font-size: 15px; font-weight: bold; color: #2c3e50; margin: 12px 0 6px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .legend-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; }
-        .symbol-poly { width: 18px; height: 12px; border: 1px solid #555; margin-left: 10px; flex-shrink: 0; }
-        .symbol-line { width: 22px; height: 4px; margin-left: 10px; flex-shrink: 0; }
-        .symbol-icon { font-size: 16px; margin-left: 10px; width: 20px; text-align: center; }
-        .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; }
+        #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        #legend-content { padding: 15px; max-height: 300px; overflow-y: auto; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; }
+        .symbol { width: 18px; height: 12px; margin-left: 10px; border: 1px solid #777; flex-shrink: 0; }
+        
+        /* أيقونة الخريطة المخصصة */
+        .map-icon { font-size: 16px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div id="advisor-ui">
     <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ الخريطة</button>
+    
+    <div id="draw-tools-container"></div>
+    
     <button class="btn-tool btn-measure" onclick="toggleMeasureTool()">📏 القياس</button>
-    <button class="btn-tool btn-stats" onclick="runLiveStats()">📊 إحصائيات</button>
-    <button class="btn-tool btn-search" onclick="toggleSearch()">🔍 بحث</button>
-    <button class="btn-tool" onclick="runSmartAdvisor()">🧠 المستشار</button>
-    <button class="btn-tool btn-hazard" onclick="runHazardScanner()">⚠️ مخاطر</button>
-    <button class="btn-tool btn-isolation" onclick="runIsolationScanner()">🔍 عزل</button>
-    <button class="btn-tool btn-eco" onclick="runEcoBuffer()">🌳 بيئة</button>
-    <button class="btn-tool btn-story" onclick="startStory()">📖 قصة</button>
-    <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 استعادة</button>
+    <button class="btn-tool" onclick="toggleSearch()" style="background:#34495e">🔍 بحث</button>
+    <button class="btn-tool" onclick="runLiveStats()" style="background:#8e44ad">📊 إحصائيات</button>
+    <button class="btn-tool btn-clear" onclick="clearAll()">🧹 مسح</button>
+</div>
+
+<div id="measure-output">
+    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">نتائج القياس الميداني</div>
+    <div id="measure-res" style="font-size: 16px; color: #d35400; font-weight: bold;">اختر أداة من الشريط أعلاه</div>
 </div>
 
 <div id="layer-control">
-    <h4>التحكم بالطبقات</h4>
+    <h4>طبقات الخريطة</h4>
     <div id="layers-list"></div>
-</div>
-
-<div id="measure-output">النتائج: <br><span id="measure-res" style="color:#d35400;">حدد نقطة للبدء</span></div>
-
-<div id="search-container">
-    <input type="text" id="search-input" placeholder="ابحث عن مكان أو معلم..." onkeyup="executeSearch()">
-</div>
-
-<div id="stats-panel">
-    <h4 style="margin:0 0 10px 0; color:#2c3e50; text-align:center;">إحصائيات الاستخدامات</h4>
-    <canvas id="statsChart" style="max-height: 180px;"></canvas>
-    <div id="stats-summary" style="font-size: 12px; margin-top: 12px; color: #333; line-height: 1.6; background: #f9f9f9; padding: 8px; border-radius: 5px; border: 1px solid #eee;"></div>
-    <button onclick="$('#stats-panel').fadeOut()" style="margin-top:10px; width:100%; cursor:pointer; border:none; background:#eee; padding:8px; border-radius:5px; font-weight:bold;">إغلاق</button>
-</div>
-
-<div id="story-panel">
-    <h3 id="story-title"></h3>
-    <div id="story-text"></div>
-    <div class="story-nav">
-        <button id="prevBtn" onclick="prevStep()" class="btn-nav">السابق</button>
-        <button id="nextBtn" onclick="nextStep()" class="btn-nav">التالي</button>
-    </div>
-    <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold;">خروج</button>
 </div>
 
 <div id="map"></div>
 
 <div id="legend-box">
     <div id="legend-title" onclick="$('#legend-content').slideToggle()">
-        <span>📊 مفتاح الخريطة</span> <span>▼</span>
+        <span>📊 مفتاح الرموز</span>
+        <span>▼</span>
     </div>
     <div id="legend-content">
-        <div id="analysis-legend-section">
-            <div class="legend-section">نتائج التحليل</div>
-            <div id="dynamic-items" style="color:gray; font-style:italic;">لا توجد أداة مفعلة...</div>
-        </div>
-        <div class="legend-section">الطبقات الأساسية</div>
-        <div id="base-layers-legend"></div>
+        <div id="base-legend"></div>
     </div>
 </div>
 
 <script>
-var map = L.map("map").setView([31.903, 35.203], 11);
-var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-var isBaseMapVisible = true;
-var layers = {};
-var analysisGroup = L.layerGroup().addTo(map);
-var currentStep = 0;
-var statsChartInstance = null;
+    // 1. إعداد الخريطة والطبقة الأساسية
+    var map = L.map("map", { zoomControl: false }).setView([31.903, 35.203], 12);
+    var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    var isBaseMapVisible = true;
+    var layers = {};
 
-const storySteps = [
-    {
-        title: "رام الله: التحدي العمراني",
-        text: "تعاني رام الله من نمو سكاني مكثف (بالبني) ومخططات هيكلية (بالبنفسجي) تحاول إدارة هذا التوسع داخل حدود المدينة (الأسود).",
-        center: [31.903, 35.203], zoom: 13, visibleLayers: ["Ramallah Boundary", "Built-up Areas", "Master Plans"]
-    },
-    {
-        title: "الواقع الجيوسياسي والعزل",
-        text: "يوضح الجدار (المنقط) عزل مساحات شاسعة (بالبرتقالي)، مما يضعف الترابط الجغرافي للمنطقة.",
-        center: [31.940, 35.130], zoom: 13, visibleLayers: ["Annexation Wall", "Closed Areas", "Ramallah Boundary"]
-    },
-    {
-        title: "المستوطنات والمخططات",
-        text: "تقف المستوطنات (بالأحمر) عائقاً أمام التوسع الطبيعي للمدينة وتؤثر على التخطيط العمراني المستقبلي.",
-        center: [31.915, 35.265], zoom: 13, visibleLayers: ["Settlements", "Ramallah Boundary"]
-    }
-];
-
-var measureGroup = new L.FeatureGroup().addTo(map);
-var isMeasureActive = false;
-var drawControl = new L.Control.Draw({
-    edit: { featureGroup: measureGroup },
-    draw: { polygon: true, polyline: true, rectangle: true, circle: false, marker: false, circlemarker: false }
-});
-
-L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
-
-function toggleBaseMap() {
-    if (isBaseMapVisible) map.removeLayer(osmLayer);
-    else osmLayer.addTo(map);
-    isBaseMapVisible = !isBaseMapVisible;
-}
-
-function toggleLayerVisibility(name, isVisible) {
-    if (isVisible) { if (!map.hasLayer(layers[name])) map.addLayer(layers[name]); }
-    else { if (map.hasLayer(layers[name])) map.removeLayer(layers[name]); }
-}
-
-function toggleMeasureTool() {
-    isMeasureActive = !isMeasureActive;
-    if (isMeasureActive) {
-        clearAnalysis();
-        for (let k in layers) {
-            if (k !== "Ramallah Boundary" && k !== "Roads") {
-                map.removeLayer(layers[k]);
-                let safeId = k.replace(/\s+/g, '-').toLowerCase();
-                $(`#chk-${safeId}`).prop('checked', false);
-            } else { if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); }
+    // 2. إعداد أدوات القياس (Leaflet Draw)
+    var measureGroup = new L.FeatureGroup().addTo(map);
+    var drawControl = new L.Control.Draw({
+        edit: { featureGroup: measureGroup },
+        draw: { 
+            polygon: { shapeOptions: { color: '#f39c12' } },
+            polyline: { shapeOptions: { color: '#f39c12' } },
+            rectangle: { shapeOptions: { color: '#f39c12' } },
+            circle: false, marker: false, circlemarker: false 
         }
-        map.addControl(drawControl);
-        $("#measure-output").fadeIn();
-    } else {
-        if (drawControl._map) map.removeControl(drawControl);
-        $("#measure-output").fadeOut();
-        measureGroup.clearLayers();
-        restoreAllLayers();
-        $("#measure-res").html("حدد نقطة للبدء");
-    }
-}
+    });
 
-map.on(L.Draw.Event.CREATED, function (e) {
-    var layer = e.layer;
-    measureGroup.addLayer(layer);
-    let output = "";
-    if (e.layerType === 'polyline') {
-        let coords = layer.getLatLngs();
-        let length = 0;
-        for (let i = 0; i < coords.length - 1; i++) { length += coords[i].distanceTo(coords[i+1]); }
-        output = `إجمالي الطول: <b>${(length / 1000).toFixed(2)} كم</b>`;
-    } else {
-        let area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-        output = `المساحة: <b>${(area / 1000000).toFixed(2)} كم²</b><br>(${(area / 1000).toFixed(0)} دونم)`;
-    }
-    $("#measure-res").html(output);
-});
+    // نقل أزرار الرسم إلى الشريط العلوي
+    map.addControl(drawControl);
+    $(".leaflet-draw-section").detach().appendTo("#draw-tools-container");
 
-function addLayer(file, name, type, style, emoji, arabicName) {
-    $.getJSON(file, function(data) {
-        let layer = L.geoJson(data, { 
-            pointToLayer: (f, latlng) => type === "point" ? L.marker(latlng, { icon: L.divIcon({ html: emoji, className: 'map-icon', iconSize: [18,18] }) }) : null,
-            style: type !== "point" ? style : null,
-            onEachFeature: function(f, l) {
-                let content = `<div style='direction:rtl; text-align:right;'><b>${arabicName}</b><hr>`;
-                for (let key in f.properties) { content += `<b>${key}:</b> ${f.properties[key]}<br>`; }
-                l.bindPopup(content + "</div>");
-            }
-        });
-        layer.addTo(map);
-        layers[name] = layer;
-
-        let safeId = name.replace(/\s+/g, '-').toLowerCase();
+    // 3. وظيفة زر القياس
+    function toggleMeasureTool() {
+        let container = $("#draw-tools-container");
+        let output = $("#measure-output");
         
-        $("#layers-list").append(`
-            <div class="layer-item">
-                <input type="checkbox" id="chk-${safeId}" checked onchange="toggleLayerVisibility('${name}', this.checked)">
-                <label for="chk-${safeId}">${arabicName}</label>
-            </div>
-        `);
-
-        let sym = "";
-        if (type === "point") sym = `<span class="symbol-icon">${emoji}</span>`;
-        else if (type === "line") {
-            let dash = style.dashArray ? "border-top: 2px dashed #999;" : "";
-            sym = `<span class="symbol-line" style="background:${style.color}; ${dash}"></span>`;
-        } else if (type === "poly") {
-            let border = (style.weight && style.weight > 2) ? "border: 2px solid black; background:none;" : `background:${style.fillColor || style.color}`;
-            sym = `<span class="symbol-poly" style="${border}"></span>`;
+        if (container.is(":visible")) {
+            container.hide();
+            output.fadeOut();
+            measureGroup.clearLayers();
+        } else {
+            container.css("display", "flex").hide().fadeIn();
+            output.fadeIn();
         }
-        $("#base-layers-legend").append(`<div class="legend-item">${sym} ${arabicName}</div>`);
-    });
-}
-
-addLayer("Schools.geojson", "Schools", "point", null, "🏫", "المدارس");
-addLayer("Wells.geojson", "Wells", "point", null, "💧", "الآبار");
-addLayer("Quarries.geojson", "Quarries", "point", null, "⛏️", "الكسارات");
-addLayer("Roads.geojson", "Roads", "line", { color: "black", weight: 1.5 }, null, "شبكة الطرق");
-addLayer("Streams.geojson", "Streams", "line", { color: "#3498db", weight: 2 }, null, "الأودية");
-addLayer("Annexation_Wall.geojson", "Annexation Wall", "line", { color: "#555", weight: 3, dashArray: '5, 10' }, null, "جدار الضم والتوسع");
-addLayer("Agricultural_Land.geojson", "Agricultural Land", "poly", { color: "green", fillColor: "#8fd19e", fillOpacity: 0.2 }, null, "أراضي زراعية");
-addLayer("Areas_totaly_closed_by_the_wall.geojson", "Closed Areas", "poly", { color: "orange", fillColor: "#ffb347", fillOpacity: 0.2 }, null, "مناطق مغلقة بالجدار");
-addLayer("Built_up.geojson", "Built-up Areas", "poly", { color: "brown", fillColor: "#c49a6c", fillOpacity: 0.2 }, null, "مناطق مبنية");
-addLayer("Approved_Urban_Master_Plans_super_simplified.geojson", "Master Plans", "poly", { color: "purple", fillColor: "#af7ac5", fillOpacity: 0.2 }, null, "مخططات هيكلية");
-addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor: "#ff6666", fillOpacity: 0.2 }, null, "مستوطنات");
-addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillOpacity: 0.1 }, null, "نطاقات الحرارة");
-addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 3, fillOpacity: 0.05 }, null, "حدود المدينة");
-
-function runSmartAdvisor() {
-    clearAnalysis(); hideExceptBoundary();
-    document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#27ae60"></span> فرصة مثالية (مناخ + تربة)</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> منطقة زراعية عادية</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> نطاق حماية مستوطنات</div>`;
-    if (layers["Settlements"]) {
-        let settleBuff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units: 'kilometers'});
-        L.geoJson(settleBuff, { style: { color: '#c0392b', fillOpacity: 0.6 } }).bindPopup("نطاق استبعاد أمني").addTo(analysisGroup);
     }
-    if (layers["Agricultural Land"] && layers["Temperature Zones"]) {
-        let agriGeo = layers["Agricultural Land"].toGeoJSON();
-        let tempGeo = layers["Temperature Zones"].toGeoJSON();
-        agriGeo.features.forEach(land => {
-            let intersected = false;
-            tempGeo.features.forEach(temp => {
-                if (temp.properties.MEAN_ANNUA === "19 - 21") {
-                    let inter = turf.intersect(land, temp);
-                    if (inter) { L.geoJson(inter, { style: { color: '#27ae60', fillOpacity: 0.8 } }).bindPopup("<b>تحليل المستشار:</b> منطقة مثالية").addTo(analysisGroup); intersected = true; }
-                }
-            });
-            if (!intersected) { L.geoJson(land, { style: { color: '#f1c40f', fillOpacity: 0.4 } }).bindPopup("إمكانية متوسطة").addTo(analysisGroup); }
-        });
-    }
-}
 
-function runHazardScanner() {
-    clearAnalysis(); hideExceptBoundary();
-    document.getElementById("dynamic-items").innerHTML = `
-        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> خطر فيضان</div>
-        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> أثر بيئي للكسارات</div>`;
-    if (layers["Streams"]) L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'}), {style:{color:'#e74c3c', fillOpacity:0.6}}).addTo(analysisGroup);
-    if (layers["Quarries"]) L.geoJson(turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
-}
-
-function runLiveStats() {
-    $("#stats-panel").fadeIn();
-    let agriArea = 0, builtArea = 0;
-    if (layers["Agricultural Land"]) layers["Agricultural Land"].eachLayer(l => agriArea += turf.area(l.feature));
-    if (layers["Built-up Areas"]) layers["Built-up Areas"].eachLayer(l => builtArea += turf.area(l.feature));
-    let agriD = (agriArea/1000).toFixed(0);
-    let builtD = (builtArea/1000).toFixed(0);
-    $("#stats-summary").html(`• <b>الزراعي:</b> ${agriD} دونم.<br>• <b>المبني:</b> ${builtD} دونم.`);
-    if (statsChartInstance) statsChartInstance.destroy();
-    statsChartInstance = new Chart(document.getElementById('statsChart').getContext('2d'), {
-        type: 'pie', data: { labels: ['زراعي', 'مبني'], datasets: [{ data: [agriD, builtD], backgroundColor: ['#2ecc71', '#e67e22'] }] }
-    });
-}
-
-function runEcoBuffer() {
-    clearAnalysis(); hideExceptBoundary();
-    document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> حماية بيئية</div>`;
-    if (layers["Streams"]) L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).addTo(analysisGroup);
-}
-
-function runIsolationScanner() {
-    clearAnalysis(); hideExceptBoundary();
-    document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> عزل الجدار</div>`;
-    if (layers["Closed Areas"]) L.geoJson(layers["Closed Areas"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 } }).addTo(analysisGroup);
-}
-
-function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
-function updateStoryScene() {
-    const step = storySteps[currentStep];
-    $("#story-title").text(step.title); $("#story-text").text(step.text);
-    map.flyTo(step.center, step.zoom);
-}
-function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); } }
-function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
-function closeStory() { $("#story-panel").fadeOut(); restoreAllLayers(); }
-
-function toggleSearch() { $("#search-container").fadeToggle(); }
-function executeSearch() {
-    let q = $("#search-input").val().toLowerCase();
-    analysisGroup.clearLayers();
-    for (let k in layers) {
-        layers[k].eachLayer(l => {
-            if (JSON.stringify(l.feature.properties).toLowerCase().includes(q)) {
-                L.geoJson(l.feature, { style: { color: 'yellow', weight: 4, fillOpacity: 0.6 } }).addTo(analysisGroup);
+    // 4. معالجة نتائج الرسم والقياس
+    map.on(L.Draw.Event.CREATED, function (e) {
+        measureGroup.clearLayers();
+        var layer = e.layer;
+        measureGroup.addLayer(layer);
+        
+        let resultText = "";
+        if (e.layerType === 'polyline') {
+            let distance = 0;
+            let coords = layer.getLatLngs();
+            for (let i = 0; i < coords.length - 1; i++) {
+                distance += coords[i].distanceTo(coords[i+1]);
             }
+            resultText = `الطول الإجمالي: ${(distance / 1000).toFixed(2)} كم`;
+        } else {
+            let area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+            resultText = `المساحة: ${(area / 1000000).toFixed(2)} كم² <br> (${(area / 1000).toFixed(0)} دونم)`;
+        }
+        $("#measure-res").html(resultText);
+    });
+
+    // 5. وظيفة إضافة الطبقات مع التحكم والمفتاح
+    function addGeoJsonLayer(file, name, arabicName, type, color, emoji) {
+        $.getJSON(file, function(data) {
+            let layer = L.geoJson(data, {
+                style: { color: color, weight: 2, fillOpacity: 0.3, fillColor: color },
+                pointToLayer: (feature, latlng) => {
+                    return L.marker(latlng, { icon: L.divIcon({ html: emoji, className: 'map-icon' }) });
+                },
+                onEachFeature: (f, l) => {
+                    l.bindPopup(`<b>${arabicName}</b><br>معلومات من قاعدة البيانات`);
+                }
+            }).addTo(map);
+            
+            layers[name] = layer;
+
+            // إضافة للصندوق
+            let safeId = name.replace(/\s+/g, '-');
+            $("#layers-list").append(`
+                <div class="layer-item">
+                    <input type="checkbox" id="chk-${safeId}" checked onchange="toggleVisibility('${name}', this.checked)">
+                    <label for="chk-${safeId}">${arabicName}</label>
+                </div>
+            `);
+
+            // إضافة للمفتاح
+            let symbol = "";
+            if (type === 'poly') symbol = `<div class="symbol" style="background:${color}"></div>`;
+            else if (type === 'line') symbol = `<div class="symbol" style="height:3px; background:${color}"></div>`;
+            else symbol = `<div class="symbol" style="border:none; text-align:center;">${emoji}</div>`;
+            
+            $("#base-legend").append(`<div class="legend-item">${symbol} <span>${arabicName}</span></div>`);
         });
     }
-}
 
-function hideExceptBoundary() { 
-    for (let k in layers) {
-        if (k !== "Ramallah Boundary") {
-            map.removeLayer(layers[k]);
-            $(`#chk-${k.replace(/\s+/g, '-').toLowerCase()}`).prop('checked', false);
-        }
+    // 6. تحميل طبقات رام الله (استبدل الروابط بملفاتك)
+    addGeoJsonLayer("Ramallah.geojson", "Boundary", "حدود البلدية", "poly", "#2c3e50", "");
+    addGeoJsonLayer("Roads.geojson", "Roads", "شبكة الطرق", "line", "#555", "");
+    addGeoJsonLayer("Agricultural_Land.geojson", "Agri", "المناطق الزراعية", "poly", "#27ae60", "");
+    addGeoJsonLayer("Schools.geojson", "Schools", "المدارس", "point", "", "🏫");
+    addGeoJsonLayer("Settlements.geojson", "Settlements", "المستوطنات", "poly", "#e74c3c", "");
+
+    // 7. التحكم العام
+    function toggleVisibility(name, isVisible) {
+        if (isVisible) map.addLayer(layers[name]);
+        else map.removeLayer(layers[name]);
     }
-}
 
-function restoreAllLayers() { 
-    for (let k in layers) {
-        if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-        $(`#chk-${k.replace(/\s+/g, '-').toLowerCase()}`).prop('checked', true);
+    function toggleBaseMap() {
+        if (isBaseMapVisible) map.removeLayer(osmLayer);
+        else osmLayer.addTo(map);
+        isBaseMapVisible = !isBaseMapVisible;
     }
-}
 
-function clearAnalysis() {
-    isMeasureActive = false;
-    if (drawControl._map) map.removeControl(drawControl);
-    analysisGroup.clearLayers(); measureGroup.clearLayers();
-    restoreAllLayers();
-    $("#measure-output, #stats-panel, #search-container, #story-panel").fadeOut();
-    document.getElementById("dynamic-items").innerHTML = "لا توجد أداة مفعلة...";
-}
+    function clearAll() {
+        measureGroup.clearLayers();
+        $("#measure-output").fadeOut();
+        $("#draw-tools-container").hide();
+        $("#measure-res").text("اختر أداة من الشريط أعلاه");
+    }
+
+    function toggleSearch() { alert("جاري تفعيل محرك البحث الجغرافي..."); }
+    function runLiveStats() { alert("جاري تحليل بيانات الطبقات..."); }
+
 </script>
 </body>
 </html>
