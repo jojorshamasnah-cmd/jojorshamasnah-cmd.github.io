@@ -19,17 +19,9 @@
         
         /* شريط الأدوات في المنتصف */
         #advisor-ui { 
-            position: absolute; 
-            top: 15px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            z-index: 1000; 
-            display: flex; 
-            gap: 8px; 
-            flex-wrap: nowrap; 
-            background: rgba(255, 255, 255, 0.7); 
-            padding: 8px; 
-            border-radius: 12px; 
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%); 
+            z-index: 1000; display: flex; gap: 8px; flex-wrap: nowrap; 
+            background: rgba(255, 255, 255, 0.7); padding: 8px; border-radius: 12px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
@@ -46,38 +38,31 @@
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
+        /* صندوق التحكم بالطبقات - يسار علوي */
+        #layer-control {
+            position: absolute; top: 80px; left: 10px; z-index: 1000;
+            background: white; padding: 12px; border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); direction: rtl;
+            min-width: 160px; max-height: 50vh; overflow-y: auto; border: 1px solid #ccc;
+        }
+        #layer-control h4 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #2c3e50; }
+        .layer-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; cursor: pointer; }
+
         /* صندوق البحث تحت الأدوات */
         #search-container { 
-            position: absolute; 
-            top: 85px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            z-index: 1000; 
-            display: none; 
-            background: white; 
-            padding: 10px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
-            width: 300px; 
+            position: absolute; top: 85px; left: 50%; transform: translateX(-50%); 
+            z-index: 1000; display: none; background: white; padding: 10px; 
+            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); width: 300px; 
         }
         #search-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; text-align: right; }
 
         #measure-output { position: absolute; top: 15px; right: 20px; z-index: 2000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: none; border-left: 5px solid #f39c12; font-weight: bold; direction: rtl; max-width: 250px; }
         
-        /* نقل الإحصائيات لليسار السفلي */
         #stats-panel { 
-            position: absolute; 
-            bottom: 30px; 
-            left: 20px; 
-            width: 300px; 
-            background: white; 
-            padding: 15px; 
-            border-radius: 12px; 
-            z-index: 3000; 
-            display: none; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
-            border-top: 5px solid #2ecc71; 
-            direction: rtl; 
+            position: absolute; bottom: 30px; left: 20px; width: 300px; 
+            background: white; padding: 15px; border-radius: 12px; 
+            z-index: 3000; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
+            border-top: 5px solid #2ecc71; direction: rtl; 
         }
         
         #story-panel { position: absolute; top: 80px; right: 20px; width: 350px; background: rgba(255, 255, 255, 0.98); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 3000; display: none; padding: 25px; border-top: 8px solid #2980b9; direction: rtl; }
@@ -86,19 +71,10 @@
         .story-nav { display: flex; justify-content: space-between; margin-top: 15px; }
         .btn-nav { background: #34495e; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
 
-        /* تعديل موقع المفتاح لليمين السفلي وتكبيره */
         #legend-box { 
-            position: absolute; 
-            bottom: 25px; 
-            right: 20px; 
-            background: white; 
-            border-radius: 12px; 
-            width: 320px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
-            z-index: 2000; 
-            border: 1px solid #ccc; 
-            overflow: hidden; 
-            direction: rtl; 
+            position: absolute; bottom: 25px; right: 20px; background: white; 
+            border-radius: 12px; width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            z-index: 2000; border: 1px solid #ccc; overflow: hidden; direction: rtl; 
         }
         #legend-title { font-weight: bold; padding: 14px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; font-size: 16px; }
         #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; }
@@ -123,6 +99,11 @@
     <button class="btn-tool btn-eco" onclick="runEcoBuffer()">🌳 بيئة</button>
     <button class="btn-tool btn-story" onclick="startStory()">📖 قصة</button>
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 استعادة</button>
+</div>
+
+<div id="layer-control">
+    <h4>التحكم بالطبقات</h4>
+    <div id="layers-list"></div>
 </div>
 
 <div id="search-container">
@@ -217,6 +198,15 @@ function toggleBaseMap() {
     isBaseMapVisible = !isBaseMapVisible;
 }
 
+// وظيفة لتشغيل وإطفاء الطبقات من الصندوق
+function toggleLayerVisibility(name, isVisible) {
+    if (isVisible) {
+        if (!map.hasLayer(layers[name])) map.addLayer(layers[name]);
+    } else {
+        if (map.hasLayer(layers[name])) map.removeLayer(layers[name]);
+    }
+}
+
 function toggleMeasureTool() {
     isMeasureActive = !isMeasureActive;
     if (isMeasureActive) {
@@ -224,6 +214,9 @@ function toggleMeasureTool() {
         for (let k in layers) {
             if (k !== "Ramallah Boundary" && k !== "Roads") {
                 map.removeLayer(layers[k]);
+                // تحديث حالة الصندوق عند الإخفاء
+                let safeId = k.replace(/\s+/g, '-').toLowerCase();
+                $(`#chk-${safeId}`).prop('checked', false);
             } else {
                 if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
             }
@@ -231,7 +224,7 @@ function toggleMeasureTool() {
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
     } else {
-        map.removeControl(drawControl);
+        if (drawControl._map) map.removeControl(drawControl);
         $("#measure-output").fadeOut();
         measureGroup.clearLayers();
         restoreAllLayers();
@@ -269,6 +262,15 @@ function addLayer(file, name, type, style, emoji) {
         });
         layer.addTo(map);
         layers[name] = layer;
+
+        // إضافة الطبقة تلقائياً للصندوق عند تحميلها
+        let safeId = name.replace(/\s+/g, '-').toLowerCase();
+        $("#layers-list").append(`
+            <div class="layer-item">
+                <input type="checkbox" id="chk-${safeId}" checked onchange="toggleLayerVisibility('${name}', this.checked)">
+                <label for="chk-${safeId}">${name}</label>
+            </div>
+        `);
     });
 }
 
@@ -383,12 +385,27 @@ function executeSearch() {
     }
 }
 
-function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]); }
-function restoreAllLayers() { for (let k in layers) if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); }
+function hideExceptBoundary() { 
+    for (let k in layers) {
+        if (k !== "Ramallah Boundary") {
+            map.removeLayer(layers[k]);
+            let safeId = k.replace(/\s+/g, '-').toLowerCase();
+            $(`#chk-${safeId}`).prop('checked', false);
+        }
+    }
+}
+
+function restoreAllLayers() { 
+    for (let k in layers) {
+        if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+        let safeId = k.replace(/\s+/g, '-').toLowerCase();
+        $(`#chk-${safeId}`).prop('checked', true);
+    }
+}
 
 function clearAnalysis() {
     isMeasureActive = false;
-    map.removeControl(drawControl);
+    if (drawControl._map) map.removeControl(drawControl);
     analysisGroup.clearLayers(); 
     measureGroup.clearLayers();
     restoreAllLayers();
