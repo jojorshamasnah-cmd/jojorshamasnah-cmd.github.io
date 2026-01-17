@@ -129,7 +129,6 @@ var statsChartInstance = null;
 
 // Measure Tool Setup
 var measureGroup = new L.FeatureGroup().addTo(map);
-var isMeasureActive = false;
 var drawControl = new L.Control.Draw({
     edit: { featureGroup: measureGroup },
     draw: { polygon: true, polyline: true, rectangle: false, circle: false, marker: false, circlemarker: false }
@@ -144,8 +143,7 @@ function toggleBaseMap() {
 }
 
 function toggleMeasureTool() {
-    isMeasureActive = !isMeasureActive;
-    if (isMeasureActive) {
+    if (!map.hasControl(drawControl)) {
         clearAnalysis(); hideExceptBoundary();
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
@@ -235,7 +233,7 @@ function runSmartAdvisor() {
                             let inter = turf.intersect(land, t);
                             if (inter) {
                                 L.geoJson(inter, {style:{color:'#1d8348', fillColor:'#2ecc71', fillOpacity:0.8}})
-                                .bindPopup("<b>Safe High Potential</b><br>Ideal climate and safe distance from restrictions.").addTo(analysisGroup);
+                                .bindPopup("<b>Safe High Potential</b><br>Ideal climate and safe distance.").addTo(analysisGroup);
                                 isGreen = true;
                             }
                         }
@@ -243,7 +241,7 @@ function runSmartAdvisor() {
                 }
                 if (!isGreen) {
                     L.geoJson(land, {style:{color:'#d4ac0d', fillColor:'#f1c40f', fillOpacity:0.6}})
-                    .bindPopup("<b>Moderate Potential</b><br>Good land but limited by climate factors.").addTo(analysisGroup);
+                    .bindPopup("<b>Moderate Potential</b><br>Good land but limited by climate.").addTo(analysisGroup);
                 }
             }
         });
@@ -301,7 +299,7 @@ function runLiveStats() {
         options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
     });
 
-    let ratio = (agriKM / builtKM).toFixed(1);
+    let ratio = builtKM > 0 ? (agriKM / builtKM).toFixed(1) : agriKM;
     let analysisText = `
         <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
             <p style="margin:0;"><b>📊 Spatial Report:</b></p>
@@ -338,7 +336,39 @@ function runHazardScanner() {
     map.fitBounds(analysisGroup.getBounds(), {padding:[20,20]});
 }
 
-// --- OTHER ANALYSES ---
+// --- UPDATED SERVICE EQUITY TOOL ---
+function runServiceEquity() {
+    clearAnalysis(); hideExceptBoundary();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:rgba(231, 76, 60, 0.6)"></span> Service Gap (No Schools/Wells)</div>`;
+    
+    let pts = [];
+    if (layers["Schools"]) layers["Schools"].eachLayer(l => pts.push(l.feature));
+    if (layers["Wells"]) layers["Wells"].eachLayer(l => pts.push(l.feature));
+
+    if (pts.length > 0) {
+        try {
+            let buffered = turf.buffer(turf.featureCollection(pts), 1.5, {units: 'kilometers'});
+            let combinedBuffer = buffered.features.reduce((acc, feat) => acc ? turf.union(acc, feat) : feat, null);
+            let boundary = layers["Ramallah Boundary"].toGeoJSON().features[0];
+            let gap = turf.difference(boundary, combinedBuffer);
+
+            if (gap) {
+                L.geoJson(gap, {
+                    style: { color: '#c0392b', fillColor: '#e74c3c', fillOpacity: 0.5, weight: 2, dashArray: '5, 5' }
+                }).bindPopup(`
+                    <div style="text-align:center;">
+                        <b style="color:#e74c3c;">⚠️ Service Gap Area</b><br>
+                        This zone is further than <b>1.5km</b> from any school or water well.
+                    </div>
+                `).addTo(analysisGroup);
+                map.fitBounds(analysisGroup.getBounds());
+            }
+        } catch (e) { console.error(e); }
+    }
+}
+
+// --- SEARCH & UTILS ---
 function toggleSearch() { $("#search-container").fadeToggle(); $("#search-input").val("").focus(); }
 function executeSearch() {
     let q = $("#search-input").val().toLowerCase();
@@ -360,18 +390,6 @@ function runIsolationScanner() {
             style: { color: '#8e44ad', fillOpacity: 0.7 }, 
             onEachFeature: (f, l) => { l.bindPopup(`<b>Isolated Area:</b> ${(turf.area(f)/1e6).toFixed(2)} km²`); } 
         }).addTo(analysisGroup);
-    }
-}
-
-function runServiceEquity() {
-    clearAnalysis(); hideExceptBoundary();
-    let pts = [];
-    if (layers["Schools"]) pts.push(...layers["Schools"].toGeoJSON().features);
-    if (layers["Wells"]) pts.push(...layers["Wells"].toGeoJSON().features);
-    if (pts.length > 0) {
-        let dissolved = turf.dissolve(turf.buffer(turf.featureCollection(pts), 1.5, {units: 'kilometers'}));
-        let gap = turf.difference(layers["Ramallah Boundary"].toGeoJSON().features[0], dissolved);
-        L.geoJson(gap, { style: { color: '#e74c3c', fillOpacity: 0.6 } }).bindPopup("<b>Service Gap Area</b>").addTo(analysisGroup);
     }
 }
 
