@@ -28,7 +28,7 @@
         .btn-clear { background: #e74c3c; }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
-        /* Measurement Display */
+        /* Measurement Output Box */
         #measure-output {
             position: absolute; top: 15px; right: 20px; z-index: 2000;
             background: rgba(255, 255, 255, 0.95); padding: 12px 18px;
@@ -120,7 +120,7 @@ var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
 var currentStep = 0;
 
-// Measurement variables
+// Measurement Variables
 var measureLayer = new L.FeatureGroup().addTo(map);
 var drawControl;
 var isMeasureActive = false;
@@ -173,13 +173,13 @@ addLayer("Settlements.geojson", "Settlements", "poly", { color: "red", fillColor
 addLayer("Temperature.geojson", "Temperature Zones", "poly", { color: "blue", fillColor: "#87ceeb", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "Ramallah Boundary", "poly", { color: "black", weight: 2, fillOpacity: 0.1 });
 
-// --- MEASUREMENT TOOL (Auto Toggles Layers) ---
+// --- MEASUREMENT TOOL LOGIC ---
 function toggleMeasureTool() {
     if (!isMeasureActive) {
         isMeasureActive = true;
         $("#measure-output").fadeIn();
-        $(".btn-measure").css("background", "#d35400"); // Highlight button
-
+        $(".btn-measure").css("border", "2px solid white");
+        
         // Hide all layers except Boundary and Roads
         for (let k in layers) {
             if (k !== "Ramallah Boundary" && k !== "Roads") {
@@ -199,7 +199,7 @@ function toggleMeasureTool() {
     } else {
         isMeasureActive = false;
         $("#measure-output").fadeOut();
-        $(".btn-measure").css("background", "#f39c12");
+        $(".btn-measure").css("border", "none");
         map.removeControl(drawControl);
         measureLayer.clearLayers();
         $("#measure-val").text("0");
@@ -226,30 +226,10 @@ map.on(L.Draw.Event.CREATED, function (e) {
     $("#measure-val").text(result);
 });
 
-// --- ORIGINAL STORY MODE ---
-const storySteps = [
-    { title: "Scene 1: Urban Expansion & Settlements", text: "Notice the conflict between Master Plans and Settlements.", center: [31.910, 35.260], zoom: 14, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
-    { title: "Scene 2: The Wall & Isolated Lands", text: "This view shows the Annexation Wall.", center: [31.940, 35.130], zoom: 14, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] },
-    { title: "Scene 3: Water Resources at Risk", text: "Water wells are vital, but threatened by proximity to Quarries.", center: [31.880, 35.230], zoom: 14, visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"] }
-];
-
-function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
-function updateStoryScene() {
-    const step = storySteps[currentStep];
-    $("#story-title").text(step.title); $("#story-text").text(step.text);
-    map.flyTo(step.center, step.zoom, { duration: 2 });
-    for (let k in layers) {
-        if (step.visibleLayers.includes(k)) { if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); } 
-        else { map.removeLayer(layers[k]); }
-    }
-}
-function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); } }
-function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
-function closeStory() { $("#story-panel").fadeOut(); clearAnalysis(); }
-
-// --- TOOL FUNCTIONS ---
+// --- Analysis & Story Tools ---
 function runServiceEquity() {
     clearAnalysis(); hideExceptBoundary();
+    document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:rgba(231, 76, 60, 0.6)"></span> Service Gap (>1.5km)</div><div class="legend-item"><span class="symbol-poly" style="background:rgba(46, 204, 113, 0.2)"></span> Current Coverage</div>`;
     let servicePoints = [];
     if (layers["Schools"]) servicePoints.push(...layers["Schools"].toGeoJSON().features);
     if (layers["Wells"]) {
@@ -264,7 +244,7 @@ function runServiceEquity() {
         if (layers["Ramallah Boundary"]) {
             let boundary = layers["Ramallah Boundary"].toGeoJSON().features[0];
             let gap = turf.difference(boundary, dissolved);
-            L.geoJson(gap, { style: { color: '#c0392b', fillColor: '#e74c3c', fillOpacity: 0.6, weight: 2 } }).bindPopup("Service Inequality Zone (>1.5km)").addTo(analysisGroup);
+            L.geoJson(gap, { style: { color: '#c0392b', fillColor: '#e74c3c', fillOpacity: 0.6, weight: 2 } }).addTo(analysisGroup);
         }
         map.fitBounds(analysisGroup.getBounds());
     }
@@ -293,6 +273,26 @@ function runIsolationScanner() {
         map.fitBounds(analysisGroup.getBounds());
     }
 }
+
+const storySteps = [
+    { title: "Scene 1: Urban Expansion & Settlements", text: "Notice the conflict...", center: [31.910, 35.260], zoom: 14, visibleLayers: ["Settlements", "Master Plans", "Ramallah Boundary"] },
+    { title: "Scene 2: The Wall & Isolated Lands", text: "Annexation Wall view...", center: [31.940, 35.130], zoom: 14, visibleLayers: ["Annexation Wall", "Agricultural Land", "Closed Areas", "Ramallah Boundary"] },
+    { title: "Scene 3: Water Resources at Risk", text: "Water wells proximity...", center: [31.880, 35.230], zoom: 14, visibleLayers: ["Wells", "Settlements", "Quarries", "Ramallah Boundary"] }
+];
+
+function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
+function updateStoryScene() {
+    const step = storySteps[currentStep];
+    $("#story-title").text(step.title); $("#story-text").text(step.text);
+    map.flyTo(step.center, step.zoom, { duration: 2 });
+    for (let k in layers) {
+        if (step.visibleLayers.includes(k)) { if (!map.hasLayer(layers[k])) map.addLayer(layers[k]); } 
+        else { map.removeLayer(layers[k]); }
+    }
+}
+function nextStep() { if (currentStep < storySteps.length - 1) { currentStep++; updateStoryScene(); } }
+function prevStep() { if (currentStep > 0) { currentStep--; updateStoryScene(); } }
+function closeStory() { $("#story-panel").fadeOut(); clearAnalysis(); }
 
 function hideExceptBoundary() { for (let k in layers) if (k !== "Ramallah Boundary") map.removeLayer(layers[k]); }
 
