@@ -220,7 +220,7 @@ function runSmartAdvisor() {
     if (layers["Settlements"]) {
         let buff = turf.buffer(layers["Settlements"].toGeoJSON(), 0.3, {units:'kilometers'});
         L.geoJson(buff, { style: {color:'#c0392b', fillColor:'#e74c3c', fillOpacity:0.7} })
-        .bindPopup("<b>Exclusion Zone</b><br>High risk area due to settlement proximity.").addTo(analysisGroup);
+        .bindPopup("<b>Exclusion Zone</b><br>High risk area due to settlement proximity (300m buffer).").addTo(analysisGroup);
     }
 
     if (layers["Agricultural Land"]) {
@@ -235,7 +235,7 @@ function runSmartAdvisor() {
                             let inter = turf.intersect(land, t);
                             if (inter) {
                                 L.geoJson(inter, {style:{color:'#1d8348', fillColor:'#2ecc71', fillOpacity:0.8}})
-                                .bindPopup("<b>Safe High Potential</b><br>Ideal climate and safe distance.").addTo(analysisGroup);
+                                .bindPopup("<b>Safe High Potential</b><br>Ideal climate and safe distance from restrictions.").addTo(analysisGroup);
                                 isGreen = true;
                             }
                         }
@@ -243,7 +243,7 @@ function runSmartAdvisor() {
                 }
                 if (!isGreen) {
                     L.geoJson(land, {style:{color:'#d4ac0d', fillColor:'#f1c40f', fillOpacity:0.6}})
-                    .bindPopup("<b>Moderate Potential</b><br>Good land but limited by climate.").addTo(analysisGroup);
+                    .bindPopup("<b>Moderate Potential</b><br>Good land but limited by climate factors.").addTo(analysisGroup);
                 }
             }
         });
@@ -316,6 +316,28 @@ function runLiveStats() {
     $("#stats-summary").html(analysisText);
 }
 
+// --- RESTORED HAZARD SCANNER ---
+function runHazardScanner() {
+    clearAnalysis(); hideExceptBoundary();
+    document.getElementById("dynamic-items").innerHTML = `
+        <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> Flood Danger Zone (150m)</div>
+        <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> Quarry Impact Zone (500m)</div>`;
+
+    if (layers["Streams"]) {
+        let floodBuffer = turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units: 'kilometers'});
+        L.geoJson(floodBuffer, {
+            style: { color: '#922b21', fillColor: '#e74c3c', fillOpacity: 0.6, weight: 1 }
+        }).bindPopup(`<b>⚠️ Flood Hazard</b><br>High risk of flash floods.<br><small>150m stream buffer</small>`).addTo(analysisGroup);
+    }
+    if (layers["Quarries"]) {
+        let quarryBuffer = turf.buffer(layers["Quarries"].toGeoJSON(), 0.5, {units: 'kilometers'});
+        L.geoJson(quarryBuffer, {
+            style: { color: '#d35400', fillColor: '#e67e22', fillOpacity: 0.5, weight: 1, dashArray: '5, 5' }
+        }).bindPopup(`<b>💨 Environmental Risk</b><br>Dust and noise pollution area.<br><small>500m quarry radius</small>`).addTo(analysisGroup);
+    }
+    map.fitBounds(analysisGroup.getBounds(), {padding:[20,20]});
+}
+
 // --- OTHER ANALYSES ---
 function toggleSearch() { $("#search-container").fadeToggle(); $("#search-input").val("").focus(); }
 function executeSearch() {
@@ -331,17 +353,13 @@ function executeSearch() {
     }
 }
 
-function runHazardScanner() {
-    clearAnalysis(); hideExceptBoundary();
-    if (layers["Streams"]) {
-        L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.15, {units:'kilometers'}), { style:{color:'#922b21', fillColor:'#e74c3c', fillOpacity:0.6} }).bindPopup("<b>Flood Alert Zone</b>").addTo(analysisGroup);
-    }
-}
-
 function runIsolationScanner() {
     clearAnalysis(); hideExceptBoundary();
     if (layers["Closed Areas"]) {
-        L.geoJson(layers["Closed Areas"].toGeoJSON(), { style: { color: '#8e44ad', fillOpacity: 0.7 }, onEachFeature: (f, l) => { l.bindPopup(`<b>Isolated Area:</b> ${(turf.area(f)/1e6).toFixed(2)} km²`); } }).addTo(analysisGroup);
+        L.geoJson(layers["Closed Areas"].toGeoJSON(), { 
+            style: { color: '#8e44ad', fillOpacity: 0.7 }, 
+            onEachFeature: (f, l) => { l.bindPopup(`<b>Isolated Area:</b> ${(turf.area(f)/1e6).toFixed(2)} km²`); } 
+        }).addTo(analysisGroup);
     }
 }
 
@@ -360,7 +378,9 @@ function runServiceEquity() {
 function runEcoBuffer() {
     clearAnalysis(); hideExceptBoundary();
     if (layers["Streams"]) {
-        L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).bindPopup("<b>Eco Protection</b>").addTo(analysisGroup);
+        L.geoJson(turf.buffer(layers["Streams"].toGeoJSON(), 0.2, {units: 'kilometers'}), { 
+            style: { color: '#1abc9c', fillOpacity: 0.4 } 
+        }).bindPopup("<b>Eco-Protection Zone</b><br>200m biodiversity buffer.").addTo(analysisGroup);
     }
 }
 
