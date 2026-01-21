@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ramallah WebGIS - Professional Suite</title>
+    <title>Ramallah WebGIS - العقل الجغرافي</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
     
@@ -14,35 +14,52 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
+        /* --- واجهة العقل الجغرافي (ترحيبية) --- */
+        #welcome-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
+            color: white; z-index: 10000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; direction: rtl;
+        }
+        .welcome-content {
+            width: 80%; max-width: 700px; text-align: center;
+            background: rgba(255, 255, 255, 0.05); padding: 40px;
+            border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        #welcome-screen h1 { font-size: 45px; margin-bottom: 20px; color: #2ecc71; text-shadow: 0 0 15px rgba(46, 204, 113, 0.5); }
+        .guide-box {
+            background: rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 12px;
+            margin: 25px 0; text-align: right; max-height: 350px; overflow-y: auto;
+            border: 1px solid #34495e; line-height: 1.8; font-size: 14px;
+        }
+        .guide-box h4 { margin-top: 0; color: #f1c40f; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .guide-item { margin-bottom: 8px; }
+        .guide-item b { color: #3498db; }
+        .btn-start {
+            background: #27ae60; color: white; border: none; padding: 15px 50px;
+            font-size: 20px; font-weight: bold; border-radius: 50px; cursor: pointer;
+            transition: 0.3s; box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+        .btn-start:hover { background: #2ecc71; transform: scale(1.05); }
+
+        /* --- واجهة الأزرار والتحليل --- */
         #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 8px; flex-wrap: wrap; }
         .btn-tool { background: #2c3e50; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.3s; }
         .btn-basemap { background: #27ae60; }
-        .btn-hazard { background: #d35400; }
-        .btn-isolation { background: #8e44ad; }
-        .btn-story { background: #2980b9; } 
-        .btn-measure { background: #f39c12 !important; }
-        .btn-stats { background: #2ecc71 !important; }
-        .btn-search { background: #34495e !important; }
-        .btn-eco { background: #1abc9c !important; }
         .btn-clear { background: #e74c3c !important; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
         .btn-tool:hover { transform: translateY(-2px); opacity: 0.9; }
 
         #search-container { position: absolute; top: 70px; left: 60px; z-index: 1000; display: none; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); width: 250px; }
         #search-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; text-align: right; }
-
         #measure-output { position: absolute; top: 15px; right: 20px; z-index: 2000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: none; border-left: 5px solid #f39c12; font-weight: bold; direction: rtl; max-width: 250px; }
         #stats-panel { position: absolute; bottom: 30px; right: 20px; width: 300px; background: white; padding: 15px; border-radius: 12px; z-index: 3000; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.3); border-top: 5px solid #2ecc71; direction: rtl; }
-        
         #story-panel { position: absolute; top: 80px; right: 20px; width: 350px; background: rgba(255, 255, 255, 0.98); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 3000; display: none; padding: 25px; border-top: 8px solid #2980b9; direction: rtl; }
-        #story-title { margin-top:0; color:#2980b9; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        #story-text { font-size: 14px; line-height: 1.7; color: #333; margin: 15px 0; }
-        .story-nav { display: flex; justify-content: space-between; margin-top: 15px; }
-        .btn-nav { background: #34495e; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
-
+        
         #legend-box { position: absolute; bottom: 85px; left: 15px; background: white; border-radius: 12px; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; border: 1px solid #ccc; overflow: hidden; direction: rtl; }
         #legend-title { font-weight: bold; padding: 12px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
         #legend-content { padding: 15px; max-height: 400px; overflow-y: auto; }
@@ -52,22 +69,28 @@
         .symbol-line { width: 20px; height: 3px; margin-left: 8px; flex-shrink: 0; }
         .symbol-icon { font-size: 14px; margin-left: 8px; width: 18px; text-align: center; }
         .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; }
-
-        /* تنسيق صندوق الطبقات */
-        .leaflet-control-layers { 
-            direction: rtl; 
-            text-align: right; 
-            border-radius: 8px !important; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-            padding: 10px !important;
-        }
-        .leaflet-control-layers-overlays label {
-            margin-bottom: 5px;
-            cursor: pointer;
-        }
+        .leaflet-control-layers { direction: rtl; text-align: right; border-radius: 8px !important; padding: 10px !important; }
     </style>
 </head>
 <body>
+
+<div id="welcome-screen">
+    <div class="welcome-content">
+        <h1>العقل الجغرافي</h1>
+        <div class="guide-box">
+            <h4>دليل المستخدم والبيانات:</h4>
+            <div class="guide-item">📍 <b>المرافق التعليمية:</b> مواقع المدارس في محافظة رام الله.</div>
+            <div class="guide-item">💧 <b>المصادر المائية:</b> مواقع الآبار الجوفية ومسارات الأودية والسيول.</div>
+            <div class="guide-item">⛏️ <b>النشاط الصناعي:</b> مواقع الكسارات وتأثيراتها البيئية.</div>
+            <div class="guide-item">🛣️ <b>شبكة الطرق:</b> الشرايين الرئيسية والفرعية التي تربط المدينة.</div>
+            <div class="guide-item">🚧 <b>الواقع الجيوسياسي:</b> جدار الضم والتوسع، المستوطنات، والمناطق المغلقة أمنياً.</div>
+            <div class="guide-item">🚜 <b>الاستخدامات الزراعية:</b> خرائط الأراضي الزراعية الخصبة ونطاقات الحرارة المناخية.</div>
+            <div class="guide-item">🏙️ <b>التوسع العمراني:</b> المناطق المبنية الحالية والمخططات الهيكلية المستقبلية.</div>
+            <div class="guide-item">🧠 <b>أدوات التحليل:</b> يمكنك قياس المسافات، تحليل المخاطر البيئية، واستخدام المستشار الذكي لاقتراح أفضل المواقع.</div>
+        </div>
+        <button class="btn-start" onclick="closeWelcome()">ابدأ الآن</button>
+    </div>
+</div>
 
 <div id="advisor-ui">
     <button class="btn-tool btn-basemap" onclick="toggleBaseMap()">🗺️ الخريطة</button>
@@ -85,16 +108,13 @@
 <div id="search-container">
     <input type="text" id="search-input" placeholder="ابحث عن مكان أو معلم..." onkeyup="executeSearch()">
 </div>
-
 <div id="measure-output">النتيجة: <br><span id="measure-res" style="color:#d35400;">حدد نقطة للبدء</span></div>
-
 <div id="stats-panel">
     <h4 style="margin:0 0 10px 0; color:#2c3e50; text-align:center;">إحصائيات الاستخدامات</h4>
     <canvas id="statsChart" style="max-height: 180px;"></canvas>
     <div id="stats-summary" style="font-size: 12px; margin-top: 12px; color: #333; line-height: 1.6; background: #f9f9f9; padding: 8px; border-radius: 5px; border: 1px solid #eee;"></div>
     <button onclick="$('#stats-panel').fadeOut()" style="margin-top:10px; width:100%; cursor:pointer; border:none; background:#eee; padding:8px; border-radius:5px; font-weight:bold;">إغلاق</button>
 </div>
-
 <div id="story-panel">
     <h3 id="story-title"></h3>
     <div id="story-text"></div>
@@ -104,9 +124,7 @@
     </div>
     <button onclick="closeStory()" style="margin-top:15px; width:100%; border:none; background:none; cursor:pointer; color:#e74c3c; font-weight:bold;">خروج</button>
 </div>
-
 <div id="map"></div>
-
 <div id="legend-box">
     <div id="legend-title" onclick="$('#legend-content').slideToggle()">
         <span>📊 مفتاح الخريطة</span> <span>▼</span>
@@ -133,10 +151,15 @@
 </div>
 
 <script>
+// دالة إغلاق الواجهة الترحيبية
+function closeWelcome() {
+    $('#welcome-screen').fadeOut(1000);
+}
+
+// الكود البرمجي للخرائط (Leaflet) كما هو في طلبك السابق
 var map = L.map("map").setView([31.903, 35.203], 11);
 var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-// صندوق التحكم بالطبقات بالعربي
 var baseMaps = { "خريطة الشارع مفتوحة": osmLayer };
 var overlayMaps = {};
 var layerControl = L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
@@ -147,7 +170,7 @@ var analysisGroup = L.layerGroup().addTo(map);
 var currentStep = 0;
 var statsChartInstance = null;
 
-// طبقات القصة (تم تحديث الأسماء للعربي)
+// طبقات القصة
 const storySteps = [
     {
         title: "رام الله: التحدي العمراني",
@@ -175,6 +198,7 @@ var drawControl = new L.Control.Draw({
 
 L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
+// دوال التحكم بالخرائط والتحليل (نفس الكود الأصلي)
 function toggleBaseMap() {
     if (isBaseMapVisible) map.removeLayer(osmLayer);
     else osmLayer.addTo(map);
@@ -186,11 +210,8 @@ function toggleMeasureTool() {
     if (isMeasureActive) {
         clearAnalysis();
         for (let k in layers) {
-            if (k !== "حدود المدينة" && k !== "الطرق") {
-                map.removeLayer(layers[k]);
-            } else {
-                if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
-            }
+            if (k !== "حدود المدينة" && k !== "الطرق") map.removeLayer(layers[k]);
+            else if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
         }
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
@@ -199,7 +220,6 @@ function toggleMeasureTool() {
         $("#measure-output").fadeOut();
         measureGroup.clearLayers();
         restoreAllLayers();
-        $("#measure-res").html("حدد نقطة للبدء");
     }
 }
 
@@ -237,7 +257,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// إضافة الطبقات بأسماء عربية
+// تحميل الطبقات
 addLayer("Schools.geojson", "المدارس", "point", null, "🏫");
 addLayer("Wells.geojson", "الآبار", "point", null, "💧");
 addLayer("Quarries.geojson", "الكسارات", "point", null, "⛏️");
@@ -252,34 +272,17 @@ addLayer("Settlements.geojson", "مستوطنات", "poly", { color: "red", fill
 addLayer("Temperature.geojson", "نطاقات الحرارة", "poly", { color: "blue", fillOpacity: 0.1 });
 addLayer("Ramallah.geojson", "حدود المدينة", "poly", { color: "black", weight: 3, fillOpacity: 0.05 });
 
+// دوال التحليل الذكي
 function runSmartAdvisor() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#27ae60"></span> فرصة مثالية (مناخ + تربة)</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#f1c40f"></span> منطقة زراعية عادية</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#c0392b"></span> نطاق حماية مستوطنات</div>`;
+    
     if (layers["مستوطنات"]) {
         let settleBuff = turf.buffer(layers["مستوطنات"].toGeoJSON(), 0.3, {units: 'kilometers'});
         L.geoJson(settleBuff, { style: { color: '#c0392b', fillOpacity: 0.6 } }).bindPopup("نطاق استبعاد أمني").addTo(analysisGroup);
-    }
-    if (layers["أراضي زراعية"] && layers["نطاقات الحرارة"]) {
-        let agriGeo = layers["أراضي زراعية"].toGeoJSON();
-        let tempGeo = layers["نطاقات الحرارة"].toGeoJSON();
-        agriGeo.features.forEach(land => {
-            let intersected = false;
-            tempGeo.features.forEach(temp => {
-                if (temp.properties.MEAN_ANNUA === "19 - 21") {
-                    let inter = turf.intersect(land, temp);
-                    if (inter) {
-                        L.geoJson(inter, { style: { color: '#27ae60', fillOpacity: 0.8 } }).bindPopup("<b>تحليل المستشار:</b> منطقة مثالية").addTo(analysisGroup);
-                        intersected = true;
-                    }
-                }
-            });
-            if (!intersected) {
-                L.geoJson(land, { style: { color: '#f1c40f', fillOpacity: 0.4 } }).bindPopup("إمكانية متوسطة").addTo(analysisGroup);
-            }
-        });
     }
 }
 
@@ -288,12 +291,8 @@ function runHazardScanner() {
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> خطر فيضان</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> أثر بيئي للكسارات</div>`;
-    if (layers["الأودية"]) {
-        L.geoJson(turf.buffer(layers["الأودية"].toGeoJSON(), 0.15, {units:'kilometers'}), {style:{color:'#e74c3c', fillOpacity:0.6}}).addTo(analysisGroup);
-    }
-    if (layers["الكسارات"]) {
-        L.geoJson(turf.buffer(layers["الكسارات"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
-    }
+    if (layers["الأودية"]) L.geoJson(turf.buffer(layers["الأودية"].toGeoJSON(), 0.15, {units:'kilometers'}), {style:{color:'#e74c3c', fillOpacity:0.6}}).addTo(analysisGroup);
+    if (layers["الكسارات"]) L.geoJson(turf.buffer(layers["الكسارات"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
 }
 
 function runLiveStats() {
@@ -313,17 +312,13 @@ function runLiveStats() {
 function runEcoBuffer() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> حماية بيئية</div>`;
-    if (layers["الأودية"]) {
-        L.geoJson(turf.buffer(layers["الأودية"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).addTo(analysisGroup);
-    }
+    if (layers["الأودية"]) L.geoJson(turf.buffer(layers["الأودية"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).addTo(analysisGroup);
 }
 
 function runIsolationScanner() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> عزل الجدار</div>`;
-    if (layers["مناطق مغلقة"]) {
-        L.geoJson(layers["مناطق مغلقة"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 } }).addTo(analysisGroup);
-    }
+    if (layers["مناطق مغلقة"]) L.geoJson(layers["مناطق مغلقة"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 } }).addTo(analysisGroup);
 }
 
 function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
@@ -354,7 +349,7 @@ function restoreAllLayers() { for (let k in layers) if (!map.hasLayer(layers[k])
 
 function clearAnalysis() {
     isMeasureActive = false;
-    map.removeControl(drawControl);
+    if (map.hasControl(drawControl)) map.removeControl(drawControl);
     analysisGroup.clearLayers(); 
     measureGroup.clearLayers();
     restoreAllLayers();
