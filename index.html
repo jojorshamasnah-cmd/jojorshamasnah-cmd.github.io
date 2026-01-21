@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
         #advisor-ui { position: absolute; top: 15px; left: 60px; z-index: 1000; display: flex; gap: 8px; flex-wrap: wrap; }
@@ -53,10 +53,18 @@
         .symbol-icon { font-size: 14px; margin-left: 8px; width: 18px; text-align: center; }
         .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; }
 
-        /* شريط الإحداثيات الجديد */
-        #coords-info { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; z-index: 4000; pointer-events: none; border: 1px solid rgba(255,255,255,0.2); }
-
-        .leaflet-control-layers { direction: rtl; text-align: right; border-radius: 8px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important; padding: 10px !important; }
+        /* تنسيق صندوق الطبقات */
+        .leaflet-control-layers { 
+            direction: rtl; 
+            text-align: right; 
+            border-radius: 8px !important; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+            padding: 10px !important;
+        }
+        .leaflet-control-layers-overlays label {
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -74,8 +82,6 @@
     <button class="btn-tool btn-clear" onclick="clearAnalysis()">🧹 استعادة</button>
 </div>
 
-<div id="coords-info">Lat: 0.00000, Lng: 0.00000</div>
-
 <div id="search-container">
     <input type="text" id="search-input" placeholder="ابحث عن مكان أو معلم..." onkeyup="executeSearch()">
 </div>
@@ -86,10 +92,7 @@
     <h4 style="margin:0 0 10px 0; color:#2c3e50; text-align:center;">إحصائيات الاستخدامات</h4>
     <canvas id="statsChart" style="max-height: 180px;"></canvas>
     <div id="stats-summary" style="font-size: 12px; margin-top: 12px; color: #333; line-height: 1.6; background: #f9f9f9; padding: 8px; border-radius: 5px; border: 1px solid #eee;"></div>
-    <div style="display:flex; gap:5px;">
-        <button onclick="window.print()" style="margin-top:10px; flex:1; cursor:pointer; border:none; background:#3498db; color:white; padding:8px; border-radius:5px; font-weight:bold;">طباعة</button>
-        <button onclick="$('#stats-panel').fadeOut()" style="margin-top:10px; flex:1; cursor:pointer; border:none; background:#eee; padding:8px; border-radius:5px; font-weight:bold;">إغلاق</button>
-    </div>
+    <button onclick="$('#stats-panel').fadeOut()" style="margin-top:10px; width:100%; cursor:pointer; border:none; background:#eee; padding:8px; border-radius:5px; font-weight:bold;">إغلاق</button>
 </div>
 
 <div id="story-panel">
@@ -130,31 +133,21 @@
 </div>
 
 <script>
-// تعريف طبقات الخرائط الأساسية
-var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
-var satelliteLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'); // Google Hybrid
+var map = L.map("map").setView([31.903, 35.203], 11);
+var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-var map = L.map("map", {
-    layers: [osmLayer]
-}).setView([31.903, 35.203], 12);
-
-var currentBase = "osm";
-
-// تحديث الإحداثيات لحظياً
-map.on('mousemove', function(e) {
-    $("#coords-info").html(`Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`);
-});
-
-var baseMaps = { "خريطة الشارع": osmLayer, "قمر صناعي": satelliteLayer };
+// صندوق التحكم بالطبقات بالعربي
+var baseMaps = { "خريطة الشارع مفتوحة": osmLayer };
 var overlayMaps = {};
 var layerControl = L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
+var isBaseMapVisible = true;
 var layers = {};
 var analysisGroup = L.layerGroup().addTo(map);
 var currentStep = 0;
 var statsChartInstance = null;
 
-// طبقات القصة
+// طبقات القصة (تم تحديث الأسماء للعربي)
 const storySteps = [
     {
         title: "رام الله: التحدي العمراني",
@@ -183,22 +176,22 @@ var drawControl = new L.Control.Draw({
 L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
 function toggleBaseMap() {
-    if (currentBase === "osm") {
-        map.removeLayer(osmLayer);
-        map.addLayer(satelliteLayer);
-        currentBase = "sat";
-    } else {
-        map.removeLayer(satelliteLayer);
-        map.addLayer(osmLayer);
-        currentBase = "osm";
-    }
+    if (isBaseMapVisible) map.removeLayer(osmLayer);
+    else osmLayer.addTo(map);
+    isBaseMapVisible = !isBaseMapVisible;
 }
 
 function toggleMeasureTool() {
     isMeasureActive = !isMeasureActive;
     if (isMeasureActive) {
         clearAnalysis();
-        hideExceptBoundary();
+        for (let k in layers) {
+            if (k !== "حدود المدينة" && k !== "الطرق") {
+                map.removeLayer(layers[k]);
+            } else {
+                if (!map.hasLayer(layers[k])) map.addLayer(layers[k]);
+            }
+        }
         map.addControl(drawControl);
         $("#measure-output").fadeIn();
     } else {
@@ -232,8 +225,9 @@ function addLayer(file, name, type, style, emoji) {
             pointToLayer: (f, latlng) => type === "point" ? L.marker(latlng, { icon: L.divIcon({ html: emoji, className: 'map-icon', iconSize: [18,18] }) }) : null,
             style: type !== "point" ? style : null,
             onEachFeature: function(f, l) {
+                let props = f.properties;
                 let content = `<div style='direction:rtl; text-align:right;'><b>${name}</b><hr>`;
-                for (let key in f.properties) { content += `<b>${key}:</b> ${f.properties[key]}<br>`; }
+                for (let key in props) { content += `<b>${key}:</b> ${props[key]}<br>`; }
                 l.bindPopup(content + "</div>");
             }
         });
@@ -243,7 +237,7 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// تحميل الطبقات
+// إضافة الطبقات بأسماء عربية
 addLayer("Schools.geojson", "المدارس", "point", null, "🏫");
 addLayer("Wells.geojson", "الآبار", "point", null, "💧");
 addLayer("Quarries.geojson", "الكسارات", "point", null, "⛏️");
@@ -282,7 +276,9 @@ function runSmartAdvisor() {
                     }
                 }
             });
-            if (!intersected) L.geoJson(land, { style: { color: '#f1c40f', fillOpacity: 0.4 } }).addTo(analysisGroup);
+            if (!intersected) {
+                L.geoJson(land, { style: { color: '#f1c40f', fillOpacity: 0.4 } }).bindPopup("إمكانية متوسطة").addTo(analysisGroup);
+            }
         });
     }
 }
@@ -292,8 +288,12 @@ function runHazardScanner() {
     document.getElementById("dynamic-items").innerHTML = `
         <div class="legend-item"><span class="symbol-poly" style="background:#e74c3c"></span> خطر فيضان</div>
         <div class="legend-item"><span class="symbol-poly" style="background:#e67e22"></span> أثر بيئي للكسارات</div>`;
-    if (layers["الأودية"]) L.geoJson(turf.buffer(layers["الأودية"].toGeoJSON(), 0.15, {units:'kilometers'}), {style:{color:'#e74c3c', fillOpacity:0.6}}).addTo(analysisGroup);
-    if (layers["الكسارات"]) L.geoJson(turf.buffer(layers["الكسارات"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
+    if (layers["الأودية"]) {
+        L.geoJson(turf.buffer(layers["الأودية"].toGeoJSON(), 0.15, {units:'kilometers'}), {style:{color:'#e74c3c', fillOpacity:0.6}}).addTo(analysisGroup);
+    }
+    if (layers["الكسارات"]) {
+        L.geoJson(turf.buffer(layers["الكسارات"].toGeoJSON(), 0.5, {units:'kilometers'}), {style:{color:'#e67e22', fillOpacity:0.5}}).addTo(analysisGroup);
+    }
 }
 
 function runLiveStats() {
@@ -313,13 +313,17 @@ function runLiveStats() {
 function runEcoBuffer() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#1abc9c"></span> حماية بيئية</div>`;
-    if (layers["الأودية"]) L.geoJson(turf.buffer(layers["الأودية"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).addTo(analysisGroup);
+    if (layers["الأودية"]) {
+        L.geoJson(turf.buffer(layers["الأودية"].toGeoJSON(), 0.2, {units: 'kilometers'}), { style: { color: '#1abc9c', fillOpacity: 0.4 } }).addTo(analysisGroup);
+    }
 }
 
 function runIsolationScanner() {
     clearAnalysis(); hideExceptBoundary();
     document.getElementById("dynamic-items").innerHTML = `<div class="legend-item"><span class="symbol-poly" style="background:#8e44ad"></span> عزل الجدار</div>`;
-    if (layers["مناطق مغلقة"]) L.geoJson(layers["مناطق مغلقة"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 } }).addTo(analysisGroup);
+    if (layers["مناطق مغلقة"]) {
+        L.geoJson(layers["مناطق مغلقة"].toGeoJSON(), { style: { color: '#8e44ad', fillColor: '#8e44ad', fillOpacity: 0.7 } }).addTo(analysisGroup);
+    }
 }
 
 function startStory() { clearAnalysis(); currentStep = 0; $("#story-panel").fadeIn(); updateStoryScene(); }
@@ -350,11 +354,14 @@ function restoreAllLayers() { for (let k in layers) if (!map.hasLayer(layers[k])
 
 function clearAnalysis() {
     isMeasureActive = false;
-    if (map.hasControl(drawControl)) map.removeControl(drawControl);
+    map.removeControl(drawControl);
     analysisGroup.clearLayers(); 
     measureGroup.clearLayers();
     restoreAllLayers();
-    $("#measure-output, #stats-panel, #search-container, #story-panel").fadeOut();
+    $("#measure-output").fadeOut();
+    $("#stats-panel").fadeOut();
+    $("#search-container").fadeOut();
+    $("#story-panel").fadeOut();
     document.getElementById("dynamic-items").innerHTML = "لا توجد أداة مفعلة...";
 }
 </script>
