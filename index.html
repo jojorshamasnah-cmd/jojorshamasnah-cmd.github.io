@@ -52,19 +52,6 @@
         .symbol-line { width: 20px; height: 3px; margin-left: 8px; flex-shrink: 0; }
         .symbol-icon { font-size: 14px; margin-left: 8px; width: 18px; text-align: center; }
         .map-icon { font-size: 14px; text-shadow: 0 0 3px white; text-align: center; }
-
-        /* تنسيق صندوق الطبقات */
-        .leaflet-control-layers { 
-            direction: rtl; 
-            text-align: right; 
-            border-radius: 8px !important; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-            padding: 10px !important;
-        }
-        .leaflet-control-layers-overlays label {
-            margin-bottom: 5px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -89,7 +76,7 @@
 <div id="measure-output">النتيجة: <br><span id="measure-res" style="color:#d35400;">حدد نقطة للبدء</span></div>
 
 <div id="stats-panel">
-    <h4 style="margin:0 0 10px 0; color:#2c3e50; text-align:center;">إحصائيات الاستخدامات</h4>
+    <h4 style="margin:0 0 10px 0; color:#2c3e50; text-align:center;">إحصائيات سنة 2016</h4>
     <canvas id="statsChart" style="max-height: 180px;"></canvas>
     <div id="stats-summary" style="font-size: 12px; margin-top: 12px; color: #333; line-height: 1.6; background: #f9f9f9; padding: 8px; border-radius: 5px; border: 1px solid #eee;"></div>
     <button onclick="$('#stats-panel').fadeOut()" style="margin-top:10px; width:100%; cursor:pointer; border:none; background:#eee; padding:8px; border-radius:5px; font-weight:bold;">إغلاق</button>
@@ -136,7 +123,6 @@
 var map = L.map("map").setView([31.903, 35.203], 11);
 var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-// صندوق التحكم بالطبقات بالعربي
 var baseMaps = { "خريطة الشارع مفتوحة": osmLayer };
 var overlayMaps = {};
 var layerControl = L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
@@ -147,7 +133,6 @@ var analysisGroup = L.layerGroup().addTo(map);
 var currentStep = 0;
 var statsChartInstance = null;
 
-// طبقات القصة (تم تحديث الأسماء للعربي)
 const storySteps = [
     {
         title: "رام الله: التحدي العمراني",
@@ -237,7 +222,6 @@ function addLayer(file, name, type, style, emoji) {
     });
 }
 
-// إضافة الطبقات بأسماء عربية
 addLayer("Schools.geojson", "المدارس", "point", null, "🏫");
 addLayer("Wells.geojson", "الآبار", "point", null, "💧");
 addLayer("Quarries.geojson", "الكسارات", "point", null, "⛏️");
@@ -296,17 +280,29 @@ function runHazardScanner() {
     }
 }
 
+// --- تحديث أداة الإحصائيات (بيانات 2016) ---
 function runLiveStats() {
     $("#stats-panel").fadeIn();
     let agriArea = 0, builtArea = 0;
     if (layers["أراضي زراعية"]) layers["أراضي زراعية"].eachLayer(l => agriArea += turf.area(l.feature));
     if (layers["مناطق مبنية"]) layers["مناطق مبنية"].eachLayer(l => builtArea += turf.area(l.feature));
+    
     let agriD = (agriArea/1000).toFixed(0);
     let builtD = (builtArea/1000).toFixed(0);
-    $("#stats-summary").html(`• <b>الزراعي:</b> ${agriD} دونم.<br>• <b>المبني:</b> ${builtD} دونم.`);
+    
+    $("#stats-summary").html(`
+        • <b>المساحة الزراعية (2016):</b> ${agriD} دونم.<br>
+        • <b>المساحة المبنية (2016):</b> ${builtD} دونم.<br>
+        • <b>الإجمالي:</b> ${(parseFloat(agriD) + parseFloat(builtD)).toFixed(0)} دونم.`);
+    
     if (statsChartInstance) statsChartInstance.destroy();
     statsChartInstance = new Chart(document.getElementById('statsChart').getContext('2d'), {
-        type: 'pie', data: { labels: ['زراعي', 'مبني'], datasets: [{ data: [agriD, builtD], backgroundColor: ['#2ecc71', '#e67e22'] }] }
+        type: 'doughnut', 
+        data: { 
+            labels: ['زراعي 2016', 'مبني 2016'], 
+            datasets: [{ data: [agriD, builtD], backgroundColor: ['#2ecc71', '#e67e22'] }] 
+        },
+        options: { plugins: { legend: { position: 'bottom' } } }
     });
 }
 
@@ -354,7 +350,7 @@ function restoreAllLayers() { for (let k in layers) if (!map.hasLayer(layers[k])
 
 function clearAnalysis() {
     isMeasureActive = false;
-    map.removeControl(drawControl);
+    if (map.hasLayer(drawControl)) map.removeControl(drawControl);
     analysisGroup.clearLayers(); 
     measureGroup.clearLayers();
     restoreAllLayers();
@@ -367,4 +363,3 @@ function clearAnalysis() {
 </script>
 </body>
 </html>
-
